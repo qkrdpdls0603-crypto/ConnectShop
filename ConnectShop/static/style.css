@@ -1,5 +1,10 @@
-/* ConnectShop/static/style.css 에 추가 */
+/* ==========================================
+   ConnectShop 전자기기 쇼핑몰 공통 스타일시트
+========================================== */
 
+/* ------------------------------------------
+   1. 헤더 로고 영역 스타일
+------------------------------------------ */
 /* 로고를 감싸는 컨테이너 간격 조절 */
 .logo-container {
     padding: 0;
@@ -9,21 +14,51 @@
 
 /* 로고 이미지 크기 및 깔끔한 fit 설정 */
 .header-logo {
-    height: 48px; /* 헤더 크기에 맞춰 조절 (예: 48~56px) */
-    width: auto;  /* 비율 유지 */
-    object-fit: contain; /* 영역 안에서 비율 유지 */
+    height: 48px; /* 헤더 크기에 맞춰 조절 (필요시 48~56px 사이로 조절) */
+    width: auto;  /* 원본 비율 유지 */
+    object-fit: contain;
 }
 
-/* (옵션) 로고 텍스트 디자인 */
+/* (옵션) 로고 텍스트 디자인 (사용 시) */
 .logo-text {
     font-size: 1.25rem;
     font-weight: 700;
     color: #333;
 }
 
+
+/* ------------------------------------------
+   2. 헤더 네비게이션 및 아이콘 스타일
+------------------------------------------ */
+/* 마이페이지(사람 모양) 아이콘 크기 미세 조정 */
 #myPageDropdown .bi-person {
-    font-size: 1.25em; /* 기존(1em)보다 1.25배 크게 설정. 필요에 따라 숫자 조절 */
-    /* 아이콘이 커지면서 위로 살짝 올라가 보일 수 있으므로 위치 미세 조정 */
+    font-size: 1.25em; /* 다른 아이콘들과 균형을 맞추기 위해 크기 확대 */
     position: relative;
-    top: 1px;
+    top: 1px;          /* 크기 확대 후 세로 중앙 정렬 미세 보정 */
+}
+
+
+/* ------------------------------------------
+   3. 데스크톱(PC) 환경 드롭다운 Hover(호버) 기능 및 충돌 방지
+------------------------------------------ */
+@media (min-width: 992px) {
+    /* 호버 시 메뉴 열기 */
+    .dropdown:hover .dropdown-menu {
+        display: block;
+        margin-top: 0;
+    }
+
+    /* 부트스트랩 Popper.js의 강제 위치 이동(순간이동) 차단  */
+    .dropdown .dropdown-menu.dropdown-menu-end {
+        position: absolute !important;
+        top: 100% !important;
+        right: 0 !important;
+        left: auto !important;
+        transform: none !important; /* 부트스트랩이 강제로 넣는 transform 무력화 */
+    }
+
+    /* 애니메이션 효과 */
+    .dropdown-menu {
+        animation: fadeIn 0.3s ease-in-out;
+    }
 }
