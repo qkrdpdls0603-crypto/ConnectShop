@@ -25,8 +25,9 @@ def create_app():
     # ----------------------------------------------------
     # [블루프린트 등록 영역]
 
-    from .views import main_views
+    from .views import main_views, auth_views
     app.register_blueprint(main_views.bp)
+    app.register_blueprint(auth_views.bp)
 
     # 나중에 views 폴더 안에 각 기능별 파일을 완성하면 아래 주석을 풀고 연결할 것입니다.
     # ----------------------------------------------------

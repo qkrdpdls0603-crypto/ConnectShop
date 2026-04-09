@@ -1,10 +1,44 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% block content %}
+<div class="container">
+    <div class="logo">
+        <a href="#"><img src="#" alt=""></a>
+    </div>
 
-</body>
-</html>
+    <h5 class="my-3 border-bottom pb-2">로그인</h5>
+
+    <form method="post" novalidate>
+        {{ form.csrf_token }}
+        {% include 'form_errors.html' %}
+
+        {{ form.email.label }}
+        {{ form.email(class="form-control mb-3") }}
+
+        {{ form.password.label }}
+        {{ form.password(class="form-control mb-3") }}
+
+        <button type="submit" class="lg-login-btn">로그인</button>
+
+    </form>
+{##}
+{#    <div class="social-login-buttons mt-4">#}
+{#        <a href="{{ url_for('auth.google_login') }}" class="btn btn-outline-dark w-100 mb-2">#}
+{#        <img src="google_icon.png" width="20"> 구글로 로그인하기#}
+{#        </a>#}
+{#        <a href="{{ url_for('auth.kakao_login') }}" class="btn btn-warning w-100">#}
+{#        <img src="kakao_icon.png" width="20"> 카카오로 로그인하기#}
+{#        </a>#}
+{#    </div>#}
+
+    <div class="login-links">
+        <span class="sep">|</span>
+        <a href="{{ url_for('auth.find_id') }}">아이디 찾기</a>
+        <span class="sep">|</span>
+        <a href="{{ url_for('auth.find_password') }}">비밀번호 재설정</a>
+        <span class="sep">|</span>
+        <a href="{{ url_for('auth.signup') }}">회원가입</a>
+        <span class="sep">|</span>
+        <a href="#">비회원주문조회</a>
+    </div>
+</div>
+{% endblock %}
