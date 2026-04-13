@@ -24,6 +24,10 @@ class User(db.Model):
     # join_date: 회원가입을 한 날짜와 시간입니다. (현재 시간이 자동으로 들어갑니다)
     join_date = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # 파이썬 터미널 등에서 유저 객체를 출력할 때 이름을 예쁘게 보여주는 기능입니다.
+    def __repr__(self):
+        return f'<User {self.username}>'
+
 # 2. 멤버십 혜택(MembershipBenefit) 테이블: 멤버십 회원이 가진 특별한 혜택 정보입니다.
 class MembershipBenefit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
