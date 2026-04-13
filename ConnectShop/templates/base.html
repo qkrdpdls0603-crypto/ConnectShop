@@ -10,24 +10,117 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
     <style>
-        /* 애플 스타일: 네비게이션 바 글자 크기와 간격 미세 조정 */
-        .apple-nav .nav-link {
-            font-size: 0.85rem;
-            color: #333 !important;
-            padding: 0.5rem 1rem !important;
-        }
+/* 애플 스타일: 네비게이션 바 글자 크기와 간격 미세 조정 */
+    .apple-nav .nav-link {
+        font-size: 0.85rem;
+        color: #333 !important;
+        padding: 0.5rem 1rem !important;
+        position: relative; /* 🌟 추가: 파란색 밑줄이 달릴 기준점 설정 */
+    }
 
-        .apple-nav .nav-link:hover {
-            color: #000 !important;
-        }
+    /* 🌟 추가: 마우스가 메뉴 덩어리(dropdown)에 올라가면 글자를 까맣고 굵게 변경 */
+    .apple-nav .dropdown:hover > .nav-link {
+        color: #000 !important;
+        font-weight: 700;
+    }
 
-        /* 드롭다운 메뉴 디자인 (삼성 스타일 둥근 모서리 및 그림자) */
-        .dropdown-menu {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-    </style>
+    /* 🌟 추가: 삼성 스타일의 파란색 밑줄 애니메이션 */
+    .apple-nav .dropdown:hover > .nav-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0px;
+        left: 1rem;  /* 글자 길이에 딱 맞게 밑줄을 긋기 위해 여백 조절 */
+        right: 1rem;
+        height: 3px; /* 밑줄 두께 */
+        background-color: #007bff; /* 삼성 스타일의 쨍한 파란색 */
+        border-radius: 2px;
+    }
+
+    /* 드롭다운 메뉴 디자인 (삼성 스타일 둥근 모서리 및 그림자) */
+    .dropdown-menu {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    /* --- 메가 검색 패널 스타일 --- */
+    header { position: relative; } /* 검색창이 헤더 바로 아래 붙도록 기준점 설정 */
+
+    .search-panel {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: #f8f9fa; /* ✅ 수정됨: 헤더(bg-light)와 완벽히 동일한 회색 톤 */
+        padding: 40px 0 60px 0;
+        z-index: 1050;
+        border-top: 1px solid #ddd;
+        /* 애니메이션 효과 */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s ease-in-out;
+    }
+
+    .search-panel.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    /* 입력창 디자인 */
+    .search-input-wrapper {
+        display: flex;
+        align-items: center;
+        border-bottom: 2px solid #000;
+        padding-bottom: 12px;
+    }
+
+    .search-icon-large { font-size: 1.8rem; margin-right: 15px; color: #333; }
+
+    .search-input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 1.8rem;
+        font-weight: 500;
+        background-color: transparent;
+    }
+    .search-input::placeholder { color: #b0b0b0; }
+    .search-close-btn { font-size: 1.2rem; cursor: pointer; }
+
+    /* 인기 검색어 */
+    .popular-searches li { margin-bottom: 15px; }
+    .popular-searches a {
+        text-decoration: none;
+        color: #333;
+        font-weight: 500;
+        font-size: 0.95rem;
+        transition: color 0.2s;
+    }
+    .popular-searches a:hover { color: #007bff; text-decoration: underline; }
+
+    /* 추천 상품 카드 */
+    .search-product-card {
+        width: 180px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .search-product-card:hover { transform: translateY(-5px); }
+
+    .search-img-box {
+        height: 180px;
+        overflow: hidden;
+        background-color: #ffffff;
+        border-radius: 8px;
+    }
+    .search-img-box img {
+        width: 80%;
+        height: auto;
+        object-fit: contain;
+    }
+</style>
 </head>
 
 <body>
@@ -280,8 +373,13 @@
 
                 <div class="collapse navbar-collapse justify-content-end" id="iconNavbar">
                     <ul class="navbar-nav align-items-center">
+
+                        <li class="nav-item me-3">
+                            <a class="nav-link" href="#">고객 지원</a>
+                        </li>
+
                         <li class="nav-item me-2">
-                            <a class="nav-link fs-5" href="#"><i class="bi bi-search"></i></a>
+                            <a class="nav-link fs-5" href="#" id="searchTrigger"><i class="bi bi-search"></i></a>
                         </li>
                         <li class="nav-item me-2">
                             <a class="nav-link fs-5" href="#"><i class="bi bi-bag"></i></a>
@@ -296,7 +394,6 @@
                             <ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="myPageDropdown">
 
                                 {% if g.user %}
-                                <!-- ✅ 로그인 상태 -->
                                 <li class="px-3 py-1">
                                     <strong>{{ g.user.username }}</strong> 님
                                 </li>
@@ -307,7 +404,7 @@
                                     <a class="dropdown-item" href="{{ url_for('auth.mypage') }}">마이페이지</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url_for('auth.cart_list') }}">주문/배송조회</a>
+                                    <a class="dropdown-item" href="{{ url_for('order._list') }}">주문/배송조회</a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
@@ -316,7 +413,6 @@
                                 </li>
 
                                 {% else %}
-                                <!-- ❌ 비로그인 상태 -->
                                 <li>
                                     <a class="dropdown-item fw-bold" href="{{ url_for('auth.login') }}">
                                         로그인 / 회원가입
@@ -330,20 +426,73 @@
                                         주문/배송조회
                                     </a>
                                 </li>
-                                <li>
-                                    <a class="dropdown-item" href="#">
-                                        고객지원
-                                    </a>
-                                </li>
                                 {% endif %}
 
                             </ul>
                         </li>
-
                     </ul>
                 </div>
             </div>
         </nav>
+        <div id="searchPanel" class="search-panel shadow-sm">
+            <div class="container">
+
+                <div class="search-input-wrapper mb-5">
+                    <i class="bi bi-search search-icon-large"></i>
+                    <input type="text" class="search-input" placeholder="갤럭시 S26 울트라">
+                    <button type="button" class="btn-close search-close-btn" id="searchCloseBtn" aria-label="Close"></button>
+                </div>
+
+                <div class="row">
+
+                    <div class="col-md-3">
+                        <div class="text-muted fw-bold mb-3" style="font-size: 0.85rem;">인기 검색어</div>
+                        <ul class="list-unstyled popular-searches">
+                            <li><a href="#">갤럭시 S26 울트라</a></li>
+                            <li><a href="#">애플 아이폰 17</a></li>
+                            <li><a href="#">샤오미</a></li>
+                            <li><a href="#">워치</a></li>
+                            <li><a href="#">무선이어폰</a></li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-9">
+                        <div class="text-muted fw-bold mb-3" style="font-size: 0.85rem;">추천</div>
+                        <div class="d-flex gap-3">
+
+                            <a href="#" class="search-product-card">
+                                <div class="search-img-box bg-light rounded mb-2 d-flex justify-content-center align-items-center">
+                                    <img src="{{ url_for('static', filename='images/menu/phone1.jpg') }}" alt="갤럭시 S26">
+                                </div>
+                                <div class="fw-bold text-dark fs-6">갤럭시 S26</div>
+                                <div class="text-muted mt-1" style="font-size: 0.75rem;">혜택가</div>
+                                <div class="fw-bold text-dark">1,385,600원</div>
+                            </a>
+
+                            <a href="#" class="search-product-card">
+                                <div class="search-img-box bg-light rounded mb-2 d-flex justify-content-center align-items-center">
+                                    <img src="{{ url_for('static', filename='images/menu/ear2.jpg') }}" alt="애플 에어팟">
+                                </div>
+                                <div class="fw-bold text-dark fs-6">애플 에어팟</div>
+                                <div class="text-muted mt-1" style="font-size: 0.75rem;">혜택가</div>
+                                <div class="fw-bold text-dark">199,000원</div>
+                            </a>
+
+                            <a href="#" class="search-product-card">
+                                <div class="search-img-box bg-light rounded mb-2 d-flex justify-content-center align-items-center">
+                                    <img src="{{ url_for('static', filename='images/menu/headphone1.jpg') }}" alt="소니 WH">
+                                </div>
+                                <div class="fw-bold text-dark fs-6">소니 WH</div>
+                                <div class="text-muted mt-1" style="font-size: 0.75rem;">혜택가</div>
+                                <div class="fw-bold text-dark">459,000원</div>
+                            </a>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
     </header>
 
     <main class="container my-5 min-vh-100">
@@ -366,6 +515,30 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchTrigger = document.getElementById('searchTrigger');
+            const searchPanel = document.getElementById('searchPanel');
+            const searchCloseBtn = document.getElementById('searchCloseBtn');
+            const searchInput = document.querySelector('.search-input');
+
+            // 돋보기 클릭 시 열기/닫기
+            searchTrigger.addEventListener('click', function(e) {
+                e.preventDefault(); // 기본 링크 이동 방지
+                searchPanel.classList.toggle('show');
+                if(searchPanel.classList.contains('show')) {
+                    searchInput.focus(); // 열리면 자동으로 타자 칠 수 있게 포커스
+                }
+            });
+
+            // X 버튼 클릭 시 닫기
+            searchCloseBtn.addEventListener('click', function() {
+                searchPanel.classList.remove('show');
+            });
+        });
+    </script>
+</body>
 </body>
 
 </html>
