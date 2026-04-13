@@ -382,7 +382,7 @@
                             <a class="nav-link fs-5" href="#" id="searchTrigger"><i class="bi bi-search"></i></a>
                         </li>
                         <li class="nav-item me-2">
-                            <a class="nav-link fs-5" href="#"><i class="bi bi-bag"></i></a>
+                            <a class="nav-link fs-5" href="{{ url_for('order._list') }}"><i class="bi bi-bag"></i></a>
                         </li>
 
                         <li class="nav-item dropdown">
@@ -404,7 +404,9 @@
                                     <a class="dropdown-item" href="{{ url_for('auth.mypage') }}">마이페이지</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url_for('order._list') }}">주문/배송조회</a>
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('order.my_orders') }}">주문/배송조회</a>
+                                </li>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
@@ -422,7 +424,7 @@
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#">
+                                    <a class="dropdown-item" href="{{ url_for('order.find_guest_order') }}">
                                         주문/배송조회
                                     </a>
                                 </li>

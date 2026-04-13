@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='order.css') }}">
+
+<div class="figma-container">
+    <h2 class="figma-title">주문/배송 조회</h2>
+
+    <div class="figma-status-bar">
+        <div class="status-node active">
+            <span class="node-label">결제완료</span>
+            <span class="node-count">{{ pay_count if pay_count else 0 }}</span>
+        </div>
+        <div class="status-node">
+            <span class="node-label">배송준비중</span>
+            <span class="node-count">{{ ready_count if ready_count else 0 }}</span>
+        </div>
+        <div class="status-node">
+            <span class="node-label">배송중</span>
+            <span class="node-count">{{ ship_count if ship_count else 0 }}</span>
+        </div>
+        <div class="status-node">
+            <span class="node-label">배송완료</span>
+            <span class="node-count">{{ done_count if done_count else 0 }}</span>
+        </div>
+    </div>
+
+    {% if order_list %}
+        {% for order in order_list %}
+            <a href="{{ url_for('order.order_detail', order_id=order.id) }}" class="order-card-link" style="text-decoration: none; color: inherit; display: block;">
+                <div class="order-card-figma">
+                    <div class="card-top">
+                        <span class="date">{{ order.order_date.strftime('%Y.%m.%d') }}</span>
+                        <span class="order-number">주문번호 #{{ order.id }} <i class="bi bi-chevron-right" style="font-size: 0.8rem;"></i></span>
+                    </div>
+
+                    <div class="card-mid">
+                        {% for item in order.items %}
+                        <div class="product-item">
+                            <div class="info">
+                                <p class="name">{{ item.product.name }}</p>
+                                <p class="meta">{{ item.quantity }}개 / {{ "{:,}".format(item.price) }}원</p>
+                            </div>
+                            <div class="price-unit">{{ "{:,}".format(item.price * item.quantity) }}원</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="card-bottom">
+                        <div class="spacer"></div>
+                        <div class="price-summary">
+                            <span class="label">최종 결제 금액</span>
+                            <span class="total">{{ "{:,}".format(order.total_price) }}원</span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        {% endfor %}
+    {% else %}
+        <div class="figma-empty">
+            <p>최근 주문 내역이 없습니다.</p>
+            <a href="{{ url_for('main.index') }}" style="color: #0071e3; text-decoration: none; font-size: 14px;">쇼핑하러 가기 →</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
