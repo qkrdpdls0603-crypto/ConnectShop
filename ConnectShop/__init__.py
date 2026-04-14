@@ -65,16 +65,15 @@ def create_app():
     # ----------------------------------------------------
     # [블루프린트 등록 영역]
 
-    from .views import main_views, auth_views, order_views
+    from .views import main_views, auth_views, order_views, product_views
     app.register_blueprint(main_views.bp)
     app.register_blueprint(auth_views.bp)
     app.register_blueprint(order_views.bp, url_prefix='/order')
-
+    app.register_blueprint(product_views.bp)
     # 나중에 views 폴더 안에 각 기능별 파일을 완성하면 아래 주석을 풀고 연결할 것입니다.
     # ----------------------------------------------------
     # from .views import auth_views, product_views, order_views
     # app.register_blueprint(auth_views.bp)
-    # app.register_blueprint(product_views.bp)
     # app.register_blueprint(order_views.bp)
 
     return app

@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+<!--아직 미완성. 링크 메인페이지가 아닌 상품페이지로 이동하기. 이번 주의 인기상품 이미지 고화질로 교체및 상품이름과 가격 데이터베이스에서 가져오기 -->
+{% block content %}
+<main>
+    {% set banner_files = ['banner1.png', 'banner2.png', 'banner3.jpeg'] %}
+
+    {% for i in range(1, 4) %}
+    <section class="banner-section position-relative vh-100 overflow-hidden mb-5">
+        <a href="{{ url_for('main.index') }}" class="d-block h-100">
+
+            <div class="image-wrapper h-100 bg-secondary-subtle">
+                <img src="{{ url_for('static', filename='images/' ~ banner_files[i-1]) }}"
+                     class="w-100 h-100 object-fit-cover"
+                     alt="메인 배너 {{ i }}">
+            </div>
+
+            {% if i == 1 %}
+                {% set top_pos = "57%" %}
+                {% set start_pos = "69%" %}
+            {% elif i == 2 %}
+                {% set top_pos = "42%" %}
+                {% set start_pos = "17%" %}
+            {% else %}
+                {% set top_pos = "75%" %}
+                {% set start_pos = "13%" %}
+            {% endif %}
+
+            {# 실제 적용: 클래스에서 위치 관련은 다 빼고 style로 제어합니다 #}
+            <div class="content-overlay position-absolute translate-middle"
+                 style="top: {{ top_pos }}; left: {{ start_pos }};">
+                <button class="btn btn-dark rounded-pill px-4">구매하기</button>
+            </div>
+        </a>
+    </section>
+    {% endfor %}
+
+    <section class="container my-5 py-5">
+    <div class="text-center mb-5">
+        <h2 class="display-5 fw-bold text-dark mb-3">이번 주의 인기 상품</h2>
+        <p class="text-muted fs-5">가장 많은 사랑을 받은 베스트 테크 아이템</p>
+        <div class="mx-auto bg-dark" style="width: 50px; height: 3px; border-radius: 2px;"></div>
+    </div>
+
+    <div class="row g-4">
+    {% set product_list = [
+        {'file': 'phone1.jpg', 'name': '갤럭시 S24 울트라', 'price': '1,450,000'},
+        {'file': 'notebook1.jpg', 'name': '아이패드 프로 13', 'price': '1,990,000'},
+        {'file': 'ear1.jpg', 'name': '맥북 에어 M3', 'price': '1,590,000'}
+    ] %}
+
+
+    {% for i in range(product_list|length) %}
+    <div class="col-md-4">
+        <a href="{{ url_for('main.index') }}" class="text-decoration-none text-dark">
+            <div class="product-card bg-secondary-subtle rounded-3 overflow-hidden shadow-sm" style="height: 500px; display: flex; flex-direction: column;">
+
+                <div class="image-area" style="height: 75%; overflow: hidden;">
+                    <img src="{{ url_for('static', filename='images/menu/' ~ product_list[i].file) }}"
+                         class="w-100 h-100 object-fit-cover"
+                         alt="{{ product_list[i].name }}">
+                </div>
+
+                <div class="info-area p-3 bg-white" style="height: 25%;">
+                    <h5 class="fw-bold mb-1">{{ product_list[i].name }}</h5>
+                    <p class="text-muted mb-0">{{ product_list[i].price }}원 </p>
+                </div>
+
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+    </section>
+
+
+
+    <section class="container my-5 py-5 border-top">
+        <div class="text-center mb-5">
+            <h2 class="fw-bold">스토어</h2>
+        </div>
+        <!--하단의 스토어 이미지 시작-->
+    <div class="row row-cols-2 row-cols-sm-4 row-cols-lg-auto g-4 text-center justify-content-center">
+
+        <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
+            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
+                <img src="{{ url_for('static', filename='images/smartphone.png') }}" class="w-75 h-75 object-fit-contain" alt="스마트폰">
+            </div>
+            <p class="fw-bold text-dark mb-0" style="font-size: 1rem; white-space: nowrap;">스마트폰</p>
+        </a> </div>
+
+        <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
+            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
+                <img src="{{ url_for('static', filename='images/earbuds.png') }}" class="w-75 h-75 object-fit-contain" alt="무선이어폰">
+            </div>
+            <p class="fw-bold text-dark mb-0" style="font-size: 1rem; white-space: nowrap;">무선이어폰</p>
+        </a> </div>
+
+        <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
+            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
+                <img src="{{ url_for('static', filename='images/smartwatch.png') }}" class="w-75 h-75 object-fit-contain" alt="스마트워치">
+            </div>
+            <p class="fw-bold text-dark mb-0" style="font-size: 1rem; white-space: nowrap;">스마트워치</p>
+        </a> </div>
+
+        <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
+            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
+                <img src="{{ url_for('static', filename='images/tablet.png') }}" class="w-75 h-75 object-fit-contain" alt="태블릿">
+            </div>
+            <p class="fw-bold text-dark mb-0" style="font-size: 1rem; white-space: nowrap;">태블릿</p>
+        </a> </div>
+
+        <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
+            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
+                <img src="{{ url_for('static', filename='images/laptop.png') }}" class="w-75 h-75 object-fit-contain" alt="노트북">
+            </div>
+            <p class="fw-bold text-dark mb-0" style="font-size: 1rem; white-space: nowrap;">노트북</p>
+        </a> </div>
+
+        <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
+            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
+                <img src="{{ url_for('static', filename='images/headphones.png') }}" class="w-75 h-75 object-fit-contain" alt="헤드폰">
+            </div>
+            <p class="fw-bold text-dark mb-0" style="font-size: 1rem; white-space: nowrap;">헤드폰</p>
+        </a> </div>
+
+        <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
+            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
+                <img src="{{ url_for('static', filename='images/speaker.png') }}" class="w-75 h-75 object-fit-contain" alt="스피커">
+            </div>
+            <p class="fw-bold text-dark mb-0" style="font-size: 1rem; white-space: nowrap;">스피커</p>
+        </a> </div>
+        <!--하단의 스토어 이미지 끝-->
+
+    </div>
+</section>
+</main>
+
+{% endblock %}

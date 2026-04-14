@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+
+{% block title %}제품 상세 - ConnectShop{% endblock %}
+
+{% block style %}
+<style>
+    /* 1. 제품 보조 바 (상단 고정)
+       기존 base.html의 헤더 높이가 56px이라고 가정했을 때 그 바로 아래 붙습니다. */
+    .product-sticky-bar {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 56px; /* 기존 헤더 높이에 맞춰 조정하세요 */
+        z-index: 1020;
+        background-color: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(5px);
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    /* 2. 왼쪽 이미지 슬라이더 고정
+       오른쪽 옵션들이 길게 스크롤될 때 왼쪽 이미지는 화면에 머뭅니다. */
+    .sticky-image-container {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 130px; /* 헤더 + 보조바 + 여백 */
+        height: fit-content;
+    }
+
+    /* 3. 디자인 디테일 (와이어프레임 반영) */
+    .option-section { margin-bottom: 40px; }
+
+    .color-dot {
+        width: 35px;
+        height: 35px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #ddd;
+    }
+    .color-dot:hover, .color-dot.active {
+        box-shadow: 0 0 0 2px #000;
+    }
+
+    /* 하단 확장 영역을 위한 스타일 */
+    .content-divider {
+        margin: 80px 0 40px;
+        border-top: 1px solid #eee;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="product-sticky-bar">
+    <div class="container d-flex justify-content-between align-items-center py-2">
+        <div>
+            <span class="text-muted small">카테고리명</span>
+            <h6 class="mb-0 fw-bold">제품 모델명</h6>
+        </div>
+        <div class="d-flex align-items-center">
+            <div class="text-end me-3 d-none d-md-block">
+                <span class="small text-muted">최종 혜택가</span>
+                <p class="mb-0 fw-bold text-danger">749,000원</p>
+            </div>
+            <button class="btn btn-primary px-4 fw-bold">구매하기</button>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="sticky-image-container mb-5">
+                <div id="productSlider" class="carousel slide bg-light rounded-4 overflow-hidden" data-bs-ride="carousel">
+                    <div class="carousel-inner">
+                        <div class="carousel-item active text-center p-5">
+                            <div class="vh-50 d-flex align-items-center justify-content-center bg-secondary-subtle">
+                                <h3 class="text-secondary">슬라이더 메인 이미지</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="carousel-control-prev" type="button" data-bs-target="#productSlider" data-bs-slide="prev">
+                        <span class="carousel-control-prev-icon bg-dark rounded-circle" aria-hidden="true"></span>
+                    </button>
+                    <button class="carousel-control-next" type="button" data-bs-target="#productSlider" data-bs-slide="next">
+                        <span class="carousel-control-next-icon bg-dark rounded-circle" aria-hidden="true"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 ps-lg-5">
+            <div class="option-section">
+                <h1 class="fw-bold mb-3">전자기기 모델명</h1>
+                <p class="text-muted">사용자님이 구상하신 제품의 핵심 장점 소개 텍스트 영역입니다.</p>
+                <div class="d-flex align-items-center mb-4">
+                    <span class="badge bg-warning text-dark me-2">BEST</span>
+                    <span class="text-muted fs-7">별점 ★★★★☆ (128)</span>
+                </div>
+            </div>
+
+            <div class="option-section">
+                <label class="form-label fw-bold">용량 선택</label>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <input type="radio" class="btn-check" name="storage" id="st1" checked>
+                        <label class="btn btn-outline-secondary w-100 py-3" for="st1">256GB</label>
+                    </div>
+                    <div class="col-6">
+                        <input type="radio" class="btn-check" name="storage" id="st2">
+                        <label class="btn btn-outline-secondary w-100 py-3" for="st2">512GB</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="option-section">
+                <label class="form-label fw-bold d-block">색상</label>
+                <div class="d-flex gap-3">
+                    <div class="color-dot active" style="background-color: #000;" title="블랙"></div>
+                    <div class="color-dot" style="background-color: #7c7c7c;" title="그레이"></div>
+                    <div class="color-dot" style="background-color: #f3f3f3;" title="화이트"></div>
+                </div>
+            </div>
+
+            <div class="card border-0 bg-light p-4 rounded-4 shadow-sm">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">기본 가격</span>
+                    <span>799,000원</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2 text-success">
+                    <span class="small">멤버십 할인</span>
+                    <span class="small">-50,000원</span>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-end mb-4">
+                    <span class="fw-bold">최종 결제 금액</span>
+                    <h3 class="mb-0 fw-bold text-primary">749,000원</h3>
+                </div>
+                <div class="row g-2">
+                    <div class="col-4">
+                        <button class="btn btn-outline-dark w-100 py-3">장바구니</button>
+                    </div>
+                    <div class="col-8">
+                        <button class="btn btn-primary w-100 py-3 fw-bold">구매하기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-divider"></div>
+
+    <div class="row mt-5">
+        <div class="col-12">
+            <ul class="nav nav-tabs nav-justified mb-5" id="productTab" role="tablist">
+                <li class="nav-item"><a class="nav-link active fw-bold" data-bs-toggle="tab" href="#detail">상세정보</a></li>
+                <li class="nav-item"><a class="nav-link fw-bold text-dark" data-bs-toggle="tab" href="#review">리뷰</a></li>
+                <li class="nav-item"><a class="nav-link fw-bold text-dark" data-bs-toggle="tab" href="#qa">문의하기</a></li>
+            </ul>
+
+            <div class="tab-content" id="productTabContent">
+                <div class="tab-pane fade show active text-center" id="detail">
+                    <div class="py-5 bg-light rounded-4 mb-4">
+                        <p class="lead">여기에 상품 상세 설명 이미지를 추가할 예정입니다.</p>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="review">
+                    <div class="py-5 text-center">
+                        <h4>구매 후기</h4>
+                        <p class="text-muted">아직 작성된 리뷰가 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
