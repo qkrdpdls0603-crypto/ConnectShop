@@ -18,14 +18,15 @@
         position: relative; /* 🌟 추가: 파란색 밑줄이 달릴 기준점 설정 */
     }
 
-    /* 🌟 추가: 마우스가 메뉴 덩어리(dropdown)에 올라가면 글자를 까맣고 굵게 변경 */
-    .apple-nav .dropdown:hover > .nav-link {
+/* 🌟 복구: 모든 메뉴(nav-item)에 마우스를 올리면 글자가 까맣고 굵어지게 변경 */
+    .apple-nav .nav-item:hover > .nav-link {
         color: #000 !important;
-        font-weight: 700;
+        /* font-weight 대신 그림자를 이용해 레이아웃이 깨지지 않도록 방어 */
+        text-shadow: 0 0 0.5px #000, 0 0 0.5px #000;
     }
 
-    /* 🌟 추가: 삼성 스타일의 파란색 밑줄 애니메이션 */
-    .apple-nav .dropdown:hover > .nav-link::after {
+    /* 🌟 복구: 모든 메뉴(nav-item)에 삼성 스타일의 파란색 밑줄 애니메이션 적용 */
+    .apple-nav .nav-item:hover > .nav-link::after {
         content: '';
         position: absolute;
         bottom: 0px;
@@ -41,6 +42,7 @@
         border: none;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 1100;
     }
 
     /* --- 메가 검색 패널 스타일 --- */
@@ -119,6 +121,18 @@
         width: 80%;
         height: auto;
         object-fit: contain;
+    }
+
+    /* 푸터 링크 스타일: 평소에는 조용히, 호버 시에는 확실하게 */
+    .footer-link {
+        color: #6c757d !important; /* Bootstrap text-muted 색상 고정 */
+        transition: all 0.2s ease;
+        display: inline-block;
+    }
+    .footer-link:hover {
+        color: #000 !important; /* 마우스 올리면 검정색으로 */
+        text-decoration: underline !important; /* 밑줄 추가 */
+        transform: translateY(-1px); /* 아주 살짝 위로 뜨는 느낌 */
     }
 </style>
 </head>
@@ -375,7 +389,7 @@
                     <ul class="navbar-nav align-items-center">
 
                         <li class="nav-item me-3">
-                            <a class="nav-link" href="#">고객 지원</a>
+                            <a class="nav-link" href="{{ url_for('main.support') }}">고객 지원</a>
                         </li>
 
                         <li class="nav-item me-2">
@@ -404,9 +418,7 @@
                                     <a class="dropdown-item" href="{{ url_for('auth.mypage') }}">마이페이지</a>
                                 </li>
                                 <li>
-                                <li>
                                     <a class="dropdown-item" href="{{ url_for('order.my_orders') }}">주문/배송조회</a>
-                                </li>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
@@ -506,10 +518,18 @@
     <footer class="bg-light text-center text-muted py-4 border-top">
         <div class="container">
             <div class="row mb-3">
-                <div class="col-md-3"><strong>회사소개</strong></div>
-                <div class="col-md-3"><strong>이용약관</strong></div>
-                <div class="col-md-3"><strong>개인정보처리방침</strong></div>
-                <div class="col-md-3"><strong>고객지원 (FAQ)</strong></div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('main.preparing') }}" class="text-decoration-none fw-bold footer-link">회사소개</a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('main.preparing') }}" class="text-decoration-none fw-bold footer-link">이용약관</a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('main.preparing') }}" class="text-decoration-none fw-bold footer-link">개인정보처리방침</a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('main.support') }}" class="text-decoration-none fw-bold footer-link">고객지원 (FAQ)</a>
+                </div>
             </div>
             <p class="mb-0">© 2026 ConnectShop. All rights reserved.</p>
             <p class="small">사업자등록번호: 123-45-67890 | 대표자: OOO | 고객센터: 1588-0000</p>
