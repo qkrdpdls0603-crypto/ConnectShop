@@ -6,19 +6,35 @@
 --nav-bg: #fff;
 }
 
+.mypage-header-wrap {
+  width: 100%;
+  background: #fff;
+  padding: 20px 0;
+  border-bottom: 1px solid #ddd;
+}
+
+.mypage-body-wrap {
+  width: 100%;
+  background: #fff;
+  padding: 30px 0;
+}
+
+.mypage-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+
 body {
 font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
 margin: 0;
-padding: 20px;
+padding: 0;
 background-color: #fff;
 color: var(--text-main);
 line-height: 1.6;
 }
 
-.container {
-max-width: 800px;
-margin: 0 auto;
-}
 
 /* --- 추가된 상단 네비게이션 스타일 --- */
 .my-info-title {
@@ -29,7 +45,8 @@ padding-bottom: 10px;
 border-bottom: 2px solid #333;
 }
 
-.nav-container {
+
+.nav-container1 {
 margin-bottom: 30px;
 border-bottom: 1px solid var(--border-color);
 }
@@ -43,7 +60,7 @@ overflow-x: auto;
 white-space: nowrap;
 }
 
-.nav-item {
+.nav-main .nav-item {
 padding: 12px 20px;
 cursor: pointer;
 font-weight: 500;
@@ -52,9 +69,10 @@ transition: all 0.2s;
 border-bottom: 3px solid transparent;
 }
 
-.nav-item:hover, .nav-item.active {
-color: var(--point-color);
-border-bottom: 3px solid var(--point-color);
+.nav-main .nav-item:hover,
+.nav-main .nav-item.active {
+    color: var(--point-color);
+    border-bottom: 3px solid var(--point-color);
 }
 
 .sub-menu-display {
@@ -86,13 +104,6 @@ text-decoration: underline;
 }
 /* ---------------------------------- */
 
-/* 기존 스타일 유지 */
-.info-header {
-display: grid;
-grid-template-columns: 1fr 1fr;
-gap: 15px;
-margin-bottom: 15px;
-}
 
 .card {
 background-color: var(--bg-gray);
@@ -110,21 +121,6 @@ justify-content: center;
 .membership { text-align: center; }
 .grade { font-weight: bold; font-size: 1.5rem; color: var(--point-color); }
 
-.benefits {
-display: grid;
-grid-template-columns: 1fr 1fr;
-gap: 15px;
-margin-bottom: 30px;
-}
-
-.benefit-item {
-background-color: var(--bg-gray);
-padding: 15px 20px;
-border-radius: 8px;
-display: flex;
-justify-content: space-between;
-align-items: center;
-}
 .benefit-label { font-size: 0.9rem; font-weight: bold; }
 .benefit-value { font-weight: bold; }
 .sub-link { font-size: 0.75rem; color: #777; text-decoration: none; border: 1px solid #ccc; padding: 2px 6px;
@@ -172,3 +168,104 @@ text-decoration: none; border-radius: 4px; font-size: 0.9rem;
 .p-info .brand { font-size: 0.75rem; color: #888; }
 .p-info .name { font-size: 0.9rem; font-weight: 500; display: block; margin-bottom: 5px; }
 .p-info .price { font-weight: bold; font-size: 1rem; }
+/* 마이페이지 전용 그리드 시스템 */
+.m-header-grid {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 35px;
+    width: 100%;
+}
+
+/* 개별 칸 공통 스타일 */
+.m-grid-item {
+    flex: 1;
+    background-color: #f8f9fa; /* 기존 var(--bg-gray) 대신 직접 지정하여 충돌 방지 */
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 20px;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.m-grid-item:hover {
+    background-color: #f1f3f5;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    cursor: pointer;
+}
+
+/* 프로필 칸 특화 스타일 */
+.m-profile-section {
+    flex: 1.6; /* 프로필은 조금 더 넓게 */
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 15px;
+    text-align: left;
+}
+
+.m-profile-icon i {
+    font-size: 3rem;
+    color: #495057;
+}
+
+.m-user-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #212529;
+}
+
+.m-user-email,
+.m-user-join-date {
+    font-size: 0.85rem;
+    color: #868e96;
+}
+
+.m-edit-link {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #495057;
+    text-decoration: none;
+    border: 1px solid #dee2e6;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: #fff;
+}
+
+/* 데이터 숫자 칸 스타일 */
+.m-data-label {
+    font-size: 0.9rem;
+    color: #495057;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.m-data-value {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #007bff; /* 포인트 컬러 직접 지정 */
+}
+
+.m-data-value span {
+    font-size: 0.9rem;
+    color: #212529;
+    margin-left: 2px;
+    font-weight: 400;
+}
+
+/* 반응형: 화면이 작아지면 2줄로 배치 */
+@media (max-width: 768px) {
+    .m-header-grid {
+        flex-wrap: wrap;
+    }
+    .m-profile-section {
+        flex: 1 0 100%; /* 프로필은 한 줄 다 차지 */
+    }
+    .m-data-box {
+        flex: 1 0 30%; /* 나머지 칸은 나눠 가짐 */
+    }
+}

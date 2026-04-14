@@ -1,7 +1,8 @@
 import re
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, EmailField
-from wtforms.validators import DataRequired, Length, EqualTo, Email, ValidationError, Optional
+from wtforms.fields.simple import SubmitField
+from wtforms.validators import DataRequired, Length, EqualTo, Email, ValidationError, Optional, Regexp
 
 
 class UserCreateForm(FlaskForm):
@@ -25,6 +26,17 @@ class UserLoginForm(FlaskForm):
 
 class FindIdForm(FlaskForm):
     username = StringField('이름', validators=[DataRequired('가입하신 이름을 입력해주세요.')])
+
+    phone = StringField(
+        '휴대폰 번호',
+        validators=[
+            DataRequired(message="휴대폰 번호를 입력하세요."),
+            Regexp(r'^\d{10,11}$', message="숫자만 10~11자리로 입력하세요."),
+            Length(min=10, max=11)
+        ],
+        render_kw={"placeholder": "숫자만 입력하세요 (예: 01012345678)"}
+    )
+    submit = SubmitField("아이디 찾기")
 
 
 class ResetPasswordForm(FlaskForm):

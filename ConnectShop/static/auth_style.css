@@ -112,3 +112,13 @@
     font-size: 14px;
     font-weight: bold;
 }
+/* 비활성화된 탭 컨텐츠는 숨김 처리 */
+.tab-content {
+    display: none;
+    width: 100%;
+}
+
+/* active 클래스가 붙은 컨텐츠만 표시 */
+.tab-content.active {
+    display: block;
+}

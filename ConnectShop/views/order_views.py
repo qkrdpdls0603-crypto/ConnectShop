@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, redirect, url_for, session, g, fla
 
 from ConnectShop import db
 from ConnectShop.models import Cart, Product, Order, OrderItem
+from ConnectShop.views.auth_views import login_required
 
 bp = Blueprint('order', __name__, url_prefix='/order')
 
@@ -150,7 +151,7 @@ def place_order():
 
     for item in cart_list:
         order_item = OrderItem(
-            order_rel=new_order,  # 위에서 만든 주문서와 연결
+            order=new_order,  # 위에서 만든 주문서와 연결
             product_id=item.product.id,
             quantity=item.quantity,
             price=item.product.price  # 주문 시점의 가격 기록
@@ -165,4 +166,100 @@ def place_order():
     db.session.commit()
 
     flash("주문이 성공적으로 완료되었습니다!")
-    return render_template('order/order_complete.html', order=new_order)
+    return redirect(url_for('order.order_complete', order_id=new_order.id))
+
+@bp.route('/complete/<int:order_id>')
+def order_complete(order_id):
+    order = db.session.get(Order, order_id)
+
+    if not order:
+        return redirect(url_for('main.index'))
+
+    return render_template('order/order_complete.html', order=order)
+
+@bp.route('/my_orders')
+@login_required
+def my_orders():
+    orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.order_date.desc()).all()
+
+    pay_done = [o for o in orders if getattr(o, 'status', '결제완료') == '결제완료']
+    ready = [o for o in orders if getattr(o, 'status', None) == '배송준비중']
+    shipping = [o for o in orders if getattr(o, 'status', None) == '배송중']
+    shipped = [o for o in orders if getattr(o, 'status', None) == '배송완료']
+
+    return render_template('order/mypage_order_list.html',
+                           order_list=orders,
+                           pay_count=len(pay_done),
+                           ready_count=len(ready),
+                           ship_count=len(shipping),
+                           done_count=len(shipped))
+
+
+@bp.route('/find_guest_order', methods=['GET', 'POST'])
+def find_guest_order():
+    if request.method == 'POST':
+        recipient = request.form.get('recipient')
+        phone = request.form.get('phone')
+
+        order = Order.query.filter_by(recipient=recipient, phone=phone).first()
+
+        if order:
+            session['guest_auth_name'] = recipient
+            session['guest_auth_phone'] = phone
+
+            return redirect(url_for('order.order_detail', order_id=order.id))
+        else:
+            flash("일치하는 주문 정보가 없습니다.")
+
+    return render_template('order/guest_order_find.html')
+
+
+@bp.route('/detail/<int:order_id>')
+def order_detail(order_id):
+    order = db.session.get(Order, order_id)
+
+    if not order:
+        flash("존재하지 않는 주문입니다.")
+        return redirect(url_for('main.index'))
+
+    # [권한 체크]
+    if g.user:
+        if order.user_id != g.user.id:
+            flash("접근 권한이 없습니다.")
+            return redirect(url_for('order.my_orders'))
+    else:
+        auth_name = session.get('guest_auth_name')
+        auth_phone = session.get('guest_auth_phone')
+
+        if not (auth_name == order.recipient and auth_phone == order.phone):
+            flash("비회원 주문 조회 후 이용 가능합니다.")
+            return redirect(url_for('order.find_guest_order'))
+
+    return render_template('order/order_detail.html', order=order)
+
+@bp.route('/order/cancel/<int:order_id>', methods=['POST'])
+def cancel_order(order_id):
+    order = Order.query.get_or_404(order_id)
+
+    is_owner = False
+
+    if g.user:
+        if order.user_id == g.user.id:
+            is_owner = True
+    else:
+        guest_phone = request.form.get('phone')
+        if order.phone == guest_phone:
+            is_owner = True
+
+    if not is_owner:
+        flash("취소 권한이 없습니다. 정보가 일치하는지 확인하세요.")
+        return redirect(request.referrer or url_for('main.index'))
+
+    if order.status == '결제완료':
+        order.status = '주문취소'
+        db.session.commit()
+        flash(f"주문 #{order_id}번 건이 정상적으로 취소되었습니다.")
+    else:
+        flash("이미 배송 중이거나 취소된 주문은 처리할 수 없습니다.")
+
+    return redirect(request.referrer or url_for('main.index'))

@@ -2,6 +2,7 @@ import functools
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql.functions import current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from ConnectShop import db
 from ConnectShop.forms import UserCreateForm, UserLoginForm, FindIdForm, ResetPasswordForm, UserUpdateForm
@@ -91,7 +92,10 @@ def find_id():
     reset_pw_form = ResetPasswordForm()
 
     if request.method == 'POST' and find_id_form.validate_on_submit():
-        user = User.query.filter_by(username=find_id_form.username.data).first()
+        user = User.query.filter_by(
+            username=find_id_form.username.data,
+            mobile=find_id_form.phone.data  # 핸드폰 번호 조건 추가
+        ).first()
         if user:
             flash(f"찾으시는 이메일은 {user.email} 입니다.")
         else:
@@ -150,7 +154,8 @@ def login_required(view):
 @bp.route('/mypage')
 @login_required
 def mypage():
-    return render_template('auth/mypage.html')
+    user = User.query.get(session['user_id'])
+    return render_template('auth/mypage.html', user=user)
 
 
 @bp.route('/orders')
