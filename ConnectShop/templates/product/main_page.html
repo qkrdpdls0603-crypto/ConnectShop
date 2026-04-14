@@ -1,20 +1,33 @@
 {% extends 'base.html' %}
-
+<!--아직 미완성. 링크 메인페이지가 아닌 상품페이지로 이동하기. 이번 주의 인기상품 이미지 고화질로 교체및 상품이름과 가격 데이터베이스에서 가져오기 -->
 {% block content %}
 <main>
+    {% set banner_files = ['banner1.png', 'banner2.png', 'banner3.jpeg'] %}
+
     {% for i in range(1, 4) %}
     <section class="banner-section position-relative vh-100 overflow-hidden mb-5">
         <a href="{{ url_for('main.index') }}" class="d-block h-100">
+
             <div class="image-wrapper h-100 bg-secondary-subtle">
-                <img src="{{ url_for('static', filename='images/banner' ~ i ~ 'png') }}"
+                <img src="{{ url_for('static', filename='images/' ~ banner_files[i-1]) }}"
                      class="w-100 h-100 object-fit-cover"
                      alt="메인 배너 {{ i }}">
             </div>
 
-            <div class="content-overlay position-absolute top-50 start-50 translate-middle text-center text-dark">
-                <small class="text-uppercase tracking-widest"></small>
-                <h2 class="display-3 fw-bold my-3"></h2>
-                <p class="lead mb-4"><br></p>
+            {% if i == 1 %}
+                {% set top_pos = "57%" %}
+                {% set start_pos = "69%" %}
+            {% elif i == 2 %}
+                {% set top_pos = "42%" %}
+                {% set start_pos = "17%" %}
+            {% else %}
+                {% set top_pos = "75%" %}
+                {% set start_pos = "13%" %}
+            {% endif %}
+
+            {# 실제 적용: 클래스에서 위치 관련은 다 빼고 style로 제어합니다 #}
+            <div class="content-overlay position-absolute translate-middle"
+                 style="top: {{ top_pos }}; left: {{ start_pos }};">
                 <button class="btn btn-dark rounded-pill px-4">구매하기</button>
             </div>
         </a>
