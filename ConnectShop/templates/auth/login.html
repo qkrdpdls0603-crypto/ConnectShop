@@ -1,14 +1,31 @@
-{% extends 'base.html' %}
-
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='auth_style.css') }}">
 
 <div class="auth-container">
     <h5 class="login-title">로그인</h5>
 
+    {# 1. 플래시 메시지 (회원가입 완료 등) 처리 #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          {# category가 success면 파란창, 아니면 빨간창 #}
+          <div class="{% if category == 'success' %}alert-success{% else %}alert-danger{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
     <form method="post" novalidate class="login-form">
         {{ form.csrf_token }}
-        {% include 'form_errors.html' %}
+
+        {# 2. 폼 에러 (이메일 미입력 등) 처리 #}
+        {# 빨간창 중복을 막기 위해 form_errors.html 대신 직접 적습니다 #}
+        {% for field, errors in form.errors.items() %}
+            {% for error in errors %}
+                <div class="alert-danger">{{ error }}</div>
+            {% endfor %}
+        {% endfor %}
 
         <div class="input-group">
             {{ form.email.label }}

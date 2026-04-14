@@ -122,3 +122,27 @@
 .tab-content.active {
     display: block;
 }
+.alert-success {
+    width: 460px;
+    background-color: #e7f3ff;
+    border: 1px solid #74c0fc;
+    color: #1971c2;
+    padding: 15px;
+    border-radius: 6px;
+    margin: 0 auto 20px auto;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* 빨간색 에러 창 */
+.alert-danger {
+    width: 460px;
+    background-color: #fff5f5;
+    border: 1px solid #ff8787;
+    color: #e03131;
+    padding: 15px;
+    border-radius: 6px;
+    margin: 0 auto 20px auto;
+    text-align: center;
+    box-sizing: border-box;
+}

@@ -1,14 +1,12 @@
 import functools
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.sql.functions import current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from ConnectShop import db
 from ConnectShop.forms import UserCreateForm, UserLoginForm, FindIdForm, ResetPasswordForm, UserUpdateForm
-from ConnectShop.models import User
-
-
+from ConnectShop.models import User, MembershipBenefit
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -47,7 +45,7 @@ def signup():
             flash('이미 가입된 정보가 있습니다.')
             return render_template('auth/signup.html', form=form)
 
-        flash('회원가입이 완료되었습니다. 로그인 해주세요.')
+        flash('회원가입이 완료되었습니다. 로그인을 진행해 주세요.', 'success')
         return redirect(url_for('auth.login'))
 
     return render_template('auth/signup.html', form=form)
@@ -71,7 +69,8 @@ def login():
             session['user_id'] = user.id
             return redirect(url_for('main.index'))
 
-        flash(error)
+        if error:
+            flash(error, 'danger')
 
     return render_template('auth/login.html', form=form)
 
@@ -162,6 +161,54 @@ def mypage():
 @login_required
 def cart_list():
     return render_template('order/cart_list.html')
+
+@bp.route('/toggle_membership', methods=['POST'])
+def toggle_membership():
+    if not g.user:
+        return jsonify({'success': False, 'message': '로그인 필요'}), 401
+
+    # 1. 멤버십 상태 토글
+    g.user.is_membership = not g.user.is_membership
+
+    # 2. 혜택 객체 확인 및 생성
+    if not g.user.benefit:
+        from ConnectShop.models import MembershipBenefit   # 🔥 올바른 import
+        new_benefit = MembershipBenefit(user_id=g.user.id)
+        db.session.add(new_benefit)
+        db.session.flush()
+        g.user.benefit = new_benefit  # 관계 연결
+
+    # 3. 멤버십 상태에 따라 혜택 업데이트
+    benefit = g.user.benefit
+    if g.user.is_membership:
+        benefit.has_apple_care = True
+        benefit.free_shipping = True
+        msg = "멤버십이 활성화되었습니다."
+    else:
+        benefit.has_apple_care = False
+        benefit.free_shipping = False
+        msg = "멤버십이 해지되었습니다."
+
+    db.session.commit()
+
+    return jsonify({'success': True, 'message': msg})
+
+
+@bp.route('/withdraw', methods=['POST'])
+@login_required
+def withdraw():
+    if g.user:
+        # 1. 연결된 혜택 정보가 있다면 먼저 삭제
+        if g.user.benefit:
+            db.session.delete(g.user.benefit)
+
+        # 2. 유저 삭제
+        db.session.delete(g.user)
+        db.session.commit()
+
+        session.clear()
+        flash("회원 탈퇴가 완료되었습니다.")
+    return redirect(url_for('main.index'))
 
 
 #구글 로그인

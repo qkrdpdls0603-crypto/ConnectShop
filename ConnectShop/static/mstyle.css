@@ -235,7 +235,14 @@ text-decoration: none; border-radius: 4px; font-size: 0.9rem;
     border-radius: 20px;
     background: #fff;
 }
+.m-withdraw-link {
+    color: #999; /* 탈퇴는 보통 강조하지 않으므로 흐리게 설정 */
+    text-decoration: none;
+}
 
+.m-withdraw-link:hover {
+    color: #ff4d4d; /* 마우스 올렸을 때만 경고 의미로 빨간색 */
+}
 /* 데이터 숫자 칸 스타일 */
 .m-data-label {
     font-size: 0.9rem;
@@ -256,6 +263,7 @@ text-decoration: none; border-radius: 4px; font-size: 0.9rem;
     margin-left: 2px;
     font-weight: 400;
 }
+
 
 /* 반응형: 화면이 작아지면 2줄로 배치 */
 @media (max-width: 768px) {

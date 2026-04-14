@@ -30,7 +30,6 @@
     <div class="mypage-container">
 
         <div class="m-header-grid">
-
             <div class="m-grid-item m-profile-section" onclick="location.href='{{ url_for('auth.mypage') }}'">
                 <div class="m-profile-icon">
                     <i class="bi bi-person-circle"></i>
@@ -44,15 +43,19 @@
                     </div>
 
                     {% if g.user %}
-                    <div class="m-user-join-date">
-                        가입일 · {{ g.user.join_date.strftime('%Y.%m.%d') }}
+                    <div class="m-user-join-date">가입일 · {{ g.user.join_date.strftime('%Y.%m.%d') }}</div>
+                    <div class="m-action-links">
+                        <a href="{{ url_for('auth.mypage') }}" class="m-edit-link">정보수정 ></a>
+                        <span class="m-divider">|</span>
+                        <a href="#" class="m-withdraw-link"
+                            onclick="confirmWithdraw(event, {{ 'true' if g.user.is_membership else 'false' }})">회원탈퇴</a>
                     </div>
-                    {% endif %}
 
-                    <a href="{{ url_for('auth.mypage') }}" class="m-edit-link">정보수정 ></a>
+                    <form id="withdrawForm" action="{{ url_for('auth.withdraw') }}" method="POST" style="display:none;">
+                    </form>
+                    {% endif %}
                 </div>
             </div>
-
             <div class="m-grid-item m-data-box">
                 <div class="m-data-label">보증 서비스</div>
                 <div class="m-data-value">
@@ -79,7 +82,6 @@
                 <div class="m-data-label">나의 쿠폰</div>
                 <div class="m-data-value">0<span>개</span></div>
             </div>
-
         </div>
         <!-- 상태바 -->
         <div class="status-bar">
@@ -160,7 +162,7 @@
             { name: '배송지 관리', link: '#' },
             { name: '수신동의 설정', link: '#' },
             { name: '나의정보', link: '#' },
-            { name: '멤버십', link: '#' },
+            { name: '멤버십(Test On/Off)', link: "javascript:toggleMembershipTest()" },
             { name: '배송지관리', link: '#' },
             { name: '제품관리', link: '#' },
             { name: 'A/S이력', link: '#' }
@@ -213,6 +215,41 @@
         const firstTab = document.querySelector('.nav-main .nav-item');
         if (firstTab) showSubMenu('account', firstTab);
     };
+
+    /* 멤버십 토글 테스트 함수 추가 */
+    function toggleMembershipTest() {
+        if (!confirm("멤버십 상태를 변경하시겠습니까? (테스트용)")) return;
+
+        fetch('/auth/toggle_membership', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload(); // 화면의 보증 서비스/배송 혜택 UI 업데이트를 위해 새로고침
+                } else {
+                    alert("오류: " + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+    function confirmWithdraw(event, isMembership) {
+        event.preventDefault(); // 링크 이동 방지
+        event.stopPropagation(); // 부모 div의 클릭 이벤트 방지
+
+        let message = "정말로 탈퇴하시겠습니까?";
+
+        // 멤버십 가입자인 경우 경고 문구 추가 [cite: 14, 15]
+        if (isMembership) {
+            message = "현재 멤버십 이용 중입니다.\n탈퇴 시 애플케어 보증 및 무료 배송 혜택이 즉시 소멸됩니다.\n\n정말로 탈퇴하시겠습니까?";
+        }
+
+        if (confirm(message)) {
+            document.getElementById('withdrawForm').submit();
+        }
+    }
 </script>
 
 {% endblock %}
