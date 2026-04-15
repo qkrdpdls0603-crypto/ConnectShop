@@ -77,7 +77,7 @@
                 </div>
             </div>
 
-            <div class="m-grid-item m-data-box coupon-info-box">
+            <a href="{{ url_for('auth.coupons') }}" class="m-grid-item m-data-box coupon-info-box" style="text-decoration: none; color: inherit; display: block;">
                 <div class="m-data-label">보유 쿠폰</div>
                 <div class="m-data-value">
                     <strong style="color:red;">{{ coupon_count or 0 }}</strong> 장
@@ -89,32 +89,42 @@
                         {% endif %}
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
 
         <div class="status-bar">
             <div class="status-item">
-                <div class="icon-box"></div>
+                <div class="icon-box">
+                    <img src="{{ url_for('static', filename='images/mp/a1.png') }}" alt="주문 아이콘" width="24" height="24">
+                </div>
                 <span class="status-label">최근주문</span>
                 <span class="status-count">0</span>
             </div>
             <div class="status-item">
-                <div class="icon-box"></div>
+                <div class="icon-box">
+                    <img src="{{ url_for('static', filename='images/mp/b1.png') }}" alt="배송 아이콘" width="24" height="24">
+                </div>
                 <span class="status-label">배송중</span>
                 <span class="status-count">0</span>
             </div>
             <div class="status-item">
-                <div class="icon-box"></div>
+                <div class="icon-box">
+                    <img src="{{ url_for('static', filename='images/mp/c1.png') }}" alt="상자 아이콘" width="24" height="24">
+                </div>
                 <span class="status-label">배송완료</span>
                 <span class="status-count">0</span>
             </div>
             <div class="status-item">
-                <div class="icon-box"></div>
+                <div class="icon-box">
+                    <img src="{{ url_for('static', filename='images/mp/d1.png') }}" alt="하트 아이콘" width="24" height="24">
+                </div>
                 <span class="status-label">찜한 제품</span>
                 <span class="status-count">0</span>
             </div>
             <div class="status-item">
-                <div class="icon-box"></div>
+                <div class="icon-box">
+                    <img src="{{ url_for('static', filename='images/mp/e1.png') }}" alt="문서 아이콘" width="24" height="24">
+                </div>
                 <span class="status-label">상품평 작성</span>
                 <span class="status-count">0</span>
             </div>
@@ -137,19 +147,53 @@
             </div>
             <div class="product-scroll">
                 <div class="product-card">
-                    <div class="product-img"></div>
+                    <div class="product-img">
+                        <img src="/static/images/menu/phone1.jpg" alt="추천 제품 01">
+                    </div>
                     <div class="p-info">
-                        <span class="brand">BRAND NAME</span>
-                        <span class="name">추천 제품 모델명 01</span>
-                        <span class="price">129,000원</span>
+                        <span class="brand">삼성전자</span>
+                        <span class="name">갤럭시S26 울트라</span>
+                        <span class="price">2,050,000원</span>
                     </div>
                 </div>
                 <div class="product-card">
-                    <div class="product-img"></div>
+                    <div class="product-img">
+                        <img src="/static/images/menu/notebook1.jpg" alt="추천 제품 02">
+                    </div>
                     <div class="p-info">
-                        <span class="brand">BRAND NAME</span>
-                        <span class="name">추천 제품 모델명 02</span>
-                        <span class="price">89,000원</span>
+                        <span class="brand">삼성전자</span>
+                        <span class="name">갤럭시북5 프로</span>
+                        <span class="price">3,229,000원</span>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-img">
+                        <img src="/static/images/menu/headphone2.jpg" alt="추천 제품 03">
+                    </div>
+                    <div class="p-info">
+                        <span class="brand">APPLE</span>
+                        <span class="name">에어팟 맥스 USB-C</span>
+                        <span class="price">549,550원</span>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-img">
+                        <img src="/static/images/menu/ear1.jpg" alt="추천 제품 04">
+                    </div>
+                    <div class="p-info">
+                        <span class="brand">삼성전자</span>
+                        <span class="name">갤럭시 버즈4 프로</span>
+                        <span class="price">356,990원</span>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-img">
+                        <img src="/static/images/menu/ear2.jpg" alt="추천 제품 05">
+                    </div>
+                    <div class="p-info">
+                        <span class="brand">APPLE</span>
+                        <span class="name">에어팟 프로3 </span>
+                        <span class="price">319,990원</span>
                     </div>
                 </div>
             </div>
@@ -169,10 +213,6 @@
             { name: '제품관리', link: '#' },
             { name: 'A/S이력', link: '#' }
         ],
-        'benefit': [
-            { name: '쿠폰함', link: "{{ url_for('auth.coupons') }}" },
-            { name: '포인트 내역', link: '#' }
-        ],
         'shopping': [
             { name: '주문/배송조회', link: "{{ url_for('order.my_orders') if url_for('order.my_orders') else '#' }}" },
             { name: '취소/반품 내역', link: '#' },
@@ -185,8 +225,7 @@
             { name: '재입고알림', link: '#' }
         ],
         'coupon': [
-            { name: '쿠폰받기', link: '#' },
-            { name: '보유쿠폰', link: "{{ url_for('auth.coupons') }}" }
+            { name: '쿠폰받기/보유쿠폰', link: "{{ url_for('auth.coupons') }}" }
         ]
     };
 
