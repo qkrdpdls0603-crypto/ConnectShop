@@ -6,7 +6,7 @@
 <div class="product-fixed-nav shadow-sm">
     <div class="container d-flex justify-content-between align-items-center h-100">
         <div class="nav-left-section">
-            <div class="product-title-small">{{ product.name|default('상품명을 불러오는 중...') }}</div>
+            <div class="product-title-small">{{ product.name }}</div>
             <div class="nav-hyperlinks">
                 <a href="#section-images" class="me-2">이미지</a>
                 <a href="#section-details">상세정보</a>
@@ -17,7 +17,7 @@
             <div class="price-info me-3 text-end">
                 <div class="price-label">최종 혜택가</div>
                 <div class="price-value text-primary fw-bold">
-                    <span id="display-final-price">{{ "{:,}".format(product.price|default(0)) }}</span>원
+                    <span id="display-final-price">{{ "{:,}".format(product.price) }}</span>원
                 </div>
             </div>
             <button class="btn btn-primary rounded-pill px-4">구매하기</button>
@@ -32,8 +32,8 @@
         <div class="col-lg-8">
             <div class="product-image-sticky">
                 <div class="temp-slider-box">
-                    <img src="{{ url_for('static', filename='images/banner1.png') }}"
-                    alt="상품 이미지"
+                    <img src="{{ url_for('static', filename='images/menu/' + product.image_path) }}"
+                    alt="{{ product.name }}"
                     class="img-fluid rounded-4 shadow-sm">
                 </div>
             </div>
@@ -41,8 +41,8 @@
 
         <div class="col-lg-4">
             <div class="option-header mb-5">
-    <h2 class="fw-bold">{{ product_name|default('갤럭시 S26 울트라') }}</h2>
-
+    <h2 class="fw-bold">{{ product_name }}</h2>
+<!--               부트스트랩 아이콘 데이터베이스에 아직 미구현됨                 -->
             <div class="product-benefits d-flex justify-content-between mt-4 p-3 bg-light rounded-4">
                 <div class="benefit-item text-center flex-fill">
                     <i class="bi bi-truck fs-3 mb-2 d-block text-primary"></i>
@@ -64,11 +64,12 @@
                         <label class="fw-bold mb-3">모델</label>
                         <div class="option-box p-3 border rounded-3 mb-2 active">
                             <div class="d-flex justify-content-between">
-                                <span>{{ product_name|default('갤럭시 S26 울트라') }}</span>
+                                <span>{{ product_name }}</span>
                             </div>
                         </div>
                     </div>
 
+<!--                    용량 데이터베이스 미구현됨-->
                 <div id="storage-select" class="mb-5">
                     <label class="fw-bold mb-3">용량</label>
                     <div class="row g-2">
@@ -213,7 +214,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <span class="fw-bold">최종 혜택 적용 예상가</span>
                         <h3 class="text-primary fw-bold mb-0">
-                            <span id="total-final-price">{{ "{:,}".format(product.price|default(1699000)) }}</span>원
+                            <span id="total-final-price">{{ "{:,}".format(product.price) }}</span>원
                         </h3>
                     </div>
 
