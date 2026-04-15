@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* 1. 히어로 배너 (애플/샤오미 스타일) */
+    .company-hero {
+        background: linear-gradient(135deg, #111 0%, #333 100%);
+        color: white;
+        border-radius: 24px;
+        padding: 100px 20px;
+        text-align: center;
+        margin-bottom: 80px;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+    }
+    .company-hero h1 {
+        font-size: 3.5rem;
+        font-weight: 800;
+        letter-spacing: -2px;
+        margin-bottom: 20px;
+    }
+
+    /* 2. 핵심 가치 카드 (LG/애플 스타일) */
+    .value-card {
+        background-color: #f8f9fa;
+        border-radius: 20px;
+        padding: 40px 30px;
+        height: 100%;
+        transition: transform 0.3s ease;
+        border: none;
+    }
+    .value-card:hover {
+        transform: translateY(-10px);
+        background-color: #fff;
+        box-shadow: 0 15px 30px rgba(0,0,0,0.08);
+    }
+    .value-icon {
+        font-size: 3rem;
+        color: #007bff;
+        margin-bottom: 20px;
+    }
+
+    /* 3. 연혁 타임라인 (삼성 스타일) */
+    .timeline {
+        position: relative;
+        max-width: 800px;
+        margin: 0 auto;
+        padding-left: 30px;
+        border-left: 2px solid #e9ecef;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 40px;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -37px;
+        top: 5px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #007bff;
+        border: 3px solid #fff;
+        box-shadow: 0 0 0 3px #e9ecef;
+    }
+    .timeline-date {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #007bff;
+        margin-bottom: 10px;
+    }
+</style>
+
+<div class="company-hero mt-3">
+    <h1>기술과 일상을 연결하다</h1>
+    <p class="fs-4 fw-light text-white-50">
+        ConnectShop은 전 세계 최고의 전자기기를<br>가장 빠르고 안전하게 만나는 혁신의 공간입니다.
+    </p>
+</div>
+
+<div class="text-center mb-5 pb-4">
+    <h2 class="fw-bold mb-3">모두를 위한 혁신, ConnectShop</h2>
+    <p class="text-muted fs-5">고객의 스마트한 라이프스타일을 위해 세 가지 원칙을 지킵니다.</p>
+</div>
+
+<div class="row g-4 mb-5 pb-5 border-bottom">
+    <div class="col-md-4">
+        <div class="value-card text-center">
+            <i class="bi bi-globe value-icon"></i>
+            <h4 class="fw-bold mb-3">Global Sourcing</h4>
+            <p class="text-muted mb-0">국내외 프리미엄 IT 기기들을 엄선하여 클릭 한 번으로 당신의 문 앞까지 안전하게 배송합니다.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="value-card text-center">
+            <i class="bi bi-shield-check value-icon"></i>
+            <h4 class="fw-bold mb-3">Trust & Verify</h4>
+            <p class="text-muted mb-0">실제 구매자만 작성할 수 있는 100% 클린 리뷰 시스템으로 정보의 신뢰성을 극대화합니다.</p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="value-card text-center">
+            <i class="bi bi-headset value-icon"></i>
+            <h4 class="fw-bold mb-3">Customer First</h4>
+            <p class="text-muted mb-0">빠른 환불 처리, 체계적인 A/S 안내 등 고객의 불편함을 최소화하는 완벽한 지원을 약속합니다.</p>
+        </div>
+    </div>
+</div>
+
+<div class="mb-5">
+    <h2 class="fw-bold text-center mb-5">ConnectShop이 걸어온 길</h2>
+
+    <div class="timeline">
+        <div class="timeline-item">
+            <div class="timeline-date">2026. 05</div>
+            <h5 class="fw-bold">ConnectShop V1.0 공식 런칭</h5>
+            <p class="text-muted">전자기기 전문 큐레이션 커머스 플랫폼 오픈 및 회원 멤버십 제도 도입</p>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-date">2026. 04</div>
+            <h5 class="fw-bold">글로벌 이커머스 엔진 구축</h5>
+            <p class="text-muted">ConnectShop의 높은 기술력을 바탕으로 한 고도화된 장바구니 및 결제 로직 구현 완료</p>
+        </div>
+        <div class="timeline-item">
+            <div class="timeline-date">2026. 03</div>
+            <h5 class="fw-bold">수원 본사 설립 및 개발 착수</h5>
+            <p class="text-muted">IT 전문가들이 모여 ConnectShop 프로젝트 기획 및 인프라 설계 시작</p>
+        </div>
+    </div>
+</div>
+
+<div class="bg-dark text-white rounded-4 p-5 text-center mt-5">
+    <h3 class="fw-bold mb-3">당신의 비즈니스와 일상에 날개를 달아주세요.</h3>
+    <p class="text-white-50 mb-4">ConnectShop과 함께라면 언제나 가장 앞선 기술을 누릴 수 있습니다.</p>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg fw-bold rounded-pill px-5">쇼핑하러 가기</a>
+</div>
+{% endblock %}
