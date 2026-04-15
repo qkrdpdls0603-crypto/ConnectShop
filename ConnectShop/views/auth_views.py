@@ -1,10 +1,11 @@
 import functools
+import requests
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from ConnectShop import db
 from ConnectShop.forms import UserCreateForm, UserLoginForm, FindIdForm, ResetPasswordForm
-from ConnectShop.models import User
+from ConnectShop.models import User, Coupon
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -132,9 +133,14 @@ def login_required(view):
 @bp.route('/mypage')
 @login_required
 def mypage():
-    # user=user를 user=g.user로 수정
-    return render_template('auth/mypage.html', user=g.user)
+    # 1. 사용자의 전체 쿠폰 개수를 계산합니다.
+    # g.user.coupons가 존재하지 않을 경우를 대비해 기본값 0을 설정합니다.
+    count = 0
+    if hasattr(g.user, 'coupons') and g.user.coupons:
+        count = len(g.user.coupons)
 
+    # 2. 템플릿으로 coupon_count 데이터를 전달합니다.
+    return render_template('auth/mypage.html', user=g.user, coupon_count=count)
 
 @bp.route('/orders')
 @login_required
@@ -182,21 +188,110 @@ def coupons_page():
         used_coupons=used_coupons
     )
 
-#구글 로그인
-#
-# @app.route('/auth/google')
-# def google_login():
-#     redirect_uri = url_for('google_callback', _external=True)
-#     return oauth.google.authorize_redirect(redirect_uri)
-#
-#
-# @app.route('/auth/google/callback')
-# def google_callback():
-#     token = oauth.google.authorize_access_token()
-#     user = token['userinfo']
-#
-#     email = user['email']
-#     name = user['name']
-#
-#     # 👉 여기서 DB 조회 / 회원 생성 / 로그인 처리
-#     return redirect(url_for('main.index'))
+
+@bp.route('/get-welcome-coupon', methods=['POST'])
+@login_required
+def get_welcome_coupon():
+    # 1. 중복 발급 확인 (계정당 1회 제한)
+    # 기존에 발급받은 쿠폰이 하나라도 있다면 발급하지 않음
+    if g.user.coupons:
+        flash("이미 쿠폰을 발급받으셨거나 보유 중입니다. (계정당 1회 참여 가능)")
+        return redirect(url_for('auth.coupons'))
+
+    # 2. 멤버십 상태에 따른 금액 결정
+    if g.user.is_membership:
+        amount = 3000
+        msg = "멤버십 전용 3,000원 쿠폰이 발급되었습니다!"
+    else:
+        amount = 1000
+        msg = "신규 가입 축하 1,000원 쿠폰이 발급되었습니다!"
+
+    # 3. 쿠폰 데이터 생성 및 저장
+    new_coupon = Coupon(
+        user_id=g.user.id,
+        discount_amount=amount,
+        is_used=False
+    )
+
+    db.session.add(new_coupon)
+    db.session.commit()
+
+    flash(msg)
+    return redirect(url_for('auth.coupons'))
+
+
+
+
+#카카오 로그인
+KAKAO_CLIENT_ID = "edc2045d293aaefae2c494a92245c19a"
+KAKAO_REDIRECT_URI = "http://127.0.0.1:5000/auth/kakao/callback"
+
+
+
+@bp.route('/kakao/login')
+def kakao_login():
+    target_url = (
+        "https://kauth.kakao.com/oauth/authorize"
+        f"?client_id={KAKAO_CLIENT_ID}"
+        f"&redirect_uri={KAKAO_REDIRECT_URI}"
+        "&response_type=code"
+    )
+    return redirect(target_url)
+
+
+@bp.route('/kakao/callback')
+def kakao_callback():
+    code = request.args.get("code")
+    if not code:
+        return "No code", 400
+
+    token_res = requests.post(
+        "https://kauth.kakao.com/oauth/token",
+        headers={"Content-Type": "application/x-www-form-urlencoded;charset=utf-8"},
+        data={
+            "grant_type": "authorization_code",
+            "client_id": KAKAO_CLIENT_ID,
+            "redirect_uri": KAKAO_REDIRECT_URI,
+            "code": code,
+        },
+    )
+    token_json = token_res.json()
+    if "error" in token_json:
+        return f"token error: {token_json}", 400
+
+    access_token = token_json.get("access_token")
+
+    user_res = requests.get(
+        "https://kapi.kakao.com/v2/user/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    user_info = user_res.json()
+
+
+    # 카카오에서 제공하는 고유 ID 및 이메일 추출
+    kakao_id = str(user_info.get("id"))
+    kakao_account = user_info.get("kakao_account")
+    email = kakao_account.get("email") if kakao_account else f"{kakao_id}@kakao.com"
+    nickname = user_info.get("properties", {}).get("nickname", "카카오유저")
+
+    # [C] DB 연동 (기존 가입 여부 확인)
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        # 가입된 적이 없으면 새 유저 생성
+        user = User(
+            email=email,
+            username=nickname,
+            password='social_login_no_password',
+            phone=f"010-0000-{kakao_id[-4:]}",  # 카카오 ID 뒷자리를 활용해 임시 번호 생성
+            is_membership=False
+        )
+        db.session.add(user)
+        db.session.commit()
+
+    # [D] 세션 로그인 처리
+
+    session.clear()
+    session['user_id'] = user.id
+    print(f"로그인 성공! 세션에 저장된 ID: {session.get('user_id')}")# DB에 저장된 유저의 고유 ID를 세션에 기록
+    return redirect(url_for('main.index'))
