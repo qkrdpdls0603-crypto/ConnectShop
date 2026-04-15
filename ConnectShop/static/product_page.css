@@ -1,0 +1,47 @@
+/* 픽스드 네비게이션 설정 */
+.product-fixed-nav {
+    position: -webkit-sticky; /* 사파리 대응 */
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 95px;
+    background-color: rgba(255, 255, 255, 0.95); /* 살짝 투명하게 */
+    backdrop-filter: blur(10px); /* 애플 스타일 블러 */
+    z-index: 1000;
+    border-bottom: 1px solid #eee;
+}
+
+/* 좌측 섹션 정렬 */
+.nav-left-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.product-title-small {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: -2px;
+}
+
+.nav-hyperlinks a {
+    font-size: 0.75rem;
+    color: #666;
+    text-decoration: none;
+}
+
+.nav-hyperlinks a:hover {
+    text-decoration: underline;
+}
+
+/* 우측 섹션 가격 레이아웃 */
+.price-label {
+    font-size: 0.7rem;
+    color: #888;
+}
+
+.price-value {
+    font-size: 1.1rem;
+    line-height: 1;
+}
