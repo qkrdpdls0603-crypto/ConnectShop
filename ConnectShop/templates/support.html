@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* 고객지원 전용 퀵메뉴 카드 호버 효과 */
+    .support-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 1px solid #eee;
+    }
+    .support-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
+        border-color: #007bff;
+    }
+    .support-icon {
+        font-size: 2.5rem;
+        color: #555;
+        transition: color 0.3s;
+    }
+    .support-card:hover .support-icon {
+        color: #007bff; /* 마우스 올리면 파란색으로 포인트 */
+    }
+    /* 검색창 스타일 */
+    .support-search {
+        border-radius: 30px;
+        padding: 0.75rem 1.5rem;
+        border: 2px solid #007bff;
+    }
+    .support-search:focus {
+        box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+    }
+</style>
+
+<div class="container my-5">
+
+    <div class="bg-light p-5 rounded-4 text-center mb-5">
+        <h2 class="fw-bold mb-3">무엇을 도와드릴까요?</h2>
+        <p class="text-muted mb-4">ConnectShop 고객지원센터에서 궁금하신 점을 해결해 드립니다.</p>
+        <div class="mx-auto" style="max-width: 600px;">
+            <div class="position-relative">
+                <input type="text" class="form-control support-search" placeholder="검색어를 입력해주세요. (예: 환불, 배송조회)">
+                <i class="bi bi-search position-absolute" style="right: 20px; top: 50%; transform: translateY(-50%); font-size: 1.2rem; color: #007bff;"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-3 col-6">
+            <a href="#faq-section" class="text-decoration-none text-dark">
+                <div class="card h-100 support-card shadow-sm rounded-4 text-center py-4">
+                    <div class="card-body">
+                        <i class="bi bi-question-circle support-icon mb-3"></i>
+                        <h5 class="fw-bold mb-0">자주 묻는 질문</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-3 col-6">
+            <a href="{% if g.user %}{{ url_for('order.my_orders') }}{% else %}{{ url_for('order.find_guest_order') }}{% endif %}" class="text-decoration-none text-dark">
+                <div class="card h-100 support-card shadow-sm rounded-4 text-center py-4">
+                    <div class="card-body">
+                        <i class="bi bi-box-seam support-icon mb-3"></i>
+                        <h5 class="fw-bold mb-0">주문 / 배송조회</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-3 col-6">
+            <a href="{{ url_for('main.preparing') }}" class="text-decoration-none text-dark">
+                <div class="card h-100 support-card shadow-sm rounded-4 text-center py-4">
+                    <div class="card-body">
+                        <i class="bi bi-star support-icon mb-3"></i>
+                        <h5 class="fw-bold mb-0">멤버십 혜택</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-3 col-6">
+            <a href="{{ url_for('main.preparing') }}" class="text-decoration-none text-dark">
+                <div class="card h-100 support-card shadow-sm rounded-4 text-center py-4">
+                    <div class="card-body">
+                        <i class="bi bi-tools support-icon mb-3"></i>
+                        <h5 class="fw-bold mb-0">A/S 및 수리 안내</h5>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <div id="faq-section" class="mb-5 pt-3">
+        <div class="d-flex justify-content-between align-items-end mb-3">
+            <h4 class="fw-bold mb-0">자주 찾는 질문 (FAQ)</h4>
+        </div>
+
+        <div class="accordion shadow-sm" id="faqAccordion">
+            {% for faq in faq_list %}
+            <div class="accordion-item border-0 border-bottom">
+                <h2 class="accordion-header" id="heading{{ faq.id }}">
+                    <button class="accordion-button fw-bold collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ faq.id }}" aria-expanded="false" aria-controls="collapse{{ faq.id }}">
+                        <span class="badge bg-primary me-3">{{ faq.category }}</span>
+                        Q. {{ faq.question }}
+                    </button>
+                </h2>
+                <div id="collapse{{ faq.id }}" class="accordion-collapse collapse" aria-labelledby="heading{{ faq.id }}" data-bs-parent="#faqAccordion">
+                    <div class="accordion-body text-muted lh-lg" style="background-color: #f8f9fa;">
+                        <strong>A.</strong> {{ faq.answer | safe }}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="p-5 text-center text-muted">등록된 질문이 없습니다.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="row bg-light rounded-4 p-4 align-items-center mt-5 border">
+        <div class="col-md-8">
+            <h5 class="fw-bold mb-2">ConnectShop 고객센터</h5>
+            <h2 class="text-primary fw-bold mb-1" style="letter-spacing: -1px;">1588-0000</h2>
+            <p class="text-muted mb-0 small">평일 09:00 ~ 18:00 (주말 및 공휴일 휴무)</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+             <a href="{{ url_for('main.preparing') }}" class="btn btn-outline-dark px-4 py-2 fw-bold">1:1 온라인 상담</a>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

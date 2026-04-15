@@ -1,13 +1,10 @@
 import functools
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from ConnectShop import db
-from ConnectShop.forms import UserCreateForm, UserLoginForm, FindIdForm, ResetPasswordForm, UserUpdateForm
+from ConnectShop.forms import UserCreateForm, UserLoginForm, FindIdForm, ResetPasswordForm
 from ConnectShop.models import User
-
-
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -17,8 +14,7 @@ bp = Blueprint('auth', __name__, url_prefix='/auth')
 def signup():
     form = UserCreateForm()
     if request.method == 'POST' and form.validate_on_submit():
-        # 중복 검사: 이메일과 이름(username) 기준
-
+        # 중복 검사
         if User.query.filter_by(email=form.email.data).first():
             flash('이미 등록된 이메일입니다.')
             return render_template('auth/signup.html', form=form)
@@ -35,7 +31,8 @@ def signup():
             email=form.email.data,
             username=form.username.data,
             phone=form.phone.data,
-            password=generate_password_hash(form.password1.data)
+            password=generate_password_hash(form.password1.data),  # <-- 콤마 추가됨
+            is_membership=False
         )
 
         try:
@@ -46,34 +43,28 @@ def signup():
             flash('이미 가입된 정보가 있습니다.')
             return render_template('auth/signup.html', form=form)
 
-        flash('회원가입이 완료되었습니다. 로그인 해주세요.')
+        flash('회원가입이 완료되었습니다. 로그인을 진행해 주세요.', 'success')
         return redirect(url_for('auth.login'))
 
     return render_template('auth/signup.html', form=form)
 
 
+# 2. 로그인
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
-    error = None
     form = UserLoginForm()
-
     if request.method == 'POST' and form.validate_on_submit():
         user = User.query.filter_by(email=form.email.data).first()
-
         if not user:
-            error = "등록되지 않은 이메일입니다."
+            flash("등록되지 않은 이메일입니다.", 'danger')
         elif not check_password_hash(user.password, form.password.data):
-            error = "비밀번호가 맞지 않습니다."
+            flash("비밀번호가 맞지 않습니다.", 'danger')
         else:
-
             session.clear()
             session['user_id'] = user.id
             return redirect(url_for('main.index'))
 
-        flash(error)
-
     return render_template('auth/login.html', form=form)
-
 
 
 # 3. 로그아웃
@@ -86,20 +77,18 @@ def logout():
 # 4. 아이디(이메일) 찾기
 @bp.route('/find_id', methods=['GET', 'POST'])
 def find_id():
-    # 파인드인포html에서 사용하는 두 가지 폼을 모두 전달
     find_id_form = FindIdForm()
     reset_pw_form = ResetPasswordForm()
-
     if request.method == 'POST' and find_id_form.validate_on_submit():
-        user = User.query.filter_by(username=find_id_form.username.data).first()
+        user = User.query.filter_by(
+            username=find_id_form.username.data,
+            phone=find_id_form.phone.data
+        ).first()
         if user:
             flash(f"찾으시는 이메일은 {user.email} 입니다.")
         else:
             flash("가입된 정보가 없습니다.")
-
-    return render_template('auth/find_info.html',
-                           find_id_form=find_id_form,
-                           reset_pw_form=reset_pw_form)
+    return render_template('auth/find_info.html', find_id_form=find_id_form, reset_pw_form=reset_pw_form)
 
 
 # 5. 비밀번호 재설정
@@ -107,9 +96,7 @@ def find_id():
 def find_password():
     find_id_form = FindIdForm()
     reset_pw_form = ResetPasswordForm()
-
     if request.method == 'POST' and reset_pw_form.validate_on_submit():
-        # 이름과 이메일이 동시에 일치하는지 확인 [cite: 1, 10]
         user = User.query.filter_by(username=reset_pw_form.username.data,
                                     email=reset_pw_form.email.data).first()
         if user:
@@ -119,29 +106,24 @@ def find_password():
             return redirect(url_for('auth.login'))
         else:
             flash("입력하신 정보와 일치하는 사용자가 없습니다.")
-
-    return render_template('auth/find_info.html',
-                           find_id_form=find_id_form,
-                           reset_pw_form=reset_pw_form)
+    return render_template('auth/find_info.html', find_id_form=find_id_form, reset_pw_form=reset_pw_form)
 
 
-# 라우팅 함수보다 먼저 실행하는 함수
 @bp.before_app_request
 def load_logged_in_user():
     user_id = session.get('user_id')
     if user_id is None:
         g.user = None
     else:
+        # User.query.get(user_id)는 2.0+ 버전에서 지양되므로 필요 시 수정 가능
         g.user = User.query.get(user_id)
 
 
-# 데코레이션 함수 (멤버십처럼 진행도?)
 def login_required(view):
     @functools.wraps(view)
     def wrapped_view(*args, **kwargs):
         if g.user is None:
-            _next = request.url if request.method == 'GET' else ''
-            return redirect(url_for('auth.login', next=_next))
+            return redirect(url_for('auth.login', next=request.url))
         return view(*args, **kwargs)
 
     return wrapped_view
@@ -150,7 +132,8 @@ def login_required(view):
 @bp.route('/mypage')
 @login_required
 def mypage():
-    return render_template('auth/mypage.html')
+    # user=user를 user=g.user로 수정
+    return render_template('auth/mypage.html', user=g.user)
 
 
 @bp.route('/orders')
@@ -158,6 +141,46 @@ def mypage():
 def cart_list():
     return render_template('order/cart_list.html')
 
+
+@bp.route('/withdraw', methods=['POST'])
+@login_required
+def withdraw():
+    # g.user가 존재할 때만 삭제 로직 실행
+    if g.user:
+        # 일대일 관계인 benefit 먼저 삭제
+        if hasattr(g.user, 'benefit') and g.user.benefit:
+            db.session.delete(g.user.benefit)
+
+        db.session.delete(g.user)
+        db.session.commit()
+        session.clear()
+        flash("회원 탈퇴가 완료되었습니다.")
+    return redirect(url_for('main.index'))
+
+
+
+@bp.route('/coupons', endpoint='coupons', methods=['GET'])
+@login_required
+def coupons_page():
+    # 1. 쿠폰 데이터 안전하게 가져오기
+    raw_coupons = getattr(g.user, "coupons", []) or []
+
+    # 2. 파이썬에서 미리 분류 (템플릿 부하 감소)
+    available_coupons = []
+    used_coupons = []
+
+    for c in raw_coupons:
+        if getattr(c, "is_used", False):
+            used_coupons.append(c)
+        else:
+            available_coupons.append(c)
+
+    # 3. 정리된 데이터만 템플릿으로 전달
+    return render_template(
+        'auth/coupons.html',
+        available_coupons=available_coupons,
+        used_coupons=used_coupons
+    )
 
 #구글 로그인
 #

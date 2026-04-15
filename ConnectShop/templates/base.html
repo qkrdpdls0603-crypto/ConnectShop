@@ -18,14 +18,15 @@
         position: relative; /* 🌟 추가: 파란색 밑줄이 달릴 기준점 설정 */
     }
 
-    /* 🌟 추가: 마우스가 메뉴 덩어리(dropdown)에 올라가면 글자를 까맣고 굵게 변경 */
-    .apple-nav .dropdown:hover > .nav-link {
+/* 🌟 복구: 모든 메뉴(nav-item)에 마우스를 올리면 글자가 까맣고 굵어지게 변경 */
+    .apple-nav .nav-item:hover > .nav-link {
         color: #000 !important;
-        font-weight: 700;
+        /* font-weight 대신 그림자를 이용해 레이아웃이 깨지지 않도록 방어 */
+        text-shadow: 0 0 0.5px #000, 0 0 0.5px #000;
     }
 
-    /* 🌟 추가: 삼성 스타일의 파란색 밑줄 애니메이션 */
-    .apple-nav .dropdown:hover > .nav-link::after {
+    /* 🌟 복구: 모든 메뉴(nav-item)에 삼성 스타일의 파란색 밑줄 애니메이션 적용 */
+    .apple-nav .nav-item:hover > .nav-link::after {
         content: '';
         position: absolute;
         bottom: 0px;
@@ -41,6 +42,7 @@
         border: none;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 1100;
     }
 
     /* --- 메가 검색 패널 스타일 --- */
@@ -120,6 +122,78 @@
         height: auto;
         object-fit: contain;
     }
+
+/* --- 장바구니 패널 스타일 (검색창과 동일) - 팀원 작업 --- */
+    .cart-panel {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: #f8f9fa;
+        padding: 40px 0 60px 0;
+        z-index: 1045;
+        border-top: 1px solid #ddd;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-10px);
+        transition: all 0.3s ease-in-out;
+    }
+
+    .cart-panel.show {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+/* <<<<<<< HEAD */
+.cart-brief-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.cart-brief-item:last-child {
+    border-bottom: none;
+}
+
+.btn-circle-qty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 1.5px solid #d2d2d7;
+    border-radius: 50%;
+    color: #1d1d1f;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    transition: all 0.2s ease;
+    background-color: white;
+}
+
+.btn-circle-qty:hover {
+    background-color: #f5f5f7;
+    border-color: #86868b;
+    color: #0071e3;
+}
+/* ======= */
+
+    /* 푸터 링크 스타일: 평소에는 조용히, 호버 시에는 확실하게 - 팀장님 작업 */
+    .footer-link {
+        color: #6c757d !important; /* Bootstrap text-muted 색상 고정 */
+        transition: all 0.2s ease;
+        display: inline-block;
+    }
+    .footer-link:hover {
+        color: #000 !important; /* 마우스 올리면 검정색으로 */
+        text-decoration: underline !important; /* 밑줄 추가 */
+        transform: translateY(-1px); /* 아주 살짝 위로 뜨는 느낌 */
+    }
+>>>>>>> 886e0ac49336dd197163ce00cd766d750a54ec9e
 </style>
 </head>
 
@@ -375,14 +449,14 @@
                     <ul class="navbar-nav align-items-center">
 
                         <li class="nav-item me-3">
-                            <a class="nav-link" href="#">고객 지원</a>
+                            <a class="nav-link" href="{{ url_for('main.support') }}">고객 지원</a>
                         </li>
 
                         <li class="nav-item me-2">
                             <a class="nav-link fs-5" href="#" id="searchTrigger"><i class="bi bi-search"></i></a>
                         </li>
                         <li class="nav-item me-2">
-                            <a class="nav-link fs-5" href="#"><i class="bi bi-bag"></i></a>
+                            <a class="nav-link fs-5" href="{{ url_for('order._list') }}" id="cartTrigger"><i class="bi bi-bag"></i></a>
                         </li>
 
                         <li class="nav-item dropdown">
@@ -404,7 +478,7 @@
                                     <a class="dropdown-item" href="{{ url_for('auth.mypage') }}">마이페이지</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url_for('order._list') }}">주문/배송조회</a>
+                                    <a class="dropdown-item" href="{{ url_for('order.my_orders') }}">주문/배송조회</a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
@@ -422,7 +496,7 @@
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="#">
+                                    <a class="dropdown-item" href="{{ url_for('order.find_guest_order') }}">
                                         주문/배송조회
                                     </a>
                                 </li>
@@ -493,6 +567,70 @@
                 </div>
             </div>
         </div>
+        <div id="cartPanel" class="cart-panel shadow-sm">
+            <div class="container">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="fw-bold">장바구니</h2>
+                    <button type="button" class="btn-close" id="cartCloseBtn"></button>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        {% if cart_items %}
+                            {% for item in cart_items[:3] %}
+                            <div class="cart-brief-item d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('static', filename='images/' + item.image) }}"
+                                         style="width: 50px; height: 50px; object-fit: contain;" class="me-3">
+                                    <div>
+                                        <span class="fw-bold d-block">{{ item.product_name }}</span>
+                                        <div class="d-flex align-items-center mt-1 qty-control">
+                                            <a href="javascript:void(0);"
+                                               class="btn-circle-qty mx-2"
+                                               onclick="updateQuantity({{ item.product_id }}, 'dec', this); return false;">-</a>
+
+                                            <span class="qty-text" id="qty-{{ item.product_id }}">{{ item.quantity }}</span>
+
+                                            <a href="javascript:void(0);"
+                                               class="btn-circle-qty mx-2"
+                                               onclick="updateQuantity({{ item.product_id }}, 'inc', this); return false;">+</a>
+
+                                            <span class="ms-2 text-muted small">/ {{ "{:,}".format(item.price) }}원</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <a href="{{ url_for('order.delete', product_id=item.product_id) }}" class="text-danger ms-2">
+                                    <i class="bi bi-x-circle"></i>
+                                </a>
+                            </div>
+                            {% endfor %}
+                            <div class="mt-3">
+                                <a href="{{ url_for('order._list') }}" class="btn btn-outline-dark btn-sm rounded-pill">장바구니 전체보기</a>
+                            </div>
+                        {% else %}
+                            <p class="py-4 text-muted">장바구니가 비어 있습니다.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-4 text-end">
+                        <div class="text-muted small">총 금액</div>
+                        <div class="fs-3 fw-bold mb-3">
+                            <span id="panel-total-price">
+                                {% if total_price %}
+                                    {{ "{:,}".format(total_price) }}원
+                                {% else %}
+                                    0원
+                                {% endif %}
+                            </span>
+                        </div>
+                        <a href="{{ url_for('order.checkout') }}" class="btn btn-primary w-100 py-3 rounded-4 {% if not cart_items %}disabled{% endif %}">
+                            바로 구매하기
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </header>
 
     <main class="container my-5 min-vh-100">
@@ -504,10 +642,18 @@
     <footer class="bg-light text-center text-muted py-4 border-top">
         <div class="container">
             <div class="row mb-3">
-                <div class="col-md-3"><strong>회사소개</strong></div>
-                <div class="col-md-3"><strong>이용약관</strong></div>
-                <div class="col-md-3"><strong>개인정보처리방침</strong></div>
-                <div class="col-md-3"><strong>고객지원 (FAQ)</strong></div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('main.company') }}" class="text-decoration-none fw-bold footer-link">회사소개</a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('main.preparing') }}" class="text-decoration-none fw-bold footer-link">이용약관</a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('main.preparing') }}" class="text-decoration-none fw-bold footer-link">개인정보처리방침</a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{{ url_for('main.support') }}" class="text-decoration-none fw-bold footer-link">고객지원 (FAQ)</a>
+                </div>
             </div>
             <p class="mb-0">© 2026 ConnectShop. All rights reserved.</p>
             <p class="small">사업자등록번호: 123-45-67890 | 대표자: OOO | 고객센터: 1588-0000</p>
@@ -523,6 +669,11 @@
             const searchCloseBtn = document.getElementById('searchCloseBtn');
             const searchInput = document.querySelector('.search-input');
 
+            const cartTrigger = document.getElementById('cartTrigger');
+            const cartPanel = document.getElementById('cartPanel');
+            const cartCloseBtn = document.getElementById('cartCloseBtn');
+
+
             // 돋보기 클릭 시 열기/닫기
             searchTrigger.addEventListener('click', function(e) {
                 e.preventDefault(); // 기본 링크 이동 방지
@@ -536,9 +687,61 @@
             searchCloseBtn.addEventListener('click', function() {
                 searchPanel.classList.remove('show');
             });
+
+            cartTrigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                searchPanel.classList.remove('show'); // 검색창 열려있으면 닫기
+                cartPanel.classList.toggle('show');
+            });
+
+            cartCloseBtn.addEventListener('click', () => cartPanel.classList.remove('show'));
+
+            searchTrigger.addEventListener('click', () => cartPanel.classList.remove('show'));
         });
+
+        async function updateQuantity(productId, action, btnElement) {
+            const qtySpan = document.getElementById(`qty-${productId}`);
+            if (!qtySpan) return;
+
+            let currentQty = parseInt(qtySpan.innerText);
+
+            if (action === 'dec' && currentQty <= 1) {
+                if (confirm("상품을 장바구니에서 삭제하시겠습니까?")) {
+                    location.href = `/order/delete/${productId}`;
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch(`/order/modify/${productId}/${action}`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' } // Flask 호환성
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.querySelectorAll(`[id="qty-${productId}"]`).forEach(el => {
+                        el.innerText = data.new_quantity;
+                    });
+
+                    document.querySelectorAll(`[id="item-total-${productId}"]`).forEach(el => {
+                        el.innerText = data.item_total + '원';
+                    });
+
+                    const subtotal = document.getElementById('summary-subtotal');
+                    const total = document.getElementById('summary-total');
+                    const panelTotal = document.getElementById('panel-total-price');
+
+                    if (subtotal) subtotal.innerText = data.total_price + '원';
+                    if (total) total.innerText = data.total_price + '원';
+                    if (panelTotal) panelTotal.innerText = data.total_price + '원';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
     </script>
-</body>
 </body>
 
 </html>

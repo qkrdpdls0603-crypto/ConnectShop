@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='order.css') }}">
+
+<div class="complete-container {{ 'order-cancelled' if order.status == '주문취소' }}">
+    <div class="order-header">
+        <div class="success-icon">
+            <i class="bi {{ 'bi-x-circle' if order.status == '주문취소' else 'bi-receipt' }}"></i>
+        </div>
+        <h1>주문 상세 내역</h1>
+        <p>주문번호 #{{ order.id }} | {{ order.order_date.strftime('%Y. %m. %d') }}</p>
+
+        <span class="status-badge" style="background-color: {{ '#86868b' if order.status == '주문취소' else '#0071e3' }};">
+            {{ order.status if order.status else '결제완료' }}
+        </span>
+    </div>
+
+    <div class="info-card">
+        <div class="card-section">
+            <h3 class="section-label">주문 상품</h3>
+            <div class="detail-product-list">
+                {% for item in order.items %}
+                <div class="detail-product-item">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="product-thumb">
+                            <img src="{{ url_for('static', filename='images/menu/' + item.product.image_path) }}" alt="{{ item.product.name }}">
+                        </div>
+                        <div>
+                            <p class="item-name mb-0">{{ item.product.name }}</p>
+                            <p class="item-meta mb-0">{{ item.quantity }}개 / {{ "{:,}".format(item.price) }}원</p>
+                        </div>
+                    </div>
+                    <div class="item-price">{{ "{:,}".format(item.price * item.quantity) }}원</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="info-card">
+        <div class="card-section">
+            <h3 class="section-label">배송 및 결제 정보</h3>
+            <div class="info-row"><span>받는 분</span><span class="info-value">{{ order.recipient }}</span></div>
+            <div class="info-row"><span>연락처</span><span class="info-value">{{ order.phone }}</span></div>
+            <div class="info-row"><span>배송 주소</span><span class="info-value">{{ order.address }}</span></div>
+            <hr class="section-hr">
+            <div class="info-row"><span>결제 수단</span><span class="info-value">{{ order.payment_method }}</span></div>
+            <div class="info-row total-row"><span>총 결제 금액</span><span class="info-value">{{ "{:,}".format(order.total_price) }}원</span></div>
+        </div>
+    </div>
+
+    {% if order.status == '결제완료' %}
+        <div class="info-card cancel-card">
+            <div class="card-section">
+                <h3 class="section-label" style="color: #ff3b30;">주문 취소</h3>
+                <form action="{{ url_for('order.cancel_order', order_id=order.id) }}" method="POST">
+                    {% if not g.user %}
+                        <p class="small text-muted mb-3">비회원 주문 취소를 위해 연락처를 입력해주세요.</p>
+                        <input type="text" name="phone" class="form-control cancel-input" placeholder="010-0000-0000" required>
+                    {% else %}
+                        <p class="small text-muted mb-3">주문을 취소하시겠습니까? 취소 후에는 되돌릴 수 없습니다.</p>
+                    {% endif %}
+                    <button type="submit" class="btn-cancel" onclick="return confirm('정말 주문을 취소하시겠습니까?')">
+                        주문 취소하기
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% elif order.status == '주문취소' %}
+        <div class="info-card" style="background: #f5f5f7; border: 1px solid #d2d2d7; text-align: center;">
+            <div class="card-section">
+                <i class="bi bi-info-circle" style="color: #86868b; font-size: 1.5rem; display: block; margin-bottom: 5px;"></i>
+                <h3 class="section-label" style="color: #86868b; margin-bottom: 5px;">취소된 주문 내역입니다</h3>
+                <p class="small text-muted mb-0">해당 주문에 대한 환불 절차는 결제 수단에 따라 3~5일 소요될 수 있습니다.</p>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="action-group">
+        <a href="{{ url_for('order.my_orders') if g.user else url_for('main.index') }}" class="btn-complete btn-complete-secondary">
+            {{ '목록으로' if g.user else '메인으로' }}
+        </a>
+        <a href="{{ url_for('main.index') }}" class="btn-complete btn-complete-primary">쇼핑 계속하기</a>
+    </div>
+</div>
+{% endblock %}

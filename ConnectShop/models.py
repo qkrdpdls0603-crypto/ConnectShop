@@ -24,7 +24,13 @@ class User(db.Model):
     # join_date: 회원가입을 한 날짜와 시간입니다. (현재 시간이 자동으로 들어갑니다)
     join_date = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # join_date 컬럼 바로 아래에 이 함수를 하나만 남기면 됩니다.
+    def __repr__(self):
+        return f'<User {self.username}>'
+
+# =========================================================
 # 2. 멤버십 혜택(MembershipBenefit) 테이블: 멤버십 회원이 가진 특별한 혜택 정보입니다.
+# =========================================================
 class MembershipBenefit(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # user_id: '누구의 혜택인가?'를 알기 위해 User 테이블의 id를 연결(ForeignKey)합니다.
@@ -67,11 +73,9 @@ class Product(db.Model):
     description = db.Column(db.Text, nullable=True)
     # image_path: 화면에 띄워줄 상품 사진 파일의 위치(경로)입니다.
     image_path = db.Column(db.String(200), nullable=True)
-
 # =========================================================
 # [팀원 3: 박예인님 담당] 장바구니 및 주문/결제 그룹
 # =========================================================
-
 # 5. 장바구니(Cart) 테이블: 고객이 쇼핑하다가 담아둔 물건들입니다.
 class Cart(db.Model):
     id = db.Column(db.Integer, primary_key=True)

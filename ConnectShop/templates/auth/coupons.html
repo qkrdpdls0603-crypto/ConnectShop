@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='coupons.css') }}">
+<div class="coupon-page-container">
+    <div class="coupon-main-tabs">
+        <button class="tab-btn active" data-tab="available">사용가능 쿠폰</button>
+        <button class="tab-btn" data-tab="used">사용 완료</button>
+    </div>
+
+    <div class="coupon-content-area">
+        <div id="available" class="tab-content active">
+            {% if available_coupons %}
+                <div class="coupon-list">
+                    {% for coupon in available_coupons %}
+                        <div class="coupon-card">
+                            <div class="coupon-logo">
+                                <img src="{{ url_for('static', filename='img/coupon-icon.png') }}" alt="C">
+                            </div>
+                            <div class="coupon-details">
+                                <span class="brand-name">북스토어 혜택</span>
+                                <h4 class="discount-title">{{ "{:,}".format(coupon.discount_amount) }}원 할인</h4>
+                                <p class="condition">조건 없이 사용 가능</p>
+                            </div>
+                            <button class="action-btn">사용하기</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">🎫</div>
+                    <p>쿠폰이 없어요</p>
+                    <a href="{{ url_for('main.index') }}" class="btn-get-coupon">새 쿠폰 받기</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <div id="used" class="tab-content">
+            {% if used_coupons %}
+                <div class="coupon-list used">
+                    {% for coupon in used_coupons %}
+                        <div class="coupon-card is-used">
+                            <div class="coupon-details">
+                                <span class="brand-name">사용 완료</span>
+                                <h4 class="discount-title">{{ "{:,}".format(coupon.discount_amount) }}원 할인</h4>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <p>사용 완료한 쿠폰 내역이 없습니다.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="coupon-footer">
+        <h5>유의사항</h5>
+        <ul>
+            <li>쿠폰 사용처의 사정에 따라 쿠폰 발급이 조기 종료되거나, 사용이 제한될 수 있습니다.</li>
+            <li>쿠폰의 발급 및 사용 조건은 정책에 따르며 자세한 사항은 고객센터를 확인해주세요.</li>
+        </ul>
+    </div>
+</div>
+
+
+<script>
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(btn.dataset.tab).classList.add('active');
+        });
+    });
+</script>
+
+{% endblock %}

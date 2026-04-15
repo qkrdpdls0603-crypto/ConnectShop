@@ -1,51 +1,7 @@
 {% extends 'base.html' %}
 {% block content %}
 <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
-
-<style>
-    .checkout-wrapper {
-        display: flex;
-        max-width: 1000px;
-        margin: 50px auto;
-        gap: 50px;
-    }
-    .checkout-form-section { flex: 2; }
-    .checkout-summary-section {
-        flex: 1;
-        background: #f5f5f7;
-        padding: 30px;
-        border-radius: 20px;
-        height: fit-content;
-        position: sticky;
-        top: 40px;
-    }
-
-    /* 입력창 스타일 */
-    .form-section { margin-bottom: 40px; }
-    .section-title { font-size: 24px; font-weight: 600; margin-bottom: 20px; }
-    .input-row { display: flex; gap: 15px; margin-bottom: 15px; }
-    .input-row > div { flex: 1; }
-    .field-label { font-size: 12px; color: #86868b; margin-bottom: 6px; }
-    .form-control {
-        width: 100%; padding: 16px; font-size: 17px;
-        border: 1px solid #d2d2d7; border-radius: 12px; outline: none;
-    }
-    .form-control:focus { border-color: #0071e3; box-shadow: 0 0 0 4px rgba(0,113,227,0.1); }
-
-    /* 결제 수단 라디오 버튼 스타일 */
-    .payment-option {
-        display: flex; align-items: center; gap: 15px; padding: 20px;
-        border: 1px solid #d2d2d7; border-radius: 12px; cursor: pointer; margin-bottom: 10px;
-    }
-
-    /* ★ 주문 완료 버튼 스타일 ★ */
-    .btn-submit {
-        width: 100%; background-color: #0071e3; color: white; border: none;
-        padding: 18px; border-radius: 12px; font-size: 17px; font-weight: 600;
-        cursor: pointer; margin-top: 20px; transition: background 0.2s;
-    }
-    .btn-submit:hover { background-color: #0077ed; }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='order.css') }}">
 
 <div class="checkout-wrapper">
     <div class="checkout-form-section">
@@ -79,14 +35,38 @@
             </div>
 
             <div class="form-section">
-                <h2 class="section-title">결제 수단</h2>
+                <h2 class="section-title">결제 방식</h2>
+
                 <label class="payment-option">
-                    <input type="radio" name="payment_method" value="card" checked>
-                    <strong>신용카드</strong>
+                    <input type="radio" name="payment_method" value="신용카드/체크카드" checked onclick="togglePaymentFields('card')">
+                    <div class="option-content">
+                        <strong>신용카드 / 체크카드</strong>
+                        <span>모든 카드사 이용 가능</span>
+                    </div>
                 </label>
-                <label class="payment-option">
-                    <input type="radio" name="payment_method" value="transfer">
-                    <strong>무통장 입금</strong>
+
+                <div id="card-info-fields" style="margin-top: 15px; padding: 20px; background: #f5f5f7; border-radius: 12px;">
+                    <div class="field-label">카드 번호</div>
+                    <input type="text" class="form-control" placeholder="0000 0000 0000 0000" maxlength="19" oninput="formatCardNumber(this)">
+
+                    <div class="input-row" style="margin-top: 15px;">
+                        <div>
+                            <div class="field-label">유효기간 (MM/YY)</div>
+                            <input type="text" class="form-control" placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this)">
+                        </div>
+                        <div>
+                            <div class="field-label">CVC</div>
+                            <input type="password" class="form-control" placeholder="***" maxlength="3">
+                        </div>
+                    </div>
+                </div>
+
+                <label class="payment-option" style="margin-top: 10px;">
+                    <input type="radio" name="payment_method" value="무통장입금" onclick="togglePaymentFields('transfer')">
+                    <div class="option-content">
+                        <strong>무통장 입금</strong>
+                        <span>주문 후 24시간 이내 입금</span>
+                    </div>
                 </label>
             </div>
         </form>
@@ -147,6 +127,30 @@ else if (len <= 7) res = val.substr(0, 3) + "-" + val.substr(3);
 else res = val.substr(0, 3) + "-" + val.substr(3, 4) + "-" + val.substr(7, 4);
 
 target.value = res;
+}
+
+function togglePaymentFields(method) {
+    const cardFields = document.getElementById('card-info-fields');
+    if (method === 'card') {
+        cardFields.style.display = 'block';
+    } else {
+        cardFields.style.display = 'none';
+    }
+}
+
+function formatCardNumber(target) {
+    let val = target.value.replace(/\D/g, '');
+    let res = val.match(/.{1,4}/g);
+    target.value = res ? res.join(' ') : val;
+}
+
+function formatExpiry(target) {
+    let val = target.value.replace(/\D/g, '');
+    if (val.length >= 2) {
+        target.value = val.substring(0, 2) + '/' + val.substring(2, 4);
+    } else {
+        target.value = val;
+    }
 }
 </script>
 

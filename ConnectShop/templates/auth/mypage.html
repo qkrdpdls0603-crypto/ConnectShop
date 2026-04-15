@@ -3,11 +3,10 @@
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='mstyle.css') }}">
 
-<div class="container">
+<div class="mypage-header-wrap">
     <div class="my-info-title">마이페이지</div>
 
-    <!-- 상단 네비게이션 -->
-    <nav class="nav-container">
+    <nav class="nav-container1">
         <ul class="nav-main">
             <li class="nav-item" onclick="showSubMenu('account', this)">나의 계정정보</li>
             <li class="nav-item" onclick="showSubMenu('shopping', this)">쇼핑</li>
@@ -19,117 +18,150 @@
         </ul>
     </nav>
 
-    <!-- 서브메뉴 영역 -->
     <div id="subMenuDisplay" class="sub-menu-display">
         <ul id="subMenuList" class="sub-menu-list"></ul>
     </div>
+</div>
 
-    <!-- 프로필 카드 -->
-    <div class="profile-card">
-        <div class="profile-img">
-            <i class="bi bi-person-circle" style="font-size: 3rem;"></i>
-        </div>
-        <div class="profile-detail">
-            <div class="user-name">
-                {% if g.user %}
-                {{ g.user.username }}님 반가워요!
-                {% else %}
-                로그인이 필요합니다.
-                {% endif %}
-            </div>
-            <div class="user-email">{{ g.user.email if g.user else '' }}</div>
-        </div>
-    </div>
+<div class="mypage-body-wrap">
+    <div class="mypage-container">
 
-    <!-- 두 번째 네비게이션 -->
-    <div class="nav-container">
-        <div class="nav-item active" onclick="showSubMenu('benefit', this)">나의 혜택</div>
-        <div class="nav-item" onclick="showSubMenu('shopping', this)">쇼핑 기록</div>
-        <div class="nav-item" onclick="showSubMenu('wishlist', this)">관심 목록</div>
-    </div>
+        <div class="m-header-grid">
+            <div class="m-grid-item m-profile-section" onclick="location.href='{{ url_for('auth.mypage') }}'">
+                <div class="m-profile-icon">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="m-profile-info">
+                    <div class="m-user-name">
+                        {% if g.user %}{{ g.user.username }}님{% else %}로그인 필요{% endif %}
+                    </div>
+                    <div class="m-user-email">
+                        {{ g.user.email if g.user else '로그인 후 이용해주세요' }}
+                    </div>
 
-    <!-- 두 번째 서브메뉴 -->
-    <div id="subMenuArea" class="sub-menu-area">
-        <ul id="subMenuList2">
-            <li><a href="#">쿠폰함</a></li>
-            <li><a href="#">포인트 내역</a></li>
-        </ul>
-    </div>
+                    {% if g.user %}
+                    <div class="m-user-join-date">가입일 · {{ g.user.join_date.strftime('%Y.%m.%d') if g.user.join_date else '-' }}</div>
+                    <div class="m-action-links">
+                        <a href="{{ url_for('auth.mypage') }}" class="m-edit-link">정보수정 ></a>
+                        <span class="m-divider">|</span>
+                        <a href="#" class="m-withdraw-link"
+                            onclick="confirmWithdraw(event, {{ 'true' if g.user.is_membership else 'false' }})">회원탈퇴</a>
+                    </div>
 
-    <!-- 상태바 -->
-    <div class="status-bar">
-        <div class="status-item">
-            <div class="icon-box"></div>
-            <span class="status-label">최근주문</span>
-            <span class="status-count">0</span>
-        </div>
-        <div class="status-item">
-            <div class="icon-box"></div>
-            <span class="status-label">배송중</span>
-            <span class="status-count">0</span>
-        </div>
-        <div class="status-item">
-            <div class="icon-box"></div>
-            <span class="status-label">배송완료</span>
-            <span class="status-count">0</span>
-        </div>
-        <div class="status-item">
-            <div class="icon-box"></div>
-            <span class="status-label">찜한 제품</span>
-            <span class="status-count">0</span>
-        </div>
-        <div class="status-item">
-            <div class="icon-box"></div>
-            <span class="status-label">상품평 작성</span>
-            <span class="status-count">0</span>
-        </div>
-    </div>
-
-    <!-- 제품 관리 -->
-    <section>
-        <div class="section-title">
-            <h3>나의 제품 관리</h3>
-            <span class="view-all">전체보기</span>
-        </div>
-        <div class="register-banner">
-            <p style="margin: 0; font-weight: 500;">제품을 직접 등록하고 편리한 서비스를 만나보세요</p>
-            <a href="#" class="btn-reg">등록하기</a>
-        </div>
-    </section>
-
-    <!-- 추천 제품 -->
-    <section>
-        <div class="section-title">
-            <h3>{{ g.user.username if g.user else '고객' }}님을 위한 맞춤 제품</h3>
-        </div>
-        <div class="product-scroll">
-            <div class="product-card">
-                <div class="product-img"></div>
-                <div class="p-info">
-                    <span class="brand">BRAND NAME</span>
-                    <span class="name">추천 제품 모델명 01</span>
-                    <span class="price">129,000원</span>
+                    <form id="withdrawForm" action="{{ url_for('auth.withdraw') }}" method="POST" style="display:none;">
+                    </form>
+                    {% endif %}
                 </div>
             </div>
-            <div class="product-card">
-                <div class="product-img"></div>
-                <div class="p-info">
-                    <span class="brand">BRAND NAME</span>
-                    <span class="name">추천 제품 모델명 02</span>
-                    <span class="price">89,000원</span>
+
+            <div class="m-grid-item m-data-box">
+                <div class="m-data-label">보증 서비스</div>
+                <div class="m-data-value">
+                    {# g.user가 있고 멤버십이 활성화된 경우만 표시 #}
+                    {% if g.user and g.user.is_membership %}
+                        <span style="color: #007bff; font-weight: bold;">Care+ 활성</span>
+                    {% else %}
+                        <span style="color: #868e96; font-size: 0.9rem;">미가입</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="m-grid-item m-data-box">
+                <div class="m-data-label">배송 혜택</div>
+                <div class="m-data-value">
+                    {% if g.user and g.user.is_membership %}
+                        <span style="color: #007bff; font-weight: bold;">무제한 무료</span>
+                    {% else %}
+                        <span style="font-size: 0.9rem; color: #212529;">일반 배송</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="m-grid-item m-data-box coupon-info-box">
+                <div class="m-data-label">보유 쿠폰</div>
+                <div class="m-data-value">
+                    <strong style="color:red;">{{ coupon_count or 0 }}</strong> 장
+                    <div style="font-size: 11px; margin-top: 4px;">
+                        {% if g.user and g.user.is_membership %}
+                        <span style="color:#007bff;">(멤버십 전용 혜택 포함)</span>
+                        {% else %}
+                        <span style="color:#999;">(기본 쿠폰 제공)</span>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-    </section>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="icon-box"></div>
+                <span class="status-label">최근주문</span>
+                <span class="status-count">0</span>
+            </div>
+            <div class="status-item">
+                <div class="icon-box"></div>
+                <span class="status-label">배송중</span>
+                <span class="status-count">0</span>
+            </div>
+            <div class="status-item">
+                <div class="icon-box"></div>
+                <span class="status-label">배송완료</span>
+                <span class="status-count">0</span>
+            </div>
+            <div class="status-item">
+                <div class="icon-box"></div>
+                <span class="status-label">찜한 제품</span>
+                <span class="status-count">0</span>
+            </div>
+            <div class="status-item">
+                <div class="icon-box"></div>
+                <span class="status-label">상품평 작성</span>
+                <span class="status-count">0</span>
+            </div>
+        </div>
+
+        <section>
+            <div class="section-title">
+                <h3>나의 제품 관리</h3>
+                <span class="view-all">전체보기</span>
+            </div>
+            <div class="register-banner">
+                <p style="margin: 0; font-weight: 500;">제품을 직접 등록하고 편리한 서비스를 만나보세요</p>
+                <a href="#" class="btn-reg">등록하기</a>
+            </div>
+        </section>
+
+        <section>
+            <div class="section-title">
+                <h3>{{ g.user.username if g.user else '고객' }}님을 위한 맞춤 제품</h3>
+            </div>
+            <div class="product-scroll">
+                <div class="product-card">
+                    <div class="product-img"></div>
+                    <div class="p-info">
+                        <span class="brand">BRAND NAME</span>
+                        <span class="name">추천 제품 모델명 01</span>
+                        <span class="price">129,000원</span>
+                    </div>
+                </div>
+                <div class="product-card">
+                    <div class="product-img"></div>
+                    <div class="p-info">
+                        <span class="brand">BRAND NAME</span>
+                        <span class="name">추천 제품 모델명 02</span>
+                        <span class="price">89,000원</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
 </div>
 
 <script>
     /* 서브메뉴 데이터 */
     const subMenuData = {
         'account': [
-            { name: '회원정보 수정', link: "{{ url_for('auth.find_id') }}" },
-            { name: '비밀번호 변경', link: "{{ url_for('auth.find_password') }}" },
-            { name: '배송지 관리', link: '#' },
+            { name: '회원정보 수정', link: "{{ url_for('auth.find_id') }}" }, // 쉼표 오류 수정됨
             { name: '수신동의 설정', link: '#' },
             { name: '나의정보', link: '#' },
             { name: '멤버십', link: '#' },
@@ -138,11 +170,11 @@
             { name: 'A/S이력', link: '#' }
         ],
         'benefit': [
-            { name: '쿠폰함', link: '#' },
+            { name: '쿠폰함', link: "{{ url_for('auth.coupons') }}" },
             { name: '포인트 내역', link: '#' }
         ],
         'shopping': [
-            { name: '주문/배송조회', link: "{{ url_for('order._list') }}" },
+            { name: '주문/배송조회', link: "{{ url_for('order.my_orders') if url_for('order.my_orders') else '#' }}" },
             { name: '취소/반품 내역', link: '#' },
             { name: '주문취소조회', link: '#' },
             { name: '결제내역조회', link: '#' },
@@ -154,11 +186,10 @@
         ],
         'coupon': [
             { name: '쿠폰받기', link: '#' },
-            { name: '보유쿠폰', link: '#' }
+            { name: '보유쿠폰', link: "{{ url_for('auth.coupons') }}" }
         ]
     };
 
-    /* 서브메뉴 출력 함수 */
     function showSubMenu(menuKey, element) {
         const displayArea = document.getElementById('subMenuDisplay');
         const listArea = document.getElementById('subMenuList');
@@ -180,11 +211,25 @@
         }
     }
 
-    /* 페이지 로드 시 기본 탭 선택 */
     window.onload = function () {
         const firstTab = document.querySelector('.nav-main .nav-item');
         if (firstTab) showSubMenu('account', firstTab);
     };
+
+    function confirmWithdraw(event, isMembership) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        let message = "정말로 탈퇴하시겠습니까?";
+        if (isMembership) {
+            message = "현재 멤버십 이용 중입니다.\n탈퇴 시 애플케어 보증 및 무료 배송 혜택이 즉시 소멸됩니다.\n\n정말로 탈퇴하시겠습니까?";
+        }
+
+        if (confirm(message)) {
+            const form = document.getElementById('withdrawForm');
+            if (form) form.submit();
+        }
+    }
 </script>
 
 {% endblock %}
