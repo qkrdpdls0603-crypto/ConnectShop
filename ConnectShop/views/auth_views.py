@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from ConnectShop import db
 from ConnectShop.forms import UserCreateForm, UserLoginForm, FindIdForm, ResetPasswordForm
-from ConnectShop.models import User
+from ConnectShop.models import User, Coupon
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -187,6 +187,41 @@ def coupons_page():
         available_coupons=available_coupons,
         used_coupons=used_coupons
     )
+
+
+@bp.route('/get-welcome-coupon', methods=['POST'])
+@login_required
+def get_welcome_coupon():
+    # 1. 중복 발급 확인 (계정당 1회 제한)
+    # 기존에 발급받은 쿠폰이 하나라도 있다면 발급하지 않음
+    if g.user.coupons:
+        flash("이미 쿠폰을 발급받으셨거나 보유 중입니다. (계정당 1회 참여 가능)")
+        return redirect(url_for('auth.coupons'))
+
+    # 2. 멤버십 상태에 따른 금액 결정
+    if g.user.is_membership:
+        amount = 3000
+        msg = "멤버십 전용 3,000원 쿠폰이 발급되었습니다!"
+    else:
+        amount = 1000
+        msg = "신규 가입 축하 1,000원 쿠폰이 발급되었습니다!"
+
+    # 3. 쿠폰 데이터 생성 및 저장
+    new_coupon = Coupon(
+        user_id=g.user.id,
+        discount_amount=amount,
+        is_used=False
+    )
+
+    db.session.add(new_coupon)
+    db.session.commit()
+
+    flash(msg)
+    return redirect(url_for('auth.coupons'))
+
+
+
+
 #카카오 로그인
 KAKAO_CLIENT_ID = "edc2045d293aaefae2c494a92245c19a"
 KAKAO_REDIRECT_URI = "http://127.0.0.1:5000/auth/kakao/callback"
