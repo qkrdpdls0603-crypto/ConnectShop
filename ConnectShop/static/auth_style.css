@@ -146,3 +146,43 @@
     text-align: center;
     box-sizing: border-box;
 }
+/* ------------------------------------------
+   5. 소셜 로그인 (텍스트 크기 & 위치 미세 조정)
+------------------------------------------ */
+
+.auth-btn.social.kakao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* ✅ 심볼과 글자 사이 간격을 살짝 줄임 */
+    gap: 6px;
+
+    width: 460px !important;
+    height: 50px !important;
+    box-sizing: border-box !important;
+    border: 1px solid #FEE500 !important;
+    border-radius: 6px !important;
+
+    background-color: #FEE500;
+    color: #191919;
+    text-decoration: none;
+
+    /* ✅ 글자 크기를 16px -> 14.5px 정도로 축소 (너무 크지 않게) */
+    font-size: 14.5px !important;
+    font-weight: 600;
+
+    /* ✅ 왼쪽으로 살짝 이동시키기 위해 오른쪽에 미세한 여백 추가 */
+    padding-right: 8px !important;
+
+    cursor: pointer;
+}
+
+/* 심볼 이미지 크기도 글자에 맞춰 살짝 조정 */
+.kakao-icon {
+    width: 16px !important;   /* 글자가 작아졌으므로 아이콘도 16px로 맞춤 */
+    height: auto !important;
+    /* 심볼 자체의 위치를 미세하게 아래로 내리고 싶을 때 사용 */
+    position: relative;
+    top: 0.5px;
+}
