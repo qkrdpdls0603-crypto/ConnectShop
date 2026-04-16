@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 {% block content %}
+
+{% set flushed_messages = get_flashed_messages() %}
+
 <link rel="stylesheet" href="{{ url_for('static', filename='auth_style.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='order.css') }}">
-
 
 <div class="auth-container">
     <h5 class="login-title">비회원 주문조회</h5>

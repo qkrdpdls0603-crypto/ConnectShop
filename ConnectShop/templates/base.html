@@ -700,47 +700,83 @@
         });
 
         async function updateQuantity(productId, action, btnElement) {
-            const qtySpan = document.getElementById(`qty-${productId}`);
-            if (!qtySpan) return;
+    // [수정] ID에 의존하지 않고, 클릭된 버튼 바로 옆의 수량(span)을 직접 찾습니다.
+    const parent = btnElement.closest('.item-quantity') || btnElement.closest('.qty-control');
+    const qtySpan = parent.querySelector('.qty-num, .qty-text');
 
-            let currentQty = parseInt(qtySpan.innerText);
+    if (!qtySpan) return;
 
-            if (action === 'dec' && currentQty <= 1) {
-                if (confirm("상품을 장바구니에서 삭제하시겠습니까?")) {
-                    location.href = `/order/delete/${productId}`;
-                }
-                return;
-            }
+    // 현재 수량 파악
+    let currentQty = parseInt(qtySpan.innerText) || 0;
 
-            try {
-                const response = await fetch(`/order/modify/${productId}/${action}`, {
-                    method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' } // Flask 호환성
+    // [확인창 로직] 수량이 1인데 마이너스(-)를 누른 경우에만 실행
+    if (action === 'dec' && currentQty === 1) {
+        if (!confirm("상품을 장바구니에서 삭제하시겠습니까?")) {
+            return; // 취소를 누르면 서버에 요청을 보내지 않고 종료합니다.
+        }
+    }
+
+    try {
+        const response = await fetch(`/order/modify/${productId}/${action}`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (data.is_deleted) {
+                // 삭제 시에는 데이터 동기화를 위해 페이지를 새로고침합니다.
+                location.reload();
+            } else {
+                // 1. 모든 수량 표시 UI 동기화 (메인 + 요약패널)
+                document.querySelectorAll(`[id="qty-${productId}"]`).forEach(el => {
+                    el.innerText = data.new_quantity;
                 });
 
-                const data = await response.json();
+                // 2. 품목별 가격 업데이트
+                document.querySelectorAll(`[id="item-total-${productId}"]`).forEach(el => {
+                    el.innerText = data.item_total + '원';
+                });
 
-                if (data.success) {
-                    document.querySelectorAll(`[id="qty-${productId}"]`).forEach(el => {
-                        el.innerText = data.new_quantity;
-                    });
-
-                    document.querySelectorAll(`[id="item-total-${productId}"]`).forEach(el => {
-                        el.innerText = data.item_total + '원';
-                    });
-
-                    const subtotal = document.getElementById('summary-subtotal');
-                    const total = document.getElementById('summary-total');
-                    const panelTotal = document.getElementById('panel-total-price');
-
-                    if (subtotal) subtotal.innerText = data.total_price + '원';
-                    if (total) total.innerText = data.total_price + '원';
-                    if (panelTotal) panelTotal.innerText = data.total_price + '원';
-                }
-            } catch (error) {
-                console.error('Error:', error);
+                // 3. 전체 합계 업데이트 (배송비 로직 포함)
+                updateAllTotalDisplays(data.total_price);
             }
         }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+function updateAllTotalDisplays(totalPriceStr) {
+    const subtotalEl = document.getElementById('summary-subtotal');     // 메인: 주문 금액
+    const totalEl = document.getElementById('summary-total');           // 메인: 총 결제 금액
+    const panelTotalEl = document.getElementById('panel-total-price');  // 요약 패널: 총 금액
+
+    // 배송비 기준 요소 (반드시 id="shipping-fee-display"가 HTML에 있어야 함)
+    const shippingEl = document.getElementById('shipping-fee-display');
+
+    // 숫자로 변환
+    const pureProductTotal = parseInt(totalPriceStr.replace(/,/g, '')) || 0;
+
+    // [배송비 로직] 멤버십 '0원' 글자가 있으면 0, 아니면 3000원
+    let shippingFee = 3000;
+    if (shippingEl && (shippingEl.innerText.includes('0원') || shippingEl.innerText.includes('무료'))) {
+        shippingFee = 0;
+    }
+
+    // 메인 장바구니: 주문 금액 (배송비 제외)
+    if (subtotalEl) subtotalEl.innerText = pureProductTotal.toLocaleString() + '원';
+
+    // 메인 장바구니: 총 결제 금액 (배송비 포함) -> 이 부분이 핵심입니다.
+    if (totalEl) {
+        const finalAmount = pureProductTotal + shippingFee;
+        totalEl.innerText = finalAmount.toLocaleString() + '원';
+    }
+
+    // 요약 패널: 총 금액 (배송비 제외)
+    if (panelTotalEl) panelTotalEl.innerText = pureProductTotal.toLocaleString() + '원';
+}
     </script>
 </body>
 

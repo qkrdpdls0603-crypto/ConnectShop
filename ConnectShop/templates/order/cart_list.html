@@ -88,13 +88,25 @@
                 <span>주문 금액</span>
                 <span id="summary-subtotal">{{ "{:,}".format(total_price|int) }}원</span>
             </div>
-            <div class="summary-line">
+            <div class="summary-line" style="font-size: 0.9rem; color: #666; margin-top: 5px;">
                 <span>배송비</span>
-                <span>무료</span>
+               <span class="info-value" id="shipping-fee-display">
+                    {% if g.user and g.user.is_membership %}
+                        0원 (멤버십 혜택 적용)
+                    {% else %}
+                        3,000원
+                    {% endif %}
+                </span>
             </div>
             <div class="summary-line summary-total">
                 <span>총 결제 금액</span>
-                <span id="summary-total">{{ "{:,}".format(total_price|int) }}원</span>
+                <span id="summary-total">
+                    {% if g.user and g.user.is_membership %}
+                        {{ "{:,}".format(total_price|int) }}원
+                    {% else %}
+                        {{ "{:,}".format(total_price|int + 3000) }}원
+                    {% endif %}
+                </span>
             </div>
             <a href="{{ url_for('order.checkout') }}" style="text-decoration: none;">
                 <button class="btn-checkout">결제 확인</button>
@@ -157,7 +169,6 @@
         }
     });
 
-    // 기존의 updateQuantity 함수와 재고 체크 로직을 여기에 유지하세요.
 </script>
 {% endblock %}
 {% endblock %}

@@ -6,7 +6,7 @@
     <div class="order-header">
         <div class="success-icon">✓</div>
         <h1>감사합니다. 주문이 완료되었습니다.</h1>
-        <p>주문 번호 #{{ order.id }}</p>
+        <p>주문 번호 #{{ order_id }}</p>
     </div>
 
     <div class="info-card">
@@ -30,11 +30,11 @@
             <div class="section-label">결제 요약</div>
             <div class="info-row">
                 <span>결제 수단</span>
-                <span class="info-value">무통장 입금</span>
+                <span class="info-value">{{ order.payment_method if order else "카드/간편결제" }}</span>
             </div>
             <div class="info-row" style="margin-top: 20px; font-size: 22px; font-weight: 700;">
                 <span>최종 결제 금액</span>
-                <span class="info-value" style="color: #0071e3;">{{ "{:,}".format(order.total_price) }}원</span>
+                <span class="info-value" style="color: #0071e3;">{{ "{:,}".format(order.total_price if order else (amount|int)) }}원</span>
             </div>
         </div>
     </div>

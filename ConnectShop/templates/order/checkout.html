@@ -1,157 +1,165 @@
 {% extends 'base.html' %}
 {% block content %}
 <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+<script src="https://js.tosspayments.com/v2/standard"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='order.css') }}">
 
 <div class="checkout-wrapper">
     <div class="checkout-form-section">
-        <form id="order-form" method="POST" action="{{ url_for('order.place_order') }}">
+        <form id="order-form">
             <div class="form-section">
                 <h2 class="section-title">배송 정보</h2>
                 <div class="input-row">
                     <div>
                         <div class="field-label">수령인</div>
-                        <input type="text" name="recipient" class="form-control" placeholder="이름" required>
+                        <input type="text" id="recipient" name="recipient" class="form-control" placeholder="이름" required>
                     </div>
                     <div>
                         <div class="field-label">연락처</div>
-                        <input type="text"
-                               name="phone"
-                               id="phone"  class="form-control"
-                               placeholder="010-0000-0000"
-                               maxlength="13"
-                               oninput="formatPhoneNumber(this)"  required>
+                        <input type="text" name="phone" id="phone" class="form-control" placeholder="010-0000-0000" maxlength="13" oninput="formatPhoneNumber(this)" required>
                     </div>
                 </div>
-                <div style="margin-top: 15px;">
+                <div class="address-group" style="margin-top: 15px;">
                     <div class="field-label">배송 주소</div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <div class="postcode-row" style="display: flex; gap: 10px; margin-bottom: 10px;">
                         <input type="text" id="postcode" name="postcode" class="form-control" style="flex: 1;" placeholder="우편번호" readonly>
-                        <button type="button" onclick="execDaumPostcode()" style="padding: 0 20px; border-radius: 12px; border: 1px solid #d2d2d7; background: white; cursor: pointer;">우편번호 찾기</button>
+                        <button type="button" class="btn-address" onclick="execDaumPostcode()">우편번호 찾기</button>
                     </div>
                     <input type="text" id="address" name="address" class="form-control" placeholder="기본 주소" readonly required>
-                    <input type="text" id="address_detail" name="address_detail" class="form-control" style="margin-top:10px;" placeholder="상세 주소 (아파트, 동, 호수 등)">
+                    <input type="text" id="address_detail" name="address_detail" class="form-control" style="margin-top:10px;" placeholder="상세 주소">
                 </div>
             </div>
 
             <div class="form-section">
-                <h2 class="section-title">결제 방식</h2>
-
-                <label class="payment-option">
-                    <input type="radio" name="payment_method" value="신용카드/체크카드" checked onclick="togglePaymentFields('card')">
-                    <div class="option-content">
-                        <strong>신용카드 / 체크카드</strong>
-                        <span>모든 카드사 이용 가능</span>
-                    </div>
-                </label>
-
-                <div id="card-info-fields" style="margin-top: 15px; padding: 20px; background: #f5f5f7; border-radius: 12px;">
-                    <div class="field-label">카드 번호</div>
-                    <input type="text" class="form-control" placeholder="0000 0000 0000 0000" maxlength="19" oninput="formatCardNumber(this)">
-
-                    <div class="input-row" style="margin-top: 15px;">
-                        <div>
-                            <div class="field-label">유효기간 (MM/YY)</div>
-                            <input type="text" class="form-control" placeholder="MM/YY" maxlength="5" oninput="formatExpiry(this)">
-                        </div>
-                        <div>
-                            <div class="field-label">CVC</div>
-                            <input type="password" class="form-control" placeholder="***" maxlength="3">
-                        </div>
-                    </div>
-                </div>
-
-                <label class="payment-option" style="margin-top: 10px;">
-                    <input type="radio" name="payment_method" value="무통장입금" onclick="togglePaymentFields('transfer')">
-                    <div class="option-content">
-                        <strong>무통장 입금</strong>
-                        <span>주문 후 24시간 이내 입금</span>
-                    </div>
-                </label>
+                <div id="payment-method"></div>
+                <div id="agreement"></div>
             </div>
         </form>
     </div>
 
     <div class="checkout-summary-section">
-        <h3 style="margin-bottom: 20px;">주문 요약</h3>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+        <h3>주문 요약</h3>
+        <div class="summary-row">
             <span>상품 금액</span>
-            <span>{{ "{:,}".format(total_price) }}원</span>
+            <span>{{ "{:,}".format(total_price - (0 if (g.user and g.user.is_membership) else 3000)) }}원</span>
         </div>
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; color: #06c167;">
+        <div class="info-row">
             <span>배송비</span>
-            <span>무료</span>
+            <span class="info-value">
+                {% if g.user and g.user.is_membership %}
+                    0원 (멤버십 혜택 적용)
+                {% else %}
+                    3,000원
+                {% endif %}
+            </span>
         </div>
-        <hr style="border: 0; border-top: 1px solid #d2d2d7; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; margin-bottom: 30px;">
-            <span>총계</span>
-            <span>{{ "{:,}".format(total_price) }}원</span>
+        <hr class="summary-divider">
+        <div class="summary-total">
+            <span>총 결제 금액</span>
+            <span>
+                {% if g.user and g.user.is_membership %}
+                    {{ "{:,}".format(total_price) }}원
+                {% else %}
+                    {{ "{:,}".format(total_price + 3000) }}원
+                {% endif %}
+            </span>
         </div>
 
-        <button type="submit" form="order-form" class="btn-submit">
-            주문 완료하기
+        <button type="button" id="payment-button" class="btn-submit" onclick="requestPayment()">
+            {% if g.user and g.user.is_membership %}
+                {{ "{:,}".format(total_price) }}원 결제하기
+            {% else %}
+                {{ "{:,}".format(total_price + 3000) }}원 결제하기
+            {% endif %}
         </button>
     </div>
 </div>
 
 <script>
-function execDaumPostcode() {
-    new daum.Postcode({
-        oncomplete: function(data) {
-            var addr = '';
+document.addEventListener("DOMContentLoaded", async function() {
+    const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
+    const customerKey = "{% if g.user %}USER_{{ g.user.id }}{% else %}GUEST_{{ now_ts }}{% endif %}";
 
-            if (data.userSelectedType === 'R') {
-                addr = data.roadAddress;
-            } else {
-                addr = data.jibunAddress;
-            }
+    const isMembership = {{ 'true' if g.user and g.user.is_membership else 'false' }};
+    const productPrice = {{ total_price }};
+    const finalAmount = isMembership ? productPrice : productPrice + 3000;
 
-            document.getElementById('postcode').value = data.zonecode;
-            document.getElementById("address").value = addr;
-            document.getElementById("address_detail").focus();
+    const tossPayments = TossPayments(clientKey);
+    const widgets = tossPayments.widgets({ customerKey });
+
+    await widgets.setAmount({
+        currency: "KRW",
+        value: finalAmount
+    });
+
+    await Promise.all([
+        widgets.renderPaymentMethods({
+            selector: "#payment-method",
+            variantKey: "DEFAULT"
+        }),
+        widgets.renderAgreement({
+            selector: "#agreement",
+            variantKey: "AGREEMENT"
+        })
+    ]);
+
+    window.requestPayment = async function() {
+        const recipient = document.getElementById('recipient').value;
+        const phone = document.getElementById('phone').value;
+        const address = document.getElementById('address').value;
+        const address_detail = document.getElementById('address_detail').value;
+
+        if (!recipient || !address || !phone) {
+            alert("배송 정보를 모두 입력해주세요.");
+            return;
         }
-    }).open();
-}
 
-function formatPhoneNumber(target) {
-let val = target.value.replace(/\D/g, "");
+        try {
+            const response = await fetch('/order/save_temp_info', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    recipient: recipient,
+                    phone: phone,
+                    address: address + " " + address_detail
+                })
+            });
 
-if (val.length > 11) {
-    val = val.substring(0, 11);
-}
+            if (!response.ok) throw new Error("세션 저장 실패");
 
-let len = val.length;
-let res = "";
-if (len <= 3) res = val;
-else if (len <= 7) res = val.substr(0, 3) + "-" + val.substr(3);
-else res = val.substr(0, 3) + "-" + val.substr(3, 4) + "-" + val.substr(7, 4);
+            await widgets.requestPayment({
+                orderId: "order_temp_{{ now_ts }}",
+                orderName: "ConnectShop 상품 결제",
+                successUrl: window.location.origin + "/order/success",
+                failUrl: window.location.origin + "/order/fail",
+                customerName: recipient,
+            });
+        } catch (error) {
+            console.error("결제 중 오류 발생:", error);
+            alert("결제 처리 중 오류가 발생했습니다.");
+        }
+    };
 
-target.value = res;
-}
+    window.execDaumPostcode = function() {
+        new daum.Postcode({
+            oncomplete: function(data) {
+                var addr = data.userSelectedType === 'R' ? data.roadAddress : data.jibunAddress;
+                document.getElementById('postcode').value = data.zonecode;
+                document.getElementById("address").value = addr;
+                document.getElementById("address_detail").focus();
+            }
+        }).open();
+    };
 
-function togglePaymentFields(method) {
-    const cardFields = document.getElementById('card-info-fields');
-    if (method === 'card') {
-        cardFields.style.display = 'block';
-    } else {
-        cardFields.style.display = 'none';
-    }
-}
-
-function formatCardNumber(target) {
-    let val = target.value.replace(/\D/g, '');
-    let res = val.match(/.{1,4}/g);
-    target.value = res ? res.join(' ') : val;
-}
-
-function formatExpiry(target) {
-    let val = target.value.replace(/\D/g, '');
-    if (val.length >= 2) {
-        target.value = val.substring(0, 2) + '/' + val.substring(2, 4);
-    } else {
-        target.value = val;
-    }
-}
+    window.formatPhoneNumber = function(target) {
+        let val = target.value.replace(/\D/g, "");
+        let len = val.length;
+        let res = "";
+        if (len <= 3) res = val;
+        else if (len <= 7) res = val.substr(0, 3) + "-" + val.substr(3);
+        else res = val.substr(0, 3) + "-" + val.substr(3, 4) + "-" + val.substr(7, 4);
+        target.value = res;
+    };
+});
 </script>
-
 {% endblock %}

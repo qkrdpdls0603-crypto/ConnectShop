@@ -5,7 +5,7 @@
 <div class="figma-container py-4">
     <div class="header mb-4">
         <h3 class="fw-bold">배송 조회</h3>
-        <p class="text-muted small">송장번호: {{ order.tracking_number }}</p>
+        <p class="text-muted small">송장번호: {{ order.courier_company }} {{ order.tracking_number }}</p>
     </div>
 
     {% if info and info.progresses %}
@@ -42,8 +42,8 @@
     </p>
 
     {% set official_urls = {
-        'CJ대한통운': 'https://www.cjlogistics.com/kor/tool/parcel/tracking?invNo=',
-        '우체국택배': 'https://service.epost.go.kr/trace.RetrieveDomakskOrbitPost.comm?displayHeader=N&POST_STR=',
+        'CJ대한통운': 'https://www.cjlogistics.com/ko/tool/parcel/tracking',
+        '우체국택배': 'https://service.epost.go.kr/iservice/trace.jsp',
         '한진택배': 'https://www.hanjin.com/kor/CMS/DeliveryMgr/WaybillSch.do?mCode=MN038',
         '롯데택배': 'https://www.lotteglogis.com/home/reservation/tracking/linkView?InvNo=',
         '로젠택배': 'https://www.ilogen.com/web/personal/trace/'
