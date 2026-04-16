@@ -47,7 +47,7 @@ border-bottom: 2px solid #333;
 
 
 .nav-container1 {
-margin-bottom: 30px;
+margin-bottom: 0;
 border-bottom: 1px solid var(--border-color);
 }
 
@@ -59,6 +59,15 @@ margin: 0;
 overflow-x: auto;
 white-space: nowrap;
 }
+
+.nav-main .nav-item a {
+    display: block;
+    color: inherit;          /* li의 색상 그대로 사용 */
+    text-decoration: none;   /* 밑줄 제거 */
+    width: 100%;
+    height: 100%;
+}
+
 
 .nav-main .nav-item {
 padding: 12px 20px;
@@ -165,6 +174,49 @@ text-decoration: none; border-radius: 4px; font-size: 0.9rem;
 .product-card { min-width: 180px; flex: 0 0 auto; }
 .product-img { width: 100%; height: 200px; aspect-ratio: 345/720; border-radius: 6px; margin-bottom:
 40px; }
+
+/* 구매확정 상품 영역 - 배경 제거 */
+.product-area {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* 상품 그리드 */
+.my-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+/* 개별 상품 */
+.my-product-item {
+  text-align: center;
+}
+
+.my-product-item a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* 상품 이미지 */
+.my-product-img {
+  width: 100%;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 12px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* 상품명 */
+.my-product-name {
+  margin-top: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+  text-align: center;
+}
+
 .p-info .brand { font-size: 0.75rem; color: #888; }
 .p-info .name { font-size: 0.9rem; font-weight: 500; display: block; margin-bottom: 5px; }
 .p-info .price { font-weight: bold; font-size: 1rem; }

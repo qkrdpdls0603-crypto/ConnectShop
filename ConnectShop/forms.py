@@ -3,6 +3,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, EmailField
 from wtforms.fields.simple import SubmitField
 from wtforms.validators import DataRequired, Length, EqualTo, Email, ValidationError, Optional, Regexp
+from datetime import datetime, timezone, timedelta
+from ConnectShop.models import User, WithdrawnEmail
 
 
 class UserCreateForm(FlaskForm):
@@ -17,6 +19,33 @@ class UserCreateForm(FlaskForm):
         field.data = cleaned
         if not re.fullmatch(r'010\d{8}', cleaned):
             raise ValidationError('010으로 시작하는 11자리 핸드폰 번호를 입력하세요.')
+
+    def validate_email(self, field):
+        email = (field.data or "").strip().lower()
+        field.data = email
+
+        # 1) 이미 가입된 이메일인지 확인
+        if User.query.filter_by(email=email).first():
+            raise ValidationError("이미 가입된 이메일입니다.")
+
+        # 2) 탈퇴 후 30일 이내 재가입 차단 로직
+        record = WithdrawnEmail.query.filter_by(email=email).first()
+        if record:
+            # record.withdrawn_at이 naive datetime일 경우를 대비해 timezone 처리
+            now = datetime.now(timezone.utc)
+
+            # DB의 시간과 현재 시간의 timezone을 맞춰서 계산
+            withdrawn_at = record.withdrawn_at
+            if withdrawn_at.tzinfo is None:
+                withdrawn_at = withdrawn_at.replace(tzinfo=timezone.utc)
+
+            blocked_until = withdrawn_at + timedelta(days=30)
+
+            if now < blocked_until:
+                remain_days = (blocked_until - now).days + 1
+                raise ValidationError(
+                    f"탈퇴한 이메일은 30일간 재가입할 수 없습니다."
+                )
 
 
 class UserLoginForm(FlaskForm):
@@ -59,3 +88,4 @@ class UserUpdateForm(FlaskForm):
         field.data = cleaned
         if not re.fullmatch(r'010\d{8}', cleaned):
             raise ValidationError('010으로 시작하는 11자리 핸드폰 번호를 입력하세요.')
+

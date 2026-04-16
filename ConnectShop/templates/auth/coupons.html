@@ -35,7 +35,15 @@
                                 {% if coupon.discount_amount == 3000 and not g.user.is_membership %}
                                     <p class="condition" style="color: #ff4d4f; font-weight: bold;">멤버십 전용 쿠폰입니다</p>
                                 {% else %}
-                                    <p class="condition">조건 없이 사용 가능</p>
+                                    <p class="condition">
+                                            조건 없이 사용 가능
+                                            {% if coupon.expires_at %}
+                                                <br>
+                                                <span style="font-size: 0.8rem; color: #777;">
+                                                    유효기간: {{ coupon.expires_at.strftime('%Y-%m-%d %H:%M') }} 까지
+                                                </span>
+                                            {% endif %}
+                                        </p>
                                 {% endif %}
                             </div>
 

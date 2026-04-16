@@ -2,10 +2,11 @@ from ConnectShop import create_app, db
 from ConnectShop.models import User, MembershipBenefit, Coupon, Product, Cart, Order, OrderItem, Review, FAQ
 # 🔥 비밀번호 암호화를 위한 도구 추가
 from werkzeug.security import generate_password_hash
-
+# db 삭제 후 재생성 시 오류 예방 코드
 app = create_app()
 
 with app.app_context():
+    db.create_all()
     # --- [주의] 삭제할 때는 생성의 '역순'으로 지워야 에러가 안 납니다! ---
     print("🧹 기존 데이터를 초기화합니다...")
     OrderItem.query.delete()
