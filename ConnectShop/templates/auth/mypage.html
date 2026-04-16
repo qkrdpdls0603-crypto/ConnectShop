@@ -12,9 +12,15 @@
             <li class="nav-item" onclick="showSubMenu('shopping', this)">쇼핑</li>
             <li class="nav-item" onclick="showSubMenu('wishlist', this)">관심목록</li>
             <li class="nav-item" onclick="showSubMenu('coupon', this)">쿠폰존</li>
-            <li class="nav-item" onclick="location.href='#gift'">선물함</li>
-            <li class="nav-item" onclick="location.href='#review'">상품평</li>
-            <li class="nav-item" onclick="location.href='#qna'">구매문의</li>
+            <li class="nav-item">
+                <a href="{{ url_for('main.preparing') }}#gift">선물함</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('main.preparing') }}#review">상품평</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ url_for('main.preparing') }}#qna">구매문의</a>
+            </li>
         </ul>
     </nav>
 
@@ -42,7 +48,7 @@
                     {% if g.user %}
                     <div class="m-user-join-date">가입일 · {{ g.user.join_date.strftime('%Y.%m.%d') if g.user.join_date else '-' }}</div>
                     <div class="m-action-links">
-                        <a href="{{ url_for('auth.mypage') }}" class="m-edit-link">정보수정 ></a>
+                        <a href="{{ url_for('auth.me') }}" class="m-edit-link">정보수정 ></a>
                         <span class="m-divider">|</span>
                         <a href="#" class="m-withdraw-link"
                             onclick="confirmWithdraw(event, {{ 'true' if g.user.is_membership else 'false' }})">회원탈퇴</a>
@@ -59,7 +65,7 @@
                 <div class="m-data-value">
                     {# g.user가 있고 멤버십이 활성화된 경우만 표시 #}
                     {% if g.user and g.user.is_membership %}
-                        <span style="color: #007bff; font-weight: bold;">Care+ 활성</span>
+                        <span style="color: #007bff; font-weight: bold;">커넥션 Care+ 활성</span>
                     {% else %}
                         <span style="color: #868e96; font-size: 0.9rem;">미가입</span>
                     {% endif %}
@@ -106,7 +112,7 @@
                         <img src="{{ url_for('static', filename='images/mp/b1.png') }}" alt="배송 아이콘" width="24" height="24">
                     </div>
                     <span class="status-label">배송중</span>
-                    <span class="status-count">0</span>
+                    <span class="status-count">{{ shipping_count }}</span>
                 </a>
             </div>
             <div class="status-item">
@@ -133,15 +139,37 @@
         </div>
 
         <section>
-            <div class="section-title">
-                <h3>나의 제품 관리</h3>
-                <span class="view-all">전체보기</span>
+          <div class="section-title">
+            <h3>나의 제품 관리</h3>
+            <span class="view-all">
+              <a href="{{ url_for('order.my_orders') }}">전체보기</a>
+            </span>
+          </div>
+
+          {% if confirmed_products %}
+            <div class="register-banner product-area">
+              <div class="my-product-grid">
+                {% for product in confirmed_products %}
+                  <div class="my-product-item">
+                    <a href="{{ url_for('product.page', product_id=product.id) }}">
+                      <img class="my-product-img"
+                           src="{{ url_for('static', filename='images/menu/' ~ product.image_path) }}"
+                           alt="{{ product.name }}">
+                      <p class="my-product-name">{{ product.name }}</p>
+                    </a>
+                  </div>
+                {% endfor %}
+              </div>
             </div>
+          {% else %}
             <div class="register-banner">
-                <p style="margin: 0; font-weight: 500;">제품을 직접 등록하고 편리한 서비스를 만나보세요</p>
-                <a href="#" class="btn-reg">등록하기</a>
+              <p>제품을 직접 등록하고 편리한 서비스를 만나보세요</p>
+              <a href="#" class="btn-reg">등록하기</a>
             </div>
+          {% endif %}
         </section>
+
+
 
         <section>
             <div class="section-title">
@@ -207,9 +235,8 @@
     /* 서브메뉴 데이터 */
     const subMenuData = {
         'account': [
-            { name: '회원정보 수정', link: "{{ url_for('auth.find_id') }}" }, // 쉼표 오류 수정됨
+            { name: '회원정보 수정', link: "{{ url_for('auth.me') }}" },
             { name: '수신동의 설정', link: '#' },
-            { name: '나의정보', link: '#' },
             { name: '멤버십', link: '#' },
             { name: '배송지관리', link: '#' },
             { name: '제품관리', link: '#' },
@@ -217,8 +244,9 @@
         ],
         'shopping': [
             { name: '주문/배송조회', link: "{{ url_for('order.my_orders') if url_for('order.my_orders') else '#' }}" },
-            { name: '취소/반품 내역', link: "{{ url_for('order.my_cancel_list') }}" },
-            { name: '주문취소조회', link: '#' },
+            { name: '환불', link: '#' },
+            { name: '반품', link: '#' },
+            { name: '주문취소조회', link: "{{ url_for('order.my_cancel_list') }}" },
             { name: '결제내역조회', link: '#' },
             { name: '결제취소조회', link: '#' }
         ],

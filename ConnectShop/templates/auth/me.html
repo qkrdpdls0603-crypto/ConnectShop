@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='me.css') }}">
+
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h4 class="mb-0 fw-bold">내 정보 관리</h4>
+                </div>
+
+                <div class="card-body p-4">
+
+                    <!-- 상단 요약 정보 -->
+                    <div class="row mb-4 text-center">
+                        <div class="col-4 border-end">
+                            <p class="text-muted small mb-1">멤버십</p>
+                            <span class="badge {{ 'bg-primary' if user.is_membership else 'bg-secondary' }}">
+                                {{ '맴버십 혜택 적용 중' if user.is_membership else '일반 회원' }}
+                            </span>
+                        </div>
+
+                        <div class="col-4 border-end">
+                            <p class="text-muted small mb-1">보유 쿠폰</p>
+                            <h5 class="fw-bold mb-0 text-primary">{{ coupon_count }}개</h5>
+                        </div>
+
+                        <div class="col-4">
+                            <p class="text-muted small mb-1">작성 리뷰</p>
+                            <h5 class="fw-bold mb-0">0개</h5>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- 정보 수정 폼 -->
+                    <form method="post" novalidate>
+                        <div class="row">
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">이름</label>
+                                <input type="text" class="form-control bg-light" value="{{ user.username }}" readonly>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold">이메일</label>
+                                <input type="email" class="form-control bg-light" value="{{ user.email }}" readonly>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <a href="{{ url_for('auth.find_id') }}" class="btn btn-outline-danger btn-sm">
+                                    비밀번호 변경하기
+                                </a>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                {{ form.phone.label(class="form-label fw-semibold") }}
+                                {{ form.phone(class="form-control bg-light", readonly=True) }}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-muted">가입일</label>
+                                <p class="form-control-plaintext small">{{ user.join_date.strftime('%Y-%m-%d') }}</p>
+                            </div>
+
+                            <hr class="my-3">
+
+                            <!-- 기본 결제수단 -->
+                            <div class="col-12 mb-4">
+                                <label class="form-label fw-semibold">기본 결제수단</label>
+                                <div class="p-3 border rounded d-flex justify-content-between align-items-center">
+                                    <span>{{ user.payment_method if user.payment_method else '등록된 결제수단이 없습니다.' }}</span>
+                                    <button type="button" class="btn btn-sm btn-link text-decoration-none">변경</button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">정보 수정하기</button>
+                        </div>
+                    </form>
+
+                    <hr class="my-4">
+
+                    <!-- 최근 배송지 -->
+                    <div class="col-12 mb-3">
+                        <label class="form-label fw-semibold">최근 배송지 (주문 기록 기반)</label>
+                        <input type="text" class="form-control bg-light" value="{{ address }}" readonly>
+                        <small class="text-muted">* 주소 수정은 상품 주문 시 새로 입력 가능합니다.</small>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <!-- 최근 결제수단 -->
+                    <div class="col-12 mb-4">
+                        <label class="form-label fw-semibold">최근 결제수단</label>
+                        <div class="p-3 border rounded d-flex justify-content-between align-items-center bg-light">
+                            <span>{{ payment_method }}</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

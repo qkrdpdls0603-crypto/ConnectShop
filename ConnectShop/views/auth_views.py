@@ -1,11 +1,13 @@
 import functools
 import requests
+
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from ConnectShop import db
 from ConnectShop.forms import UserCreateForm, UserLoginForm, FindIdForm, ResetPasswordForm
-from ConnectShop.models import User, Coupon
+from ConnectShop.models import User, Coupon, Order, OrderItem, Product, WithdrawnEmail
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -130,17 +132,47 @@ def login_required(view):
     return wrapped_view
 
 
+
+
 @bp.route('/mypage')
 @login_required
 def mypage():
-    # 1. 사용자의 전체 쿠폰 개수를 계산합니다.
-    # g.user.coupons가 존재하지 않을 경우를 대비해 기본값 0을 설정합니다.
-    count = 0
-    if hasattr(g.user, 'coupons') and g.user.coupons:
-        count = len(g.user.coupons)
+    # ✅ 쿠폰 개수
+    coupon_count = len(getattr(g.user, 'coupons', []) or [])
 
-    # 2. 템플릿으로 coupon_count 데이터를 전달합니다.
-    return render_template('auth/mypage.html', user=g.user, coupon_count=count)
+    # ✅ 배송중 주문 개수
+    shipping_count = (
+        Order.query
+        .filter(
+            Order.user_id == g.user.id,
+            Order.status == '배송중'
+        )
+        .count()
+    )
+
+    # ✅ 구매확정된 "상품 목록"
+    confirmed_products = (
+        db.session.query(Product)
+        .join(OrderItem, Product.id == OrderItem.product_id)
+        .join(Order, Order.id == OrderItem.order_id)
+        .filter(
+            Order.user_id == g.user.id,
+            Order.status == '구매확정'
+        )
+        .order_by(Order.order_date.desc())
+        .distinct()
+        .limit(6)
+        .all()
+    )
+
+    return render_template(
+        'auth/mypage.html',
+        user=g.user,
+        coupon_count=coupon_count,
+        shipping_count=shipping_count,
+        confirmed_products=confirmed_products
+    )
+
 
 @bp.route('/orders')
 @login_required
@@ -151,17 +183,33 @@ def cart_list():
 @bp.route('/withdraw', methods=['POST'])
 @login_required
 def withdraw():
-    # g.user가 존재할 때만 삭제 로직 실행
     if g.user:
-        # 일대일 관계인 benefit 먼저 삭제
+        email = (g.user.email or "").strip().lower()
+        now = datetime.now(timezone.utc)
+
+        # 1) 탈퇴 이메일 기록 (재가입 방지용)
+        record = WithdrawnEmail.query.filter_by(email=email).first()
+        if record:
+            record.withdrawn_at = now
+        else:
+            db.session.add(WithdrawnEmail(email=email, withdrawn_at=now))
+
+        # 2) 쿠폰 먼저 삭제 (NOT NULL user_id 이슈 방지)
+        for coupon in getattr(g.user, "coupons", []):
+            db.session.delete(coupon)
+
+        # 3) 1:1 관계 benefit 삭제
         if hasattr(g.user, 'benefit') and g.user.benefit:
             db.session.delete(g.user.benefit)
 
+        # 4) 회원 삭제
         db.session.delete(g.user)
         db.session.commit()
+
         session.clear()
         flash("회원 탈퇴가 완료되었습니다.")
     return redirect(url_for('main.index'))
+
 
 
 
@@ -172,11 +220,35 @@ def coupons_page():
     raw_coupons = getattr(g.user, "coupons", []) or []
 
     # 2. 파이썬에서 미리 분류 (템플릿 부하 감소)
+
+    issued_map = session.get('coupon_issued_map', {}) or {}
+
+    now = datetime.now(timezone.utc)
+    expire_delta = timedelta(days=7)
+
     available_coupons = []
     used_coupons = []
 
     for c in raw_coupons:
-        if getattr(c, "is_used", False):
+        # 3) 이 쿠폰이 "이후 발급"이라 세션에 발급시각이 있으면 → 만료 체크
+        issued_raw = issued_map.get(str(c.id))  # 쿠폰 id를 키로 사용
+        expires_at = None
+        is_expired = False
+
+        if issued_raw:
+            try:
+                issued_at = datetime.fromisoformat(issued_raw)
+                expires_at = issued_at + expire_delta
+                is_expired = now > expires_at
+            except ValueError:
+                pass
+
+        # 4) 템플릿에서 보여주고 싶으면 임시 속성으로 붙이기(선택)
+        c.expires_at = expires_at
+        c.is_expired = is_expired
+
+        # 5) 분류: 사용했거나 만료면 used, 아니면 available
+        if getattr(c, "is_used", False) or is_expired:
             used_coupons.append(c)
         else:
             available_coupons.append(c)
@@ -216,8 +288,45 @@ def get_welcome_coupon():
     db.session.add(new_coupon)
     db.session.commit()
 
+    issued_map = session.get('coupon_issued_map', {}) or {}
+    issued_map[str(new_coupon.id)] = datetime.now(timezone.utc).isoformat()
+    session['coupon_issued_map'] = issued_map
+    session.modified = True
+
     flash(msg)
     return redirect(url_for('auth.coupons'))
+
+
+
+@bp.route('/me', methods=['GET', 'POST'])
+@login_required
+def me():
+    from ConnectShop.forms import UserUpdateForm
+    form = UserUpdateForm(obj=g.user)
+
+    # 쿠폰 개수
+    coupon_count = len(g.user.coupons) if hasattr(g.user, 'coupons') else 0
+
+    # 최근 주문 정보
+    last_order = Order.query.filter_by(user_id=g.user.id).order_by(Order.order_date.desc()).first()
+    address_info = last_order.address if last_order else "주문 이력이 없습니다."
+    payment_info = last_order.payment_method if last_order else "등록된 수단 없음"
+
+    if request.method == 'POST' and form.validate_on_submit():
+        # 🔥 phone 수정 금지 → phone 업데이트 제거
+        db.session.commit()
+        flash("정보가 수정되었습니다.")
+        return redirect(url_for('auth.me'))
+
+    return render_template(
+        'auth/me.html',
+        user=g.user,
+        form=form,
+        address=address_info,
+        payment_method=payment_info,
+        coupon_count=coupon_count
+    )
+
 
 
 
