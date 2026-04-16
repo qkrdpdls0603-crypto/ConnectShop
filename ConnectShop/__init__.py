@@ -1,12 +1,13 @@
 from flask import Flask, g, session
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from flask_mail import Mail  # 🌟 1. Mail 모듈 가져오기
 import config
 
-# 전역 변수로 db, migrate 객체를 생성합니다.
+# 전역 변수로 db, migrate, mail 객체를 생성합니다.
 db = SQLAlchemy()
 migrate = Migrate()
-
+mail = Mail()  # 🌟 2. 전역 변수로 mail 객체 생성 (이 줄이 없어서 에러가 났습니다!)
 
 def create_app():
     # 플라스크 앱 인스턴스 생성
@@ -15,9 +16,18 @@ def create_app():
     # config.py 파일에 작성한 항목들을 앱의 환경 변수로 부릅니다.
     app.config.from_object(config)
 
-    # ORM (데이터베이스) 연동
+    # 🌟 3. Flask-Mail 구글 이메일 설정 추가 (이메일 발송의 핵심 엔진)
+    app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+    app.config['MAIL_PORT'] = 587
+    app.config['MAIL_USE_TLS'] = True
+    app.config['MAIL_USERNAME'] = 'gangto3333@gmail.com' # 🚨 본인의 진짜 구글 이메일 주소로 변경
+    app.config['MAIL_PASSWORD'] = 'xyeqqaadisjdteol'   # 🚨 띄어쓰기 없이 16자리 문자 입력
+    app.config['MAIL_DEFAULT_SENDER'] = 'gangto3333@gmail.com' # 🚨 본인의 구글 이메일 주소
+
+    # ORM (데이터베이스) 및 Mail 연동
     db.init_app(app)
     migrate.init_app(app, db)
+    mail.init_app(app) # 🌟 4. 플라스크 앱에 mail 객체 등록
 
     # 요약 장바구니 데이터 주입 로직
     @app.context_processor
@@ -70,10 +80,5 @@ def create_app():
     app.register_blueprint(auth_views.bp)
     app.register_blueprint(order_views.bp, url_prefix='/order')
     app.register_blueprint(product_views.bp)
-    # 나중에 views 폴더 안에 각 기능별 파일을 완성하면 아래 주석을 풀고 연결할 것입니다.
-    # ----------------------------------------------------
-    # from .views import auth_views, product_views, order_views
-    # app.register_blueprint(auth_views.bp)
-    # app.register_blueprint(order_views.bp)
 
     return app

@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .brand-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+        transition: all 0.3s ease;
+    }
+    .brand-logo-box {
+        width: 60px;
+        height: 60px;
+        background-color: #f8f9fa;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+    /* 카드 높이를 일정하게 맞춤 */
+    .brand-card { min-height: 300px; }
+</style>
+
+<div class="container my-5">
+
+    <div class="text-center mb-5">
+        <h2 class="fw-bold mb-3">A/S 및 수리 안내</h2>
+        <p class="text-muted">ConnectShop에서 판매하는 모든 브랜드 제품은 제조사 공식 서비스센터를 통해 전문적인 수리를 받으실 수 있습니다.</p>
+    </div>
+
+    <div class="row justify-content-center mb-5">
+        <div class="col-md-10">
+            <div class="alert alert-primary bg-primary bg-opacity-10 border-primary border-opacity-25 rounded-4 p-4 d-flex align-items-center">
+                <i class="bi bi-info-circle-fill fs-2 text-primary me-4"></i>
+                <div>
+                    <h5 class="fw-bold text-primary mb-1">제품 수령 후 14일 이내인가요?</h5>
+                    <p class="mb-0 text-dark small">기기 결함으로 의심되는 경우, 가까운 공식 센터에서 <strong>'불량 판정서'</strong>를 발급받아 1:1 문의로 접수해 주세요. 확인 후 신속하게 새 제품 교환 또는 환불을 진행해 드립니다.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 justify-content-center mb-5">
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-apple fs-3 text-dark"></i></div>
+                <h6 class="fw-bold">Apple</h6>
+                <p class="text-muted x-small mb-4">애플코리아 고객지원<br><span class="fw-bold text-primary">080-333-4000</span></p>
+                <a href="https://support.apple.com/ko-kr" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-phone fs-3 text-primary"></i></div>
+                <h6 class="fw-bold">삼성전자</h6>
+                <p class="text-muted x-small mb-4">삼성전자 서비스센터<br><span class="fw-bold text-primary">1588-3366</span></p>
+                <a href="https://www.samsungsvc.co.kr/" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-tv fs-3 text-danger"></i></div>
+                <h6 class="fw-bold">LG전자</h6>
+                <p class="text-muted x-small mb-4">LG전자 고객지원<br><span class="fw-bold text-primary">1544-7777</span></p>
+                <a href="https://www.lge.co.kr/support" target="_blank" class="btn btn-sm btn-outline-danger rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-headphones fs-3 text-dark"></i></div>
+                <h6 class="fw-bold">SONY</h6>
+                <p class="text-muted x-small mb-4">소니코리아 고객지원<br><span class="fw-bold text-primary">1588-0911</span></p>
+                <a href="https://www.sony.co.kr/scs/handler/Index-Start" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-google fs-3 text-success"></i></div>
+                <h6 class="fw-bold">Google</h6>
+                <p class="text-muted x-small mb-4">구글 고객지원 센터<br><span class="fw-bold text-primary">지원 사이트 문의</span></p>
+                <a href="https://store.google.com/us/magazine/support?hl=en-US" target="_blank" class="btn btn-sm btn-outline-success rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-laptop fs-3 text-danger"></i></div>
+                <h6 class="fw-bold">Lenovo</h6>
+                <p class="text-muted x-small mb-4">레노버 코리아 지원<br><span class="fw-bold text-primary">1670-0088</span></p>
+                <a href="https://support.lenovo.com/kr/ko" target="_blank" class="btn btn-sm btn-outline-danger rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-pc-display fs-3 text-info"></i></div>
+                <h6 class="fw-bold">ASUS</h6>
+                <p class="text-muted x-small mb-4">에이수스 고객지원<br><span class="fw-bold text-primary">1566-6868</span></p>
+                <a href="https://www.asus.com/kr/support/" target="_blank" class="btn btn-sm btn-outline-info rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-geo-alt fs-3 text-dark"></i></div>
+                <h6 class="fw-bold">Garmin</h6>
+                <p class="text-muted x-small mb-4">가민 코리아 고객지원<br><span class="fw-bold text-primary">지원 사이트 문의</span></p>
+                <a href="https://support.garmin.com/ko-KR/" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-phone-vibrate fs-3 text-primary"></i></div>
+                <h6 class="fw-bold">Motorola</h6>
+                <p class="text-muted x-small mb-4">모토로라 고객지원<br><span class="fw-bold text-primary">지원 사이트 문의</span></p>
+                <a href="https://ko-kr.support.motorola.com/app/home" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-smartwatch fs-3 text-warning"></i></div>
+                <h6 class="fw-bold">Xiaomi</h6>
+                <p class="text-muted x-small mb-4">샤오미 코리아 서비스<br><span class="fw-bold text-primary">1566-8106</span></p>
+                <a href="https://www.mi.com/kr/support/" target="_blank" class="btn btn-sm btn-outline-warning text-dark rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-headset fs-3 text-primary"></i></div>
+                <h6 class="fw-bold">Shokz</h6>
+                <p class="text-muted x-small mb-4">샥즈 A/S 센터<br><span class="fw-bold text-primary">1661-6374</span></p>
+                <a href="https://shokz.co.kr/cs/afterservice.php" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-watch fs-3 text-secondary"></i></div>
+                <h6 class="fw-bold">Amazfit</h6>
+                <p class="text-muted x-small mb-4">어메이즈핏 고객지원<br><span class="fw-bold text-primary">게시판 문의</span></p>
+                <a href="https://amazfit.kr/board/free/list.html?board_no=1" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-volume-up fs-3 text-dark"></i></div>
+                <h6 class="fw-bold">Bose</h6>
+                <p class="text-muted x-small mb-4">보스 코리아 고객지원<br><span class="fw-bold text-primary">02-3446-3003</span></p>
+                <a href="https://www.bose.co.kr/NOTICE" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-boombox fs-3 text-warning"></i></div>
+                <h6 class="fw-bold">JBL</h6>
+                <p class="text-muted x-small mb-4">JBL 코리아 서비스<br><span class="fw-bold text-primary">02-553-3491</span></p>
+                <a href="https://support.jbl.com/kr/kr/" target="_blank" class="btn btn-sm btn-outline-warning text-dark rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-earbuds fs-3 text-dark"></i></div>
+                <h6 class="fw-bold">Sennheiser</h6>
+                <p class="text-muted x-small mb-4">젠하이저 서비스<br><span class="fw-bold text-primary">1544-1607</span></p>
+                <a href="https://spares.sennheiser-hearing.com/ko/catalog" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-speaker fs-3 text-dark"></i></div>
+                <h6 class="fw-bold">Britz</h6>
+                <p class="text-muted x-small mb-4">브리츠 고객지원<br><span class="fw-bold text-primary">031-908-1091</span></p>
+                <a href="https://www.britz.co.kr/customer/notice.html" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+        <div class="col text-center">
+            <div class="card h-100 shadow-sm border-0 p-4 brand-card">
+                <div class="brand-logo-box mx-auto"><i class="bi bi-tablet fs-3 text-secondary"></i></div>
+                <h6 class="fw-bold">iMUZ</h6>
+                <p class="text-muted x-small mb-4">아이뮤즈 고객지원<br><span class="fw-bold text-primary">070-4351-4822</span></p>
+                <a href="https://shop.imuz.com/board/list.php?bdId=question" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill mt-auto">공식 사이트</a>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{{ url_for('main.support') }}" class="btn btn-outline-secondary rounded-pill px-4 py-2 fw-bold shadow-sm">
+            <i class="bi bi-arrow-left me-2"></i>고객센터 메인
+        </a>
+    </div>
+
+</div>
+{% endblock %}

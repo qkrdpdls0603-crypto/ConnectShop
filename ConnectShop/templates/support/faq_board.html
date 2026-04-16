@@ -2,16 +2,18 @@
 
 {% block content %}
 <style>
-    /* 검색창 활성화 시 테두리 색상 */
     .board-search:focus {
         box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
         border-color: #007bff;
         outline: none;
     }
+    /* 페이지네이션 버튼 색상 커스텀 */
+    .pagination .page-link { color: #555; border-radius: 5px; margin: 0 3px; }
+    .pagination .page-item.active .page-link { background-color: #0d6efd; border-color: #0d6efd; color: white; }
 </style>
 
 <div class="container my-5">
-    
+
     <div class="text-center mb-5">
         <h2 class="fw-bold mb-3">자주 찾는 질문 (FAQ) 전체보기</h2>
         <p class="text-muted">찾으시는 질문을 검색하시거나 전체 목록을 확인해 보세요.</p>
@@ -30,7 +32,7 @@
 
     <div class="row justify-content-center">
         <div class="col-md-10">
-            
+
             {% if kw %}
                 <div class="mb-4 d-flex justify-content-between align-items-center">
                     <h5 class="fw-bold text-primary mb-0">
@@ -41,7 +43,7 @@
             {% endif %}
 
             <div class="accordion shadow-sm mb-5" id="faqBoardAccordion">
-                {% for faq in faq_list %}
+                {% for faq in faq_list.items %}
                 <div class="accordion-item border-0 border-bottom">
                     <h2 class="accordion-header" id="headingBoard{{ faq.id }}">
                         <button class="accordion-button fw-bold collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseBoard{{ faq.id }}">
@@ -55,7 +57,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 {% else %}
                 <div class="p-5 text-center text-muted border rounded-4 bg-light shadow-sm">
                     <i class="bi bi-emoji-frown mb-3 d-block" style="font-size: 3rem; color: #ccc;"></i>
@@ -68,8 +70,43 @@
                 </div>
                 {% endfor %}
             </div>
-            
-            <div class="text-center mt-5">
+
+            {% if faq_list.total > 0 %}
+            <nav aria-label="Page navigation" class="mt-4 mb-5">
+                <ul class="pagination justify-content-center">
+
+                    <li class="page-item {% if not faq_list.has_prev %}disabled{% endif %}">
+                        <a class="page-link fw-bold" href="{% if faq_list.has_prev %}{{ url_for('main.faq_board', page=faq_list.prev_num, kw=kw) }}{% else %}#{% endif %}">
+                            <i class="bi bi-chevron-left"></i> 이전
+                        </a>
+                    </li>
+
+                    {% for page_num in faq_list.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == faq_list.page %}
+                            <li class="page-item active" aria-current="page">
+                                <a class="page-link fw-bold" href="#">{{ page_num }}</a>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('main.faq_board', page=page_num, kw=kw) }}">{{ page_num }}</a>
+                            </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    <li class="page-item {% if not faq_list.has_next %}disabled{% endif %}">
+                        <a class="page-link fw-bold" href="{% if faq_list.has_next %}{{ url_for('main.faq_board', page=faq_list.next_num, kw=kw) }}{% else %}#{% endif %}">
+                            다음 <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+
+                </ul>
+            </nav>
+            {% endif %}
+            <div class="text-center mt-4">
                 <a href="{{ url_for('main.support') }}" class="btn btn-outline-dark rounded-pill px-4 py-2 fw-bold">
                     <i class="bi bi-arrow-left me-2"></i>고객센터 메인으로 돌아가기
                 </a>
