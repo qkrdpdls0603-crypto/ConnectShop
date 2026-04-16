@@ -88,9 +88,9 @@
                 <span>주문 금액</span>
                 <span id="summary-subtotal">{{ "{:,}".format(total_price|int) }}원</span>
             </div>
-            <div class="summary-line" style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+            <div class="info-row">
                 <span>배송비</span>
-               <span class="info-value" id="shipping-fee-display">
+                <span class="info-value">
                     {% if g.user and g.user.is_membership %}
                         0원 (멤버십 혜택 적용)
                     {% else %}
@@ -102,8 +102,10 @@
                 <span>총 결제 금액</span>
                 <span id="summary-total">
                     {% if g.user and g.user.is_membership %}
+                        {# 멤버십이면 상품 금액만 표시 #}
                         {{ "{:,}".format(total_price|int) }}원
                     {% else %}
+                        {# 일반 회원이면 상품 금액 + 3000원 표시 #}
                         {{ "{:,}".format(total_price|int + 3000) }}원
                     {% endif %}
                 </span>
