@@ -87,12 +87,7 @@
             <div class="summary-line">
                 <span>주문 금액</span>
                 <span id="summary-subtotal">
-                    {# 서버에서 온 total_price가 배송비 포함이라면, 일반 사용자일 때 3000원을 빼서 표시 #}
-                    {% if g.user and g.user.is_membership %}
-                        {{ "{:,}".format(total_price|int) }}원
-                    {% else %}
-                        {{ "{:,}".format(total_price|int - 3000) }}원
-                    {% endif %}
+                    {{ "{:,}".format(product_total) }}원
                 </span>
             </div>
             <div class="summary-line">

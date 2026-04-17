@@ -89,7 +89,16 @@ def add(product_id):
         save_guest_cart(guest_cart)
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'success': True, 'message': '장바구니에 추가되었습니다.'})
+        # 최신 장바구니 데이터를 다시 조회
+        if g.user:
+            cart_items = Cart.query.filter_by(user_id=g.user.id).all()
+        else:
+            cart_items = get_guest_cart()  # 비회원 로직에 맞춰 수정
+
+        return jsonify({
+            'success': True,
+            'cart_count': len(cart_items)  # 장바구니 아이템 개수 등 전달
+        })
 
     return redirect(url_for('order._list'))
 
@@ -212,8 +221,10 @@ def modify(product_id, action):
             'new_quantity': new_quantity,
             'is_deleted': is_deleted,
             'item_total': format(unit_price * new_quantity, ','),
-            'pure_total': format(pure_total, ','),  # 순수 상품가
-            'total_price': format(final_total, ',')  # ★ 배송비 포함 최종가
+            'pure_total': format(pure_total, ','),  # 화면 표시용
+            'total_price': format(final_total, ','),  # 화면 표시용
+            'raw_pure_total': pure_total,  # ★ JS 계산용 숫자
+            'raw_total_price': final_total  # ★ JS 계산용 숫자
         })
 
     return redirect(request.referrer or url_for('order._list'))
@@ -698,3 +709,11 @@ def refund_request(order_id, item_id, type):
         flash("처리 중 오류가 발생했습니다.", "danger")
 
     return redirect(url_for('order.order_detail', order_id=order_id))
+
+
+@bp.app_context_processor
+def inject_cart_totals():
+    cart_list = get_cart_items()
+    product_total = sum(item.product.price * item.quantity for item in cart_list)
+
+    return dict(product_total=product_total)
