@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+
+    {% if products_by_brand %}
+        {% for brand, products in products_by_brand.items() %}
+        <div class="brand-section mb-5 py-3">
+            <h3 class="fw-bold mb-4">{{ brand }} 제품</h3>
+
+            <div id="carousel-{{ loop.index }}" class="carousel slide" data-bs-ride="false">
+                <div class="carousel-inner p-1">
+                    <div class="carousel-item active">
+                        <div class="row g-4">
+                            {% for product in products %}
+                            <div class="col-md-3">
+                                <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+                                    <div class="bg-light p-4 text-center">
+                                        <img src="{{ url_for('static', filename='images/menu/' + product.image_path) if product.image_path else '' }}"
+                                             class="img-fluid" style="height: 180px; object-fit: contain;" alt="{{ product.name }}">
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted small mb-1">{{ product.brand }}</p>
+                                        <h6 class="fw-bold text-truncate">{{ product.name }}</h6>
+                                        <p class="text-primary fw-bold mb-3">{{ "{:,}".format(product.price) }}원</p>
+                                        <a href="{{ url_for('product.page', product_id=product.id) }}"
+                                           class="btn btn-dark w-100 rounded-pill btn-sm">상세보기</a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# 4개마다 슬라이드 페이지 나누기 #}
+                            {% if loop.index % 4 == 0 and not loop.last %}
+                        </div>
+                    </div>
+                    <div class="carousel-item">
+                        <div class="row g-4">
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if products|length > 4 %}
+                <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ loop.index }}" data-bs-slide="prev" style="width: 5%; filter: invert(1);">
+                    <span class="carousel-control-prev-icon"></span>
+                </button>
+                <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ loop.index }}" data-bs-slide="next" style="width: 5%; filter: invert(1);">
+                    <span class="carousel-control-next-icon"></span>
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center py-5">
+            <p class="text-muted fs-5">등록된 상품이 없습니다.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    /* 마우스 올리면 살짝 들리는 효과 */
+    .card:hover { transform: translateY(-5px); transition: 0.3s; }
+</style>
+{% endblock %}

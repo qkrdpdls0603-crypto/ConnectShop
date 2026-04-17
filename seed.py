@@ -84,7 +84,9 @@ with app.app_context():
     # 1. 대표 상품 5개 (p1~p5 : 옵션이나 타 기능에서 참조하기 위해 변수로 고정)
     # -------------------------------------------------------------------
     p1 = Product(name='갤럭시 S26 울트라', price=1690000, category='스마트폰', brand='삼성', stock=10,
+
                  description='가장 완벽한 AI 스마트폰', image_path='phone_sam1.jpg', box_image_path='images/sam1_box.jpg',
+
                  box_description='스마트폰 | 데이터 케이블 | 분리핀')
     p2 = Product(name='애플 에어팟', price=199000, category='무선이어폰', brand='애플', stock=20, description='테스트용 상품 2',
                  image_path='ear2.jpg')

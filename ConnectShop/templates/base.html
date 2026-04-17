@@ -19,14 +19,15 @@
     }
 
 /* 🌟 복구: 모든 메뉴(nav-item)에 마우스를 올리면 글자가 까맣고 굵어지게 변경 */
-    .apple-nav .nav-item:hover > .nav-link {
-        color: #000 !important;
-        /* font-weight 대신 그림자를 이용해 레이아웃이 깨지지 않도록 방어 */
-        text-shadow: 0 0 0.5px #000, 0 0 0.5px #000;
+    .apple-nav .nav-item:hover > .nav-link,
+    .apple-nav .nav-link.active {
+    color: #000 !important;
+    text-shadow: 0 0 0.5px #000, 0 0 0.5px #000;
     }
 
     /* 🌟 복구: 모든 메뉴(nav-item)에 삼성 스타일의 파란색 밑줄 애니메이션 적용 */
-    .apple-nav .nav-item:hover > .nav-link::after {
+    .apple-nav .nav-item:hover > .nav-link::after,
+    .apple-nav .nav-link.active::after{
         content: '';
         position: absolute;
         bottom: 0px;
@@ -217,9 +218,11 @@
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-
+                  
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
-                    <ul class="navbar-nav align-items-center"> <li class="nav-item dropdown">
+                    <ul class="navbar-nav align-items-center">
+                        
+                        <li class="nav-item dropdown">
                             <a class="nav-link" href="#" role="button" aria-expanded="false">스마트폰</a>
                             <div class="dropdown-menu mega-menu shadow-sm">
                                 <div class="d-flex gap-4 justify-content-center align-items-center">
@@ -437,6 +440,29 @@
                         </li>
 
                     </ul>
+
+                {# 3. 메가 메뉴 (드롭다운) 부분 #}
+                <div class="dropdown-menu mega-menu shadow-sm">
+                    <div class="d-flex gap-4 justify-content-center">
+                        {# 각 카테고리별로 1번부터 5번까지의 이미지를 매칭 (예: phone1.jpg, phone_sam1.jpg 대응) #}
+                        {% for i in range(1, 6) %}
+                            {% set img_name = prefix + i|string + '.jpg' %}
+                            {# 예외 처리: 스마트폰의 첫 번째 이미지만 phone_sam1.jpg 라면 #}
+                            {% if name == '스마트폰' and i == 1 %}
+                                {% set img_name = 'phone_sam1.jpg' %}
+                            {% endif %}
+
+                            <a href="#" class="mega-item d-flex flex-column align-items-center">
+                                <img src="{{ url_for('static', filename='images/menu/' + img_name) }}"
+                                     alt="{{ name }} {{ i }}" class="mega-img">
+                                <span class="mega-text">{{ name }} {{ i }}</span>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
                 </div>
 
                 <div class="collapse navbar-collapse justify-content-end" id="iconNavbar">
@@ -530,7 +556,7 @@
 
                             <a href="#" class="search-product-card">
                                 <div class="search-img-box bg-light rounded mb-2 d-flex justify-content-center align-items-center">
-                                    <img src="{{ url_for('static', filename='images/menu/phone1.jpg') }}" alt="갤럭시 S26">
+                                    <img src="{{ url_for('static', filename='images/menu/phone_sam1.jpg') }}" alt="갤럭시 S26">
                                 </div>
                                 <div class="fw-bold text-dark fs-6">갤럭시 S26</div>
                                 <div class="text-muted mt-1" style="font-size: 0.75rem;">혜택가</div>
