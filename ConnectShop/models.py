@@ -141,6 +141,7 @@ class OrderItem(db.Model):
     # order: '상세내역.order'로 부모 영수증 정보를 불러올 수 있습니다.
     order = db.relationship('Order', backref=db.backref('items', cascade='all, delete-orphan'))
     product = db.relationship('Product')
+    status = db.Column(db.String(20), nullable=True)
 
 # =========================================================
 # [팀원 4: 이강토(본인) 담당] 고객센터 및 리뷰 그룹

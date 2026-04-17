@@ -12,6 +12,7 @@ from ConnectShop.views.auth_views import login_required, cart_list
 bp = Blueprint('order', __name__, url_prefix='/order')
 
 
+
 # --- Helper Functions ---
 def get_guest_cart():
     return session.get('guest_cart', [])
@@ -69,7 +70,7 @@ def _list():
                            stock_warnings=stock_warnings)
 
 
-@bp.route('/add/<int:product_id>')
+@bp.route('/add/<int:product_id>', methods=['GET', 'POST']) # POST 허용
 def add(product_id):
     if g.user:
         cart = Cart.query.filter_by(user_id=g.user.id, product_id=product_id).first()
@@ -86,6 +87,19 @@ def add(product_id):
         else:
             guest_cart.append({'product_id': product_id, 'quantity': 1})
         save_guest_cart(guest_cart)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # 최신 장바구니 데이터를 다시 조회
+        if g.user:
+            cart_items = Cart.query.filter_by(user_id=g.user.id).all()
+        else:
+            cart_items = get_guest_cart()  # 비회원 로직에 맞춰 수정
+
+        return jsonify({
+            'success': True,
+            'cart_count': len(cart_items)  # 장바구니 아이템 개수 등 전달
+        })
+
     return redirect(url_for('order._list'))
 
 
@@ -190,7 +204,16 @@ def modify(product_id, action):
 
     # 전체 금액 재계산
     cart_list = get_cart_items()
-    total_price = sum(item.product.price * item.quantity for item in cart_list)
+    pure_total = sum(item.product.price * item.quantity for item in cart_list)
+
+    shipping_fee = 0
+    if pure_total > 0:
+        if g.user and getattr(g.user, 'is_membership', False):
+            shipping_fee = 0
+        else:
+            shipping_fee = 3000
+
+    final_total = pure_total + shipping_fee
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({
@@ -198,7 +221,10 @@ def modify(product_id, action):
             'new_quantity': new_quantity,
             'is_deleted': is_deleted,
             'item_total': format(unit_price * new_quantity, ','),
-            'total_price': format(total_price, ',')
+            'pure_total': format(pure_total, ','),  # 화면 표시용
+            'total_price': format(final_total, ','),  # 화면 표시용
+            'raw_pure_total': pure_total,  # ★ JS 계산용 숫자
+            'raw_total_price': final_total  # ★ JS 계산용 숫자
         })
 
     return redirect(request.referrer or url_for('order._list'))
@@ -669,7 +695,7 @@ def refund_request(order_id, item_id, type):
         refund_amount = order_item.price * order_item.quantity
         # 주문의 총 결제 금액에서 환불 상품만큼 차감
         order.total_price = max(0, order.total_price - refund_amount)
-        order_item.status = '환불완료'
+        order_item.status = '환불신청'
 
     # 2. 교환일 경우: 금액 유지 및 상태만 변경
     elif type == '교환':
@@ -683,3 +709,11 @@ def refund_request(order_id, item_id, type):
         flash("처리 중 오류가 발생했습니다.", "danger")
 
     return redirect(url_for('order.order_detail', order_id=order_id))
+
+
+@bp.app_context_processor
+def inject_cart_totals():
+    cart_list = get_cart_items()
+    product_total = sum(item.product.price * item.quantity for item in cart_list)
+
+    return dict(product_total=product_total)

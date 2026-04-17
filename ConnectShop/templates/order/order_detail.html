@@ -29,11 +29,14 @@
                             <div class="product-item-info">
                                 <p class="item-name">
                                     {{ item.product.name }}
-                                    {# --- 배지 위치를 이름 바로 뒤(p태그 안)로 이동 --- #}
-                                    {% if item.status == '환불완료' %}
-                                        <span class="badge bg-danger ms-2" style="font-size: 11px; vertical-align: middle; display: inline-block;">환불완료</span>
+                                    {% if item.status == '환불신청' %}
+                                        <span class="badge bg-secondary">환불신청</span>
+                                    {% elif item.status == '환불완료' %}
+                                        <span class="badge bg-danger">환불완료</span>
                                     {% elif item.status == '교환신청' %}
-                                        <span class="badge bg-warning text-dark ms-2" style="font-size: 11px; vertical-align: middle; display: inline-block;">교환신청</span>
+                                        <span class="badge bg-warning text-dark">교환신청</span>
+                                    {% elif item.status == '교환완료' %}
+                                        <span class="badge bg-success">교환완료</span>
                                     {% endif %}
                                 </p>
                                 <p class="item-meta">{{ item.quantity }}개 / {{ "{:,}".format(item.price) }}원</p>
@@ -44,20 +47,22 @@
 
                     {% if can_refund %}
                         <div class="item-action-btns">
-                            {% if not item.status %}
-                                {# 아직 아무 신청도 안 한 경우에만 버튼 노출 #}
-                                <button type="button"
-                                        onclick="openRefundModal('{{ order.id }}', '{{ item.id }}', '{{ item.product.name }}')"
-                                        class="btn-item-action">
-                                    교환 · 환불 신청
-                                </button>
-                            {% else %}
-                                {# 이미 신청한 경우 안내 문구 표시 #}
-                                <span style="font-size: 13px; color: #86868b; padding-right: 10px;">
-                                    <i class="bi bi-check-circle"></i> {{ item.status }} 처리가 진행 중입니다.
-                                </span>
-                            {% endif %}
-                        </div>
+                            {% if not item.status or item.status == '교환완료' %}
+                            <button type="button"
+                                    onclick="openRefundModal('{{ order.id }}', '{{ item.id }}', '{{ item.product.name }}')"
+                                    class="btn-item-action">
+                                교환 · 환불 신청
+                            </button>
+                        {% else %}
+                            <span style="font-size: 13px; color: #86868b; font-weight: 500;">
+                                {% if '환불완료' in item.status %}
+                                    <i class="bi bi-check-circle-fill" style="color: #34c759;"></i> {{ item.status }}
+                                {% else %}
+                                    <i class="bi bi-clock-history"></i> {{ item.status }} 중
+                                {% endif %}
+                            </span>
+                        {% endif %}
+                    </div>
                     {% endif %}
                 </div>
                 {% endfor %}

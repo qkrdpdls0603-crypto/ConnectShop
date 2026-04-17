@@ -22,7 +22,13 @@
                                         <h6 class="fw-bold text-truncate">{{ product.name }}</h6>
                                         <p class="text-primary fw-bold mb-3">{{ "{:,}".format(product.price) }}원</p>
                                         <a href="{{ url_for('product.page', product_id=product.id) }}"
-                                           class="btn btn-dark w-100 rounded-pill btn-sm">상세보기</a>
+                                           class="btn btn-dark w-100 rounded-pill btn-sm mb-2">상세보기</a>
+
+                                        <button type="button"
+                                                onclick="addCartCatalog('{{ product.id }}')"
+                                                class="btn btn-outline-primary w-100 rounded-pill btn-sm">
+                                            <i class="bi bi-cart-plus me-1"></i> 담기
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -61,4 +67,37 @@
     /* 마우스 올리면 살짝 들리는 효과 */
     .card:hover { transform: translateY(-5px); transition: 0.3s; }
 </style>
+
+<script>
+    async function addCartCatalog(productId) {
+    try {
+        const response = await fetch(`/order/add/${productId}`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // 1. 장바구니로 바로 가겠냐고 물어봄
+            if (confirm("장바구니에 상품을 담았습니다.\n지금 확인하시겠습니까?")) {
+                location.href = "{{ url_for('order._list') }}";
+            } else {
+                // 2. '취소'를 눌러도 데이터는 담겼으므로,
+                // 요약 장바구니 수치를 반영하기 위해 현재 페이지를 새로고침만 함
+                location.reload();
+            }
+        } else {
+            // 서버에서 success: false를 보낸 경우
+            alert(data.message || "장바구니 담기에 실패했습니다.");
+        }
+    } catch (error) {
+        // 네트워크 오류나 서버 다운 등의 진짜 에러인 경우
+        console.error('Error:', error);
+        alert("통신 오류가 발생했습니다.");
+    }
+}
+</script>
 {% endblock %}
