@@ -1,3 +1,5 @@
+import random
+from datetime import datetime, timedelta
 from ConnectShop import create_app, db
 from ConnectShop.models import User, MembershipBenefit, Coupon, Product, Cart, Order, OrderItem, Review, FAQ, ProductOption
 # 🔥 비밀번호 암호화를 위한 도구 추가
@@ -970,4 +972,60 @@ with app.app_context():
 
     # 🔥 최종 3차 커밋 (상세 내역 확정)
     db.session.commit()
-    print("✅ 데이터베이스 대통합 완료!")
+
+    # ==========================================
+    # Phase 4. 자동 리뷰 생성 (Review)
+    # ==========================================
+    print("📝 상품별 그럴싸한 리뷰 데이터를 13개씩 생성하는 중...")
+
+    REVIEW_CONTENTS = [
+        "배송이 빠르고 물건이 너무 좋아요! 완전 만족합니다.",
+        "가성비 최고입니다. 이 가격에 이 퀄리티라니 놀랍네요.",
+        "디자인이 실물이 훨씬 예쁘고 마음에 듭니다.",
+        "지인에게 선물했는데 아주 좋아하네요. 뿌듯합니다.",
+        "포장도 꼼꼼하고 품질도 기대 이상으로 만족스럽습니다.",
+        "생각보다 훨씬 좋네요. 앞으로 잘 쓰겠습니다!",
+        "기대했던 것만큼 훌륭합니다. 믿고 구매하길 잘했네요.",
+        "색상이 화면과 같고 정말 예뻐요. 강추합니다.",
+        "작동이 부드럽고 성능이 우수합니다. 역시 최고네요.",
+        "배송은 조금 걸렸지만, 상품이 좋아서 용서가 됩니다.",
+        "벌써 두 번째 구매입니다. 재구매 의사 100% 입니다!",
+        "가격 대비 아주 훌륭한 제품입니다. 주변에 추천하고 있어요.",
+        "매일 아주 잘 사용하고 있습니다. 삶의 질이 올라갔어요!",
+        "마감 처리가 아주 깔끔하고 고급스럽습니다. 만족해요.",
+        "고민하다 샀는데 진작 살 걸 그랬어요. 너무 좋습니다."
+    ]
+
+    # 앞서 만들어둔 모든 유저와 상품을 불러옵니다.
+    all_users = User.query.all()
+    all_products = Product.query.all()
+
+    reviews_added = 0
+    for product in all_products:
+        # 27명의 유저 리스트를 무작위로 섞은 뒤, 앞의 13명만 뽑습니다 (1인 1리뷰 원칙 준수!)
+        random.shuffle(all_users)
+        selected_users = all_users[:13]
+
+        for i in range(13):
+            # 4~5점 위주의 별점 세팅
+            rating = random.choices([5, 4, 3], weights=[70, 20, 10])[0]
+            content = random.choice(REVIEW_CONTENTS)
+            # 최근 90일 이내의 랜덤 날짜
+            random_days = random.randint(0, 90)
+            random_time = datetime.utcnow() - timedelta(days=random_days)
+
+            review = Review(
+                product_id=product.id,
+                user_id=selected_users[i].id,
+                content=content,
+                rating=rating,
+                image_path=None,
+                timestamp=random_time
+            )
+            db.session.add(review)
+            reviews_added += 1
+
+    # 🔥 진짜 최종 4차 커밋
+    db.session.commit()
+    print(f"🎉 성공! 모든 상품에 리뷰가 13개씩 세팅되었습니다. (총 {reviews_added}개 추가됨)")
+    print("🏆 ConnectShop 데이터베이스 초기 세팅 완벽 종료!")

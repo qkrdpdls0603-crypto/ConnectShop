@@ -141,6 +141,7 @@ class OrderItem(db.Model):
     # order: '상세내역.order'로 부모 영수증 정보를 불러올 수 있습니다.
     order = db.relationship('Order', backref=db.backref('items', cascade='all, delete-orphan'))
     product = db.relationship('Product')
+    status = db.Column(db.String(20), nullable=True)
 
 # =========================================================
 # [팀원 4: 이강토(본인) 담당] 고객센터 및 리뷰 그룹
@@ -155,6 +156,7 @@ class Review(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False) # 리뷰 내용
     rating = db.Column(db.Integer, default=5) # 별점 (1~5점, 기본 5점)
+    image_path = db.Column(db.String(255), nullable=True) # 이미지
     timestamp = db.Column(db.DateTime, default=datetime.utcnow) # 작성 시간
     # product, user: 쉽게 데이터를 꺼내오기 위한 관계 설정입니다.
     product = db.relationship('Product', backref=db.backref('reviews'))
