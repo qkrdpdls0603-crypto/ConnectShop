@@ -70,7 +70,7 @@ def _list():
                            stock_warnings=stock_warnings)
 
 
-@bp.route('/add/<int:product_id>')
+@bp.route('/add/<int:product_id>', methods=['GET', 'POST']) # POST 허용
 def add(product_id):
     if g.user:
         cart = Cart.query.filter_by(user_id=g.user.id, product_id=product_id).first()
@@ -87,6 +87,10 @@ def add(product_id):
         else:
             guest_cart.append({'product_id': product_id, 'quantity': 1})
         save_guest_cart(guest_cart)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': '장바구니에 추가되었습니다.'})
+
     return redirect(url_for('order._list'))
 
 

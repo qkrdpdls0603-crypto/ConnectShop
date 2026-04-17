@@ -22,7 +22,13 @@
                                         <h6 class="fw-bold text-truncate">{{ product.name }}</h6>
                                         <p class="text-primary fw-bold mb-3">{{ "{:,}".format(product.price) }}원</p>
                                         <a href="{{ url_for('product.page', product_id=product.id) }}"
-                                           class="btn btn-dark w-100 rounded-pill btn-sm">상세보기</a>
+                                           class="btn btn-dark w-100 rounded-pill btn-sm mb-2">상세보기</a>
+
+                                        <button type="button"
+                                                onclick="addCartCatalog('{{ product.id }}')"
+                                                class="btn btn-outline-primary w-100 rounded-pill btn-sm">
+                                            <i class="bi bi-cart-plus me-1"></i> 담기
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -61,4 +67,28 @@
     /* 마우스 올리면 살짝 들리는 효과 */
     .card:hover { transform: translateY(-5px); transition: 0.3s; }
 </style>
+
+<script>
+    async function addCartCatalog(productId) {
+    try {
+        const response = await fetch(`/order/add/${productId}`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            if (confirm("장바구니에 상품을 담았습니다.\n지금 확인하시겠습니까?")) {
+                location.href = "{{ url_for('order._list') }}";
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert("장바구니 담기에 실패했습니다.");
+    }
+}
+</script>
 {% endblock %}
