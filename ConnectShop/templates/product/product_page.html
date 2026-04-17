@@ -46,8 +46,8 @@
 <!--               부트스트랩 아이콘 데이터베이스에 아직 미구현됨                 -->
             <div class="product-benefits d-flex justify-content-between mt-4 p-3 bg-light rounded-4">
                 <div class="benefit-item text-center flex-fill">
-                    <i class="bi bi-truck fs-3 mb-2 d-block text-primary"></i>
-                    <span class="fw-medium" style="font-size: 0.75rem;">무료 배송</span>
+                    <i class="bi bi-headset fs-3 mb-2 d-block text-primary"></i>
+                    <span class="fw-medium" style="font-size: 0.75rem;">고객 상담</span>
                 </div>
                 <div class="benefit-item text-center flex-fill border-start border-end">
                     <i class="bi bi-shield-check fs-3 mb-2 d-block text-primary"></i>
@@ -170,22 +170,16 @@
                 <p class="text-muted mt-5 small text-start ps-3" style="line-height: 1.6;">
                     {{ product.box_description|safe if product.box_description else '상품 구성 정보가 없습니다.' }}
                 </p>
-            </div> <div class="col-lg-4 border rounded-4 p-4 shadow-sm bg-light">
+            </div>
+            <div class="col-lg-4 border rounded-4 p-4 shadow-sm bg-light">
                 <h6 class="fw-bold mb-4">최종 구매 혜택가</h6>
 
                 <div class="price-detail-box bg-white rounded-3 p-3">
                     <div class="d-flex justify-content-between mb-2 small">
                         <span>기준가</span>
-                        <del>1,849,000원</del>
+                        <span>{{ "{:,}".format(product.price) }}</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-2 small text-danger fw-medium">
-                        <span>즉시 할인</span>
-                        <span>-150,000원</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-3 small text-danger fw-medium">
-                        <span>쿠폰 할인</span>
-                        <span>-50,000원</span>
-                    </div>
+
 
                     <hr class="my-3">
 
@@ -196,15 +190,20 @@
                         </h3>
                     </div>
 
-                    <div class="benefit-box small text-muted p-2 bg-light rounded-3 mb-4">
-                        <p class="mb-1 fw-medium text-dark"><i class="bi bi-gift-fill me-1"></i> 삼성카드 결제 혜택</p>
-                        <p class="mb-0">100만원 이상 결제 시 캐시백 <span class="fw-medium text-dark">40,000원</span></p>
+                    <div class="coupon-section mb-4">
+                        <button type="button" class="btn btn-outline-danger w-100 py-2 rounded-3 fw-bold shadow-sm"
+                                onclick="handleCouponClick()" style="border-style: dashed;">
+                            <i class="bi bi-ticket-perforated me-2"></i> 쿠폰 적용하기
+                        </button>
+                        <div id="selected-coupon-info" class="mt-2 small text-danger fw-bold" style="display: none;">
+                            <i class="bi bi-check-circle-fill"></i> <span id="applied-coupon-name"></span> (-<span id="applied-discount-amount">0</span>원)
+                        </div>
                     </div>
-
                     <div class="row g-2">
                         <div class="col-3">
-                            <button type="button" class="btn btn-outline-dark w-100 py-3 rounded-pill">
-                                <i class="bi bi-gift"></i>
+                            <button type="button" class="btn btn-outline-dark w-100 py-3 rounded-pill"
+                                    onclick="addToCartWithOptions({{ product.id }})">
+                                <i class="bi bi-bag"></i>
                             </button>
                         </div>
                         <div class="col-9">
@@ -212,13 +211,18 @@
                         </div>
                     </div>
 
+                    <input type="hidden" id="is-logged-in" value="{{ 'true' if g.user else 'false' }}">
+
                     <div class="text-center mt-3">
                         <span class="text-muted delivery-date" style="font-size: 0.7rem;">
                             <i class="bi bi-truck me-1"></i> 로딩 중...
                         </span>
                     </div>
                 </div>
-            </div> </div> </div> </section>
+            </div>
+        </div>
+    </div>
+</section>
 
 
 <div class="product-content-wrapper" style="margin-top: 60px;">
@@ -226,17 +230,100 @@
     <section id="section-details" style="height: 500px; background: #ddd;">상세 설명 영역 예정</section>
 </div>
 
+<div class="modal fade" id="couponModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold">내 보유 쿠폰</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+            <div class="d-grid mb-4">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill" onclick="cancelCoupon()">
+                    <i class="bi bi-x-circle me-1"></i> 쿠폰 적용 취소 (원래 가격으로)
+                </button>
+            </div>
+
+            <hr>
+                {% if coupons %}
+                    {% for coupon in coupons %}
+                    <div class="card mb-3 border-danger shadow-sm">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ coupon.name }}</h6>
+                                <p class="text-muted small mb-0">{{ "{:,}".format(coupon.discount_amount) }}원 할인</p>
+                            </div>
+                            <button class="btn btn-danger btn-sm rounded-pill px-3"
+                                    onclick="applyCoupon('{{ coupon.id }}', {{ coupon.discount_amount }}, '{{ coupon.name }}')">
+                                적용하기
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-muted">사용 가능한 쿠폰이 없습니다.</p>
+                    </div>
+                {% endif %}
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+/**
+ * [주의 1] 전역 함수 정의 영역
+ */
+
+function checkCouponLogin() {
+    const loginInput = document.getElementById('user-logged-in');
+    const isLoggedIn = loginInput ? loginInput.value === 'true' : false;
+
+    if (isLoggedIn) {
+        alert("현재 사용 가능한 쿠폰이 없습니다.");
+    } else {
+        if (confirm("로그인 해야만 사용할 수 있는 기능입니다.\n로그인 하시겠습니까?")) {
+            location.href = "{{ url_for('auth.login') }}";
+        }
+    }
+}
+
+// 팀원분의 서버 코드(@bp.route('/add/<int:product_id>'))에 맞춘 함수
+function addToCartWithOptions(productId) {
+    /** * 주의: 현재 팀원분의 파이썬 서버 코드는 GET 방식이며 수량을 1씩만 늘리도록 되어 있습니다.
+     * 따라서 수량/옵션 데이터를 JSON으로 보내면 서버가 읽지 못하므로,
+     * 주소 뒤에 ID만 붙여서 호출하는 방식으로 통일합니다.
+     */
+    fetch(`/order/add/${productId}`)
+    .then(response => {
+        // 서버가 200 OK 응답을 주면 성공
+        if (response.ok) {
+            if (confirm("장바구니에 상품을 담았습니다. 장바구니로 이동하시겠습니까?")) {
+                location.href = "{{ url_for('order._list') }}";
+            }
+        } else {
+            alert("장바구니 담기에 실패했습니다. (에러: " + response.status + ")");
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert("서버 통신 중 오류가 발생했습니다.");
+    });
+}
+
+/**
+ * [주의 2] 초기화 및 이벤트 연결 영역
+ */
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. 필요한 요소들 찾기
     const quantityVal = document.getElementById('quantity-val');
     const warningMsg = document.getElementById('stock-warning');
-    const basePrice = parseInt(document.getElementById('raw-price').value);
-    const maxStock = parseInt(document.getElementById('max-stock').value);
-    const deliveryDateElement = document.querySelector('.delivery-date'); // 클래스로 찾는 게 깔끔합니다
+    const basePrice = parseInt(document.getElementById('raw-price').value || 0);
+    const maxStock = parseInt(document.getElementById('max-stock').value || 0);
+    const deliveryDateElement = document.querySelector('.delivery-date');
 
-    // 2. 통합 가격 계산 함수
     function refreshTotal() {
+        if (!quantityVal) return;
         const currentQty = parseInt(quantityVal.innerText);
         let extraPrice = 0;
 
@@ -247,56 +334,147 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const finalTotal = (basePrice + extraPrice) * currentQty;
         const formattedPrice = finalTotal.toLocaleString('ko-KR');
-        document.getElementById('display-final-price').innerText = formattedPrice;
-        document.getElementById('total-final-price').innerText = formattedPrice;
 
-        warningMsg.style.display = (currentQty >= maxStock) ? 'block' : 'none';
+        const displayPrice = document.getElementById('display-final-price');
+        const totalPrice = document.getElementById('total-final-price');
+
+        if (displayPrice) displayPrice.innerText = formattedPrice;
+        if (totalPrice) totalPrice.innerText = formattedPrice;
+
+        if (warningMsg) warningMsg.style.display = (currentQty >= maxStock) ? 'block' : 'none';
     }
 
-    // 3. [중요!] 배송 날짜 계산 로직 (여기에 있어야 페이지 열리자마자 바로 실행됩니다)
+    // 배송 날짜 계산
     if (deliveryDateElement) {
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
-
         const month = (tomorrow.getMonth() + 1).toString().padStart(2, '0');
         const date = tomorrow.getDate().toString().padStart(2, '0');
-
         deliveryDateElement.innerHTML = `<i class="bi bi-truck me-1"></i> 지금 주문 시 ${month}월 ${date}일 부터 순차 배송됩니다.`;
     }
 
-    // 4. 옵션 버튼 클릭 이벤트
-    document.querySelectorAll('.option-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const group = this.closest('.row');
+    // 옵션 버튼 이벤트 (수정본)
+document.querySelectorAll('.option-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const group = this.closest('.row');
+        if (group) {
+            // 1. 버튼 디자인 변경 (활성화)
             group.querySelectorAll('.option-btn').forEach(b => b.classList.remove('active', 'btn-dark'));
             this.classList.add('active', 'btn-dark');
 
+            // 2. [추가됨] 이미지 변경 로직
             const newImg = this.getAttribute('data-image-variant');
-            if (newImg && newImg !== 'None') {
+            if (newImg && newImg !== 'None' && newImg.trim() !== '') {
+                // 대표 이미지가 들어있는 img 태그를 찾습니다.
+                // 클래스명(.product-image-sticky img)이 실제 HTML과 맞는지 꼭 확인하세요!
                 const mainImg = document.querySelector('.product-image-sticky img');
-                if (mainImg) mainImg.src = "/static/images/menu/" + newImg;
+                if (mainImg) {
+                    // 팀 프로젝트의 실제 이미지 경로에 맞춰 수정이 필요할 수 있습니다.
+                    mainImg.src = "/static/images/menu/" + newImg;
+                }
             }
-            refreshTotal();
-        });
-    });
 
-    // 5. 수량 조절 이벤트
-    document.getElementById('plus-btn').addEventListener('click', function() {
-        let currentVal = parseInt(quantityVal.innerText);
-        if (currentVal < maxStock) {
-            quantityVal.innerText = currentVal + 1;
-            refreshTotal();
-        }
-    });
-
-    document.getElementById('minus-btn').addEventListener('click', function() {
-        let currentVal = parseInt(quantityVal.innerText);
-        if (currentVal > 1) {
-            quantityVal.innerText = currentVal - 1;
+            // 3. 가격 합계 갱신
             refreshTotal();
         }
     });
 });
+
+    // 수량 플러스 버튼
+    const plusBtn = document.getElementById('plus-btn');
+    if (plusBtn) {
+        plusBtn.addEventListener('click', function() {
+            let currentVal = parseInt(quantityVal.innerText);
+            if (currentVal < maxStock) {
+                quantityVal.innerText = currentVal + 1;
+                refreshTotal();
+            }
+        });
+    }
+
+    // 수량 마이너스 버튼
+    const minusBtn = document.getElementById('minus-btn');
+    if (minusBtn) {
+        minusBtn.addEventListener('click', function() {
+            let currentVal = parseInt(quantityVal.innerText);
+            if (currentVal > 1) {
+                quantityVal.innerText = currentVal - 1;
+                refreshTotal();
+            }
+        });
+    }
+});
+    function handleCouponClick() {
+    // 1. 로그인 여부 확인
+    const isLoggedIn = document.getElementById('is-logged-in').value === 'true';
+
+    if (!isLoggedIn) {
+        // 2. 비회원일 때 팝업창
+        if (confirm("로그인 해야만 사용할 수 있는 기능입니다.\n로그인 페이지로 이동하시겠습니까?")) {
+            location.href = "{{ url_for('auth.login') }}"; // 팀의 로그인 주소 확인 필요
+        }
+    } else {
+        // 3. 회원일 때 쿠폰 모달 띄우기
+        const couponModal = new bootstrap.Modal(document.getElementById('couponModal'));
+        couponModal.show();
+    }
+}
+
+// 쿠폰 선택 시 실행될 함수
+
+function applyCoupon(id, amount, name) {
+    // 1. 화면에 할인 정보 표시 (기존과 동일)
+    document.getElementById('applied-coupon-name').innerText = name;
+    document.getElementById('applied-discount-amount').innerText = amount.toLocaleString();
+    document.getElementById('selected-coupon-info').style.display = 'block';
+
+    // 2. [수정] 현재 '옵션이 포함된' 총액을 가져옵니다.
+    // total-final-price에 적힌 글자에서 쉼표(,)를 제거하고 숫자로 바꿉니다.
+    const currentPriceText = document.getElementById('total-final-price').innerText.replace(/,/g, '');
+    const currentTotal = parseInt(currentPriceText);
+
+    // 3. 현재 총액에서 쿠폰 금액만큼만 뺍니다.
+    const finalPrice = currentTotal - amount;
+    const formattedPrice = finalPrice.toLocaleString();
+
+    // 4. 두 군데 가격표 업데이트 (기존과 동일)
+    document.getElementById('total-final-price').innerText = formattedPrice;
+    const stickyPrice = document.getElementById('display-final-price');
+    if (stickyPrice) {
+        stickyPrice.innerText = formattedPrice;
+    }
+
+    // 모달 닫기 및 알림
+    const modalElement = document.getElementById('couponModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    modal.hide();
+    alert("쿠폰이 적용되었습니다!");
+}
+
+function cancelCoupon() {
+    // 1. 선택된 쿠폰 정보 숨기기
+    document.getElementById('selected-coupon-info').style.display = 'none';
+
+    // 2. 가격 원상복구
+    const basePrice = {{ product.price }};
+    const formattedPrice = basePrice.toLocaleString();
+
+    // 3. [핵심] 두 군데의 가격표를 모두 원래대로 복구
+    document.getElementById('total-final-price').innerText = formattedPrice; // 메인 혜택가
+
+    const stickyPrice = document.getElementById('display-final-price'); // 상단 스티키 바 가격
+    if (stickyPrice) {
+        stickyPrice.innerText = formattedPrice;
+    }
+
+    // 4. 변수 초기화 및 모달 닫기
+    selectedCouponId = null;
+    const modalElement = document.getElementById('couponModal');
+    const modal = bootstrap.Modal.getInstance(modalElement);
+    if(modal) modal.hide();
+
+    alert("쿠폰 적용이 취소되었습니다.");
+}
 </script>
 {% endblock %}

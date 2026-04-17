@@ -4,7 +4,13 @@
     {% if products_by_brand %}
         {% for brand, products in products_by_brand.items() %}
         <div class="brand-section mb-5 py-3">
-            <h3 class="fw-bold mb-4">{{ brand }} 제품</h3>
+            <h3 class="fw-bold mb-4 d-flex align-items-center">
+                <img src="{{ url_for('static', filename='images/logos/' + brand + '.svg') }}"
+                     alt="{{ brand }} 로고"
+                     class="me-2"
+                     style="height: 1.5em; width: auto; object-fit: contain;">
+                <span>{{ brand }} 제품</span>
+            </h3>
 
             <div id="carousel-{{ loop.index }}" class="carousel slide" data-bs-ride="false">
                 <div class="carousel-inner p-1">
