@@ -75,10 +75,11 @@ def create_app():
     # ----------------------------------------------------
     # [블루프린트 등록 영역]
 
-    from .views import main_views, auth_views, order_views, product_views
+    from .views import main_views, auth_views, order_views, product_views, review_views
     app.register_blueprint(main_views.bp)
     app.register_blueprint(auth_views.bp)
     app.register_blueprint(order_views.bp, url_prefix='/order')
     app.register_blueprint(product_views.bp)
+    app.register_blueprint(review_views.bp, url_prefix='/review')
 
     return app

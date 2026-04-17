@@ -350,7 +350,7 @@
                         <div class="text-muted fw-bold mb-3" style="font-size: 0.85rem;">인기 검색어</div>
                         <ul class="list-unstyled popular-searches">
                             <li><a href="#">갤럭시 S26 울트라</a></li>
-                            <li><a href="#">애플 아이폰 17</a></li>
+                            <li><a href="#">아이폰 17</a></li>
                             <li><a href="#">샤오미</a></li>
                             <li><a href="#">워치</a></li>
                             <li><a href="#">무선이어폰</a></li>
@@ -493,7 +493,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <script>
+<script>
         document.addEventListener('DOMContentLoaded', function() {
             const searchTrigger = document.getElementById('searchTrigger');
             const searchPanel = document.getElementById('searchPanel');
@@ -528,86 +528,123 @@
             cartCloseBtn.addEventListener('click', () => cartPanel.classList.remove('show'));
 
             searchTrigger.addEventListener('click', () => cartPanel.classList.remove('show'));
+
+            // ==========================================
+            // 🌟 새로 추가된 메가 검색 실행 로직!
+            // ==========================================
+            function executeSearch() {
+                const query = searchInput.value.trim();
+                if (query) {
+                    location.href = `/product/list?kw=${encodeURIComponent(query)}`;
+                } else {
+                    alert("검색어를 입력해주세요!");
+                    searchInput.focus();
+                }
+            }
+
+            // 1. 엔터키 입력 시 검색
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    executeSearch();
+                }
+            });
+
+            // 2. 돋보기 아이콘 클릭 시 검색
+            const searchIcon = document.querySelector('.search-icon-large');
+            if (searchIcon) {
+                searchIcon.style.cursor = "pointer";
+                searchIcon.addEventListener('click', executeSearch);
+            }
+
+            // 3. 인기 검색어 클릭 시 바로 검색
+            document.querySelectorAll('.popular-searches a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const kw = this.innerText;
+                    location.href = `/product/list?kw=${encodeURIComponent(kw)}`;
+                });
+            });
+            // ==========================================
         });
 
         async function updateQuantity(productId, action, btnElement) {
-    // [수정] ID에 의존하지 않고, 클릭된 버튼 바로 옆의 수량(span)을 직접 찾습니다.
-    const parent = btnElement.closest('.item-quantity') || btnElement.closest('.qty-control');
-    const qtySpan = parent.querySelector('.qty-num, .qty-text');
+            // [수정] ID에 의존하지 않고, 클릭된 버튼 바로 옆의 수량(span)을 직접 찾습니다.
+            const parent = btnElement.closest('.item-quantity') || btnElement.closest('.qty-control');
+            const qtySpan = parent.querySelector('.qty-num, .qty-text');
 
-    if (!qtySpan) return;
+            if (!qtySpan) return;
 
-    // 현재 수량 파악
-    let currentQty = parseInt(qtySpan.innerText) || 0;
+            // 현재 수량 파악
+            let currentQty = parseInt(qtySpan.innerText) || 0;
 
-    // [확인창 로직] 수량이 1인데 마이너스(-)를 누른 경우에만 실행
-    if (action === 'dec' && currentQty === 1) {
-        if (!confirm("상품을 장바구니에서 삭제하시겠습니까?")) {
-            return; // 취소를 누르면 서버에 요청을 보내지 않고 종료합니다.
-        }
-    }
+            // [확인창 로직] 수량이 1인데 마이너스(-)를 누른 경우에만 실행
+            if (action === 'dec' && currentQty === 1) {
+                if (!confirm("상품을 장바구니에서 삭제하시겠습니까?")) {
+                    return; // 취소를 누르면 서버에 요청을 보내지 않고 종료합니다.
+                }
+            }
 
-    try {
-        const response = await fetch(`/order/modify/${productId}/${action}`, {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            if (data.is_deleted) {
-                // 삭제 시에는 데이터 동기화를 위해 페이지를 새로고침합니다.
-                location.reload();
-            } else {
-                // 1. 모든 수량 표시 UI 동기화 (메인 + 요약패널)
-                document.querySelectorAll(`[id="qty-${productId}"]`).forEach(el => {
-                    el.innerText = data.new_quantity;
+            try {
+                const response = await fetch(`/order/modify/${productId}/${action}`, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
 
-                // 2. 품목별 가격 업데이트
-                document.querySelectorAll(`[id="item-total-${productId}"]`).forEach(el => {
-                    el.innerText = data.item_total + '원';
-                });
+                const data = await response.json();
 
-                // 3. 전체 합계 업데이트 (배송비 로직 포함)
-                updateAllTotalDisplays(data.total_price);
+                if (data.success) {
+                    if (data.is_deleted) {
+                        // 삭제 시에는 데이터 동기화를 위해 페이지를 새로고침합니다.
+                        location.reload();
+                    } else {
+                        // 1. 모든 수량 표시 UI 동기화 (메인 + 요약패널)
+                        document.querySelectorAll(`[id="qty-${productId}"]`).forEach(el => {
+                            el.innerText = data.new_quantity;
+                        });
+
+                        // 2. 품목별 가격 업데이트
+                        document.querySelectorAll(`[id="item-total-${productId}"]`).forEach(el => {
+                            el.innerText = data.item_total + '원';
+                        });
+
+                        // 3. 전체 합계 업데이트 (배송비 로직 포함)
+                        updateAllTotalDisplays(data.total_price);
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
             }
         }
-    } catch (error) {
-        console.error('Error:', error);
-    }
-}
 
-function updateAllTotalDisplays(totalPriceStr) {
-    const subtotalEl = document.getElementById('summary-subtotal');     // 메인: 주문 금액
-    const totalEl = document.getElementById('summary-total');           // 메인: 총 결제 금액
-    const panelTotalEl = document.getElementById('panel-total-price');  // 요약 패널: 총 금액
+        function updateAllTotalDisplays(totalPriceStr) {
+            const subtotalEl = document.getElementById('summary-subtotal');     // 메인: 주문 금액
+            const totalEl = document.getElementById('summary-total');           // 메인: 총 결제 금액
+            const panelTotalEl = document.getElementById('panel-total-price');  // 요약 패널: 총 금액
 
-    // 배송비 기준 요소 (반드시 id="shipping-fee-display"가 HTML에 있어야 함)
-    const shippingEl = document.getElementById('shipping-fee-display');
+            // 배송비 기준 요소 (반드시 id="shipping-fee-display"가 HTML에 있어야 함)
+            const shippingEl = document.getElementById('shipping-fee-display');
 
-    // 숫자로 변환
-    const pureProductTotal = parseInt(totalPriceStr.replace(/,/g, '')) || 0;
+            // 숫자로 변환
+            const pureProductTotal = parseInt(totalPriceStr.replace(/,/g, '')) || 0;
 
-    // [배송비 로직] 멤버십 '0원' 글자가 있으면 0, 아니면 3000원
-    let shippingFee = 3000;
-    if (shippingEl && (shippingEl.innerText.includes('0원') || shippingEl.innerText.includes('무료'))) {
-        shippingFee = 0;
-    }
+            // [배송비 로직] 멤버십 '0원' 글자가 있으면 0, 아니면 3000원
+            let shippingFee = 3000;
+            if (shippingEl && (shippingEl.innerText.includes('0원') || shippingEl.innerText.includes('무료'))) {
+                shippingFee = 0;
+            }
 
-    // 메인 장바구니: 주문 금액 (배송비 제외)
-    if (subtotalEl) subtotalEl.innerText = pureProductTotal.toLocaleString() + '원';
+            // 메인 장바구니: 주문 금액 (배송비 제외)
+            if (subtotalEl) subtotalEl.innerText = pureProductTotal.toLocaleString() + '원';
 
-    // 메인 장바구니: 총 결제 금액 (배송비 포함) -> 이 부분이 핵심입니다.
-    if (totalEl) {
-        const finalAmount = pureProductTotal + shippingFee;
-        totalEl.innerText = finalAmount.toLocaleString() + '원';
-    }
+            // 메인 장바구니: 총 결제 금액 (배송비 포함) -> 이 부분이 핵심입니다.
+            if (totalEl) {
+                const finalAmount = pureProductTotal + shippingFee;
+                totalEl.innerText = finalAmount.toLocaleString() + '원';
+            }
 
-    // 요약 패널: 총 금액 (배송비 제외)
-    if (panelTotalEl) panelTotalEl.innerText = pureProductTotal.toLocaleString() + '원';
-}
+            // 요약 패널: 총 금액 (배송비 제외)
+            if (panelTotalEl) panelTotalEl.innerText = pureProductTotal.toLocaleString() + '원';
+        }
 
     </script>
 
