@@ -440,28 +440,6 @@
                         </li>
 
                     </ul>
-
-                {# 3. 메가 메뉴 (드롭다운) 부분 #}
-                <div class="dropdown-menu mega-menu shadow-sm">
-                    <div class="d-flex gap-4 justify-content-center">
-                        {# 각 카테고리별로 1번부터 5번까지의 이미지를 매칭 (예: phone1.jpg, phone_sam1.jpg 대응) #}
-                        {% for i in range(1, 6) %}
-                            {% set img_name = prefix + i|string + '.jpg' %}
-                            {# 예외 처리: 스마트폰의 첫 번째 이미지만 phone_sam1.jpg 라면 #}
-                            {% if name == '스마트폰' and i == 1 %}
-                                {% set img_name = 'phone_sam1.jpg' %}
-                            {% endif %}
-
-                            <a href="#" class="mega-item d-flex flex-column align-items-center">
-                                <img src="{{ url_for('static', filename='images/menu/' + img_name) }}"
-                                     alt="{{ name }} {{ i }}" class="mega-img">
-                                <span class="mega-text">{{ name }} {{ i }}</span>
-                            </a>
-                        {% endfor %}
-                    </div>
-                </div>
-            </li>
-            {% endfor %}
         </ul>
                 </div>
 
@@ -587,6 +565,7 @@
                 </div>
             </div>
         </div>
+
         <div id="cartPanel" class="cart-panel shadow-sm">
             <div class="container">
                 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -638,11 +617,7 @@
                         <div class="fs-3 fw-bold mb-3">
                             <span id="panel-total-price">
                                 {% if total_price %}
-                                    {% if g.user and g.user.is_membership %}
-                                        {{ "{:,}".format(total_price) }}원
-                                    {% else %}
-                                        {{ "{:,}".format(total_price - 3000) }}원
-                                    {% endif %}
+                                    {{ "{:,}".format(total_price) }}원
                                 {% else %}
                                     0원
                                 {% endif %}
@@ -662,6 +637,8 @@
 
         {% endblock %}
     </main>
+
+    <div id="user-context" data-is-membership="{{ 'true' if g.user and g.user.is_membership else 'false' }}"></div>
 
     <footer class="bg-light text-center text-muted py-4 border-top">
         <div class="container">
@@ -724,7 +701,6 @@
         });
 
         async function updateQuantity(productId, action, btnElement) {
-    // [수정] ID에 의존하지 않고, 클릭된 버튼 바로 옆의 수량(span)을 직접 찾습니다.
     const parent = btnElement.closest('.item-quantity') || btnElement.closest('.qty-control');
     const qtySpan = parent.querySelector('.qty-num, .qty-text');
 
@@ -736,24 +712,25 @@
     // [확인창 로직] 수량이 1인데 마이너스(-)를 누른 경우에만 실행
     if (action === 'dec' && currentQty === 1) {
         if (!confirm("상품을 장바구니에서 삭제하시겠습니까?")) {
-            return; // 취소를 누르면 서버에 요청을 보내지 않고 종료합니다.
+            return;
         }
     }
 
     try {
+        // 서버에 요청을 보냅니다.
         const response = await fetch(`/order/modify/${productId}/${action}`, {
             method: 'POST',
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
 
+        // ✅ 응답을 여기서 받아야 합니다.
         const data = await response.json();
 
         if (data.success) {
             if (data.is_deleted) {
-                // 삭제 시에는 데이터 동기화를 위해 페이지를 새로고침합니다.
                 location.reload();
             } else {
-                // 1. 모든 수량 표시 UI 동기화 (메인 + 요약패널)
+                // 1. 모든 수량 표시 UI 동기화
                 document.querySelectorAll(`[id="qty-${productId}"]`).forEach(el => {
                     el.innerText = data.new_quantity;
                 });
@@ -763,8 +740,8 @@
                     el.innerText = data.item_total + '원';
                 });
 
-                // 3. 전체 합계 업데이트 (배송비 로직 포함)
-                updateAllTotalDisplays(data.total_price);
+                // 3. 전체 합계 업데이트 (서버에서 받은 data 전체를 넘김)
+                updateAllTotalDisplays(data);
             }
         }
     } catch (error) {
@@ -772,34 +749,24 @@
     }
 }
 
-function updateAllTotalDisplays(totalPriceStr) {
-    const subtotalEl = document.getElementById('summary-subtotal');     // 메인: 주문 금액
-    const totalEl = document.getElementById('summary-total');           // 메인: 총 결제 금액
-    const panelTotalEl = document.getElementById('panel-total-price');  // 요약 패널: 총 금액
-
-    // 배송비 기준 요소 (반드시 id="shipping-fee-display"가 HTML에 있어야 함)
+function updateAllTotalDisplays(data) {
+    const subtotalEl = document.getElementById('summary-subtotal');
+    const totalEl = document.getElementById('summary-total');
+    const panelTotalEl = document.getElementById('panel-total-price');
     const shippingEl = document.getElementById('shipping-fee-display');
 
-    // 숫자로 변환
-    const pureProductTotal = parseInt(totalPriceStr.replace(/,/g, '')) || 0;
+    if (subtotalEl) subtotalEl.innerText = data.pure_total + '원';
+    if (totalEl) totalEl.innerText = data.total_price + '원';
 
-    // [배송비 로직] 멤버십 '0원' 글자가 있으면 0, 아니면 3000원
-    let shippingFee = 3000;
-    if (shippingEl && (shippingEl.innerText.includes('0원') || shippingEl.innerText.includes('무료'))) {
-        shippingFee = 0;
+    // 요약 패널도 서버가 준 최종가로 업데이트
+    if (panelTotalEl) {
+        panelTotalEl.innerText = data.total_price + '원';
     }
 
-    // 메인 장바구니: 주문 금액 (배송비 제외)
-    if (subtotalEl) subtotalEl.innerText = pureProductTotal.toLocaleString() + '원';
-
-    // 메인 장바구니: 총 결제 금액 (배송비 포함) -> 이 부분이 핵심입니다.
-    if (totalEl) {
-        const finalAmount = pureProductTotal + shippingFee;
-        totalEl.innerText = finalAmount.toLocaleString() + '원';
+    if (shippingEl) {
+        const isFree = data.pure_total === data.total_price;
+        shippingEl.innerText = isFree ? '0원 (멤버십 무료)' : '3,000원';
     }
-
-    // 요약 패널: 총 금액 (배송비 제외)
-    if (panelTotalEl) panelTotalEl.innerText = pureProductTotal.toLocaleString() + '원';
 }
 
     </script>
