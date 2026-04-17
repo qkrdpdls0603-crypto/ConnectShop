@@ -156,6 +156,7 @@ class Review(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     content = db.Column(db.Text, nullable=False) # 리뷰 내용
     rating = db.Column(db.Integer, default=5) # 별점 (1~5점, 기본 5점)
+    image_path = db.Column(db.String(255), nullable=True) # 이미지
     timestamp = db.Column(db.DateTime, default=datetime.utcnow) # 작성 시간
     # product, user: 쉽게 데이터를 꺼내오기 위한 관계 설정입니다.
     product = db.relationship('Product', backref=db.backref('reviews'))

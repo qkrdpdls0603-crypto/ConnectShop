@@ -227,7 +227,127 @@
     <section id="section-images" style="height: 500px; background: #eee;">슬라이더 영역 예정</section>
     <section id="section-details" style="height: 500px; background: #ddd;">상세 설명 영역 예정</section>
 </div>
+<section id="section-reviews" class="py-5">
+    <div class="container">
+        <div class="product-reviews mt-5 pt-4 border-top">
+            <h4 class="fw-bold mb-4">상품 리뷰</h4>
 
+            {% if g.user %}
+                {% if has_reviewed %}
+                    <div class="alert alert-info text-center rounded-4 py-4 mb-5 shadow-sm border-0 bg-light">
+                        <i class="bi bi-info-circle me-2 text-primary"></i> 이미 이 상품에 대한 소중한 리뷰를 남겨주셨습니다!
+                    </div>
+                {% else %}
+                    <div class="card mb-5 shadow-sm border-0 bg-light">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3">리뷰 작성하기</h6>
+                            <form action="{{ url_for('review.create', product_id=product.id) }}" method="POST" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small">별점</label>
+                                    <select name="rating" class="form-select w-auto border-0 shadow-sm" required>
+                                        <option value="5">⭐⭐⭐⭐⭐ (5점)</option>
+                                        <option value="4">⭐⭐⭐⭐ (4점)</option>
+                                        <option value="3">⭐⭐⭐ (3점)</option>
+                                        <option value="2">⭐⭐ (2점)</option>
+                                        <option value="1">⭐ (1점)</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="content" class="form-label text-muted small">내용</label>
+                                    <textarea class="form-control border-0 shadow-sm mb-3" id="content" name="content" rows="3" placeholder="상품에 대한 솔직한 리뷰를 남겨주세요!" required></textarea>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <input type="file" name="image" class="form-control w-50 border-0 shadow-sm" accept="image/*">
+                                    <button type="submit" class="btn btn-dark px-4 rounded-pill">리뷰 등록</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-secondary text-center rounded-4 py-4 mb-5">
+                    리뷰를 작성하려면 <a href="{{ url_for('auth.login') }}" class="alert-link text-decoration-none">로그인</a>이 필요합니다.
+                </div>
+            {% endif %}
+
+            <div class="review-list">
+                {% if product.reviews %}
+                    {% for review in product.reviews|sort(attribute='timestamp', reverse=True) %}
+                    <div class="review-item border-bottom py-4">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="fw-bold me-2 text-dark">{{ review.user.username[0] }}**</span>
+                                <span class="text-warning">{% for i in range(review.rating) %}⭐{% endfor %}</span>
+                            </div>
+                            <span class="text-muted small">{{ review.timestamp.strftime('%Y-%m-%d') }}</span>
+                        </div>
+
+                        {% if review.image_path %}
+                            <div class="mt-2 mb-3">
+                                <img src="{{ url_for('static', filename=review.image_path) }}" alt="리뷰 이미지" class="rounded shadow-sm" style="max-height: 150px; width: auto;">
+                            </div>
+                        {% endif %}
+
+                        <p class="mb-3 text-secondary" style="line-height: 1.6;">{{ review.content }}</p>
+
+                        {% if g.user and g.user.id == review.user_id %}
+                            <div class="d-flex justify-content-end gap-2 mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editReviewModal{{ review.id }}">
+                                    수정
+                                </button>
+                                <form action="{{ url_for('review.delete', review_id=review.id) }}" method="POST">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('정말 이 리뷰를 삭제하시겠습니까?');">삭제</button>
+                                </form>
+                            </div>
+
+                            <div class="modal fade" id="editReviewModal{{ review.id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title fw-bold">리뷰 수정</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form action="{{ url_for('review.edit', review_id=review.id) }}" method="POST" enctype="multipart/form-data">
+                                            <div class="modal-body">
+                                                <div class="mb-3">
+                                                    <label class="form-label small text-muted">별점 수정</label>
+                                                    <select name="rating" class="form-select" required>
+                                                        <option value="5" {% if review.rating == 5 %}selected{% endif %}>⭐⭐⭐⭐⭐ (5점)</option>
+                                                        <option value="4" {% if review.rating == 4 %}selected{% endif %}>⭐⭐⭐⭐ (4점)</option>
+                                                        <option value="3" {% if review.rating == 3 %}selected{% endif %}>⭐⭐⭐ (3점)</option>
+                                                        <option value="2" {% if review.rating == 2 %}selected{% endif %}>⭐⭐ (2점)</option>
+                                                        <option value="1" {% if review.rating == 1 %}selected{% endif %}>⭐ (1점)</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label small text-muted">내용 수정</label>
+                                                    <textarea class="form-control" name="content" rows="4" required>{{ review.content }}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label small text-muted">사진 변경 (선택)</label>
+                                                    <input type="file" name="image" class="form-control" accept="image/*">
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+                                                <button type="submit" class="btn btn-dark">수정 완료</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <p class="text-muted mb-0">아직 등록된 리뷰가 없습니다.<br>첫 번째 리뷰의 주인공이 되어보세요!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // 1. 필요한 요소들 찾기
