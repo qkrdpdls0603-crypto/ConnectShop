@@ -467,5 +467,37 @@ function addToCartWithOptions(productId) {
         }
     });
 }
+    function buyNow(productId) {
+    const isLoggedIn = document.getElementById('is-logged-in')?.value === 'true';
+    const quantity = parseInt(document.getElementById('quantity-val').innerText);
+
+    // 선택된 옵션 ID들 수집
+    const selectedOptions = [];
+    document.querySelectorAll('.option-btn.active').forEach(btn => {
+        const optId = btn.getAttribute('data-option-id');
+        if (optId) selectedOptions.push(optId);
+    });
+
+    // 1. 비회원 체크 로직
+    if (!isLoggedIn) {
+        if (!confirm("로그인 후 구매하시면 쿠폰 혜택을 받으실 수 있습니다.\n비회원으로 구매하시겠습니까?")) {
+            location.href = "{{ url_for('auth.login') }}";
+            return;
+        }
+    }
+
+    // 2. 서버로 보낼 데이터 구성
+    // 팀원분의 checkout 함수가 GET으로 데이터를 받을 수 있게 쿼리 스트링을 만듭니다.
+    const baseUrl = "{{ url_for('order.checkout') }}";
+    const params = new URLSearchParams({
+        direct_buy: 'true',           // 바로구매인지 장바구니구매인지 구분값
+        product_id: productId,
+        quantity: quantity,
+        options: selectedOptions.join(','),
+        coupon_id: appliedCouponId || '' // 전역 변수 사용
+    });
+
+    location.href = `${baseUrl}?${params.toString()}`;
+}
 </script>
 {% endblock %}
