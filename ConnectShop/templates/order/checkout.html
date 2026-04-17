@@ -39,10 +39,36 @@
 
     <div class="checkout-summary-section">
         <h3>주문 요약</h3>
+
+        <div class="form-section" style="border: none; padding: 0; margin-bottom: 20px;">
+            <div class="field-label">쿠폰 적용</div>
+            <select id="coupon-select" class="form-control" onchange="updateTotalAmount()">
+                <option value="0" data-discount="0">사용 가능한 쿠폰 선택</option>
+                {% for coupon in available_coupons %}
+                    <option value="{{ coupon.id }}" data-discount="{{ coupon.discount_amount }}">
+                        {{ coupon.name }} (-{{ "{:,}".format(coupon.discount_amount) }}원)
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
         <div class="summary-row">
             <span>상품 금액</span>
-            <span>{{ "{:,}".format(total_price - (0 if (g.user and g.user.is_membership) else 3000)) }}원</span>
+            <span>
+                {# 서버의 total_price가 배송비 포함이라면, 멤버십이 아닐 때 3,000원을 빼서 표시 #}
+                {% if g.user and g.user.is_membership %}
+                    {{ "{:,}".format(total_price|int) }}원
+                {% else %}
+                    {{ "{:,}".format(total_price|int - 3000) }}원
+                {% endif %}
+            </span>
         </div>
+
+        <div class="summary-row" style="color: #ff3b30;">
+            <span>쿠폰 할인</span>
+            <span id="display-discount">0원</span>
+        </div>
+
         <div class="info-row">
             <span>배송비</span>
             <span class="info-value">
@@ -57,11 +83,8 @@
         <div class="summary-total">
             <span>총 결제 금액</span>
             <span>
-                {% if g.user and g.user.is_membership %}
-                    {{ "{:,}".format(total_price) }}원
-                {% else %}
-                    {{ "{:,}".format(total_price + 3000) }}원
-                {% endif %}
+                {# 총 결제 금액은 이미 배송비가 포함된 서버의 total_price를 그대로 사용 #}
+                {{ "{:,}".format(total_price|int) }}원
             </span>
         </div>
 
@@ -69,23 +92,25 @@
             {% if g.user and g.user.is_membership %}
                 {{ "{:,}".format(total_price) }}원 결제하기
             {% else %}
-                {{ "{:,}".format(total_price + 3000) }}원 결제하기
+                {{ "{:,}".format(total_price|int) }}원 결제하기
             {% endif %}
         </button>
     </div>
 </div>
 
 <script>
+// 전역 변수로 선언하여 모든 함수에서 접근 가능하게 합니다.
+let widgets = null;
+
 document.addEventListener("DOMContentLoaded", async function() {
     const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
     const customerKey = "{% if g.user %}USER_{{ g.user.id }}{% else %}GUEST_{{ now_ts }}{% endif %}";
 
     const isMembership = {{ 'true' if g.user and g.user.is_membership else 'false' }};
-    const productPrice = {{ total_price }};
-    const finalAmount = isMembership ? productPrice : productPrice + 3000;
+    const finalAmount = {{ total_price|int }};
 
     const tossPayments = TossPayments(clientKey);
-    const widgets = tossPayments.widgets({ customerKey });
+    widgets = tossPayments.widgets({ customerKey });
 
     await widgets.setAmount({
         currency: "KRW",
@@ -103,36 +128,66 @@ document.addEventListener("DOMContentLoaded", async function() {
         })
     ]);
 
-    window.requestPayment = async function() {
-        const recipient = document.getElementById('recipient').value;
-        const phone = document.getElementById('phone').value;
-        const address = document.getElementById('address').value;
-        const address_detail = document.getElementById('address_detail').value;
+    // [금액 업데이트 함수]
+    window.updateTotalAmount = async function() {
+        const couponSelect = document.getElementById('coupon-select');
+        const selectedOption = couponSelect.options[couponSelect.selectedIndex];
+        const discount = parseInt(selectedOption.getAttribute('data-discount')) || 0;
+        const originalTotal = {{ total_price|int }};
+        const updatedFinalAmount = Math.max(0, originalTotal - discount);
 
-        if (!recipient || !address || !phone) {
-            alert("배송 정보를 모두 입력해주세요.");
-            return;
+        // UI 업데이트
+        document.getElementById('display-discount').innerText = (discount > 0 ? "-" : "") + discount.toLocaleString() + "원";
+        const finalTotalDisplay = document.querySelector('.summary-total span:last-child');
+        if (finalTotalDisplay) finalTotalDisplay.innerText = updatedFinalAmount.toLocaleString() + "원";
+        const payButton = document.getElementById('payment-button');
+        if (payButton) payButton.innerText = updatedFinalAmount.toLocaleString() + "원 결제하기";
+
+        // 위젯 금액 갱신
+        if (widgets) {
+            await widgets.setAmount({
+                currency: "KRW",
+                value: updatedFinalAmount
+            });
         }
+    };
+
+    // [결제 요청 함수 - 에러 해결 지점]
+    window.requestPayment = async function() {
+        // 1. 입력 필드에서 값 가져오기 (이 부분이 누락되어 에러가 났습니다)
+        const recipient = document.getElementById('recipient').value.trim();
+        const phone = document.getElementById('phone').value.trim();
+        const address = document.getElementById('address').value.trim();
+        const address_detail = document.getElementById('address_detail').value.trim();
+        const couponId = document.getElementById('coupon-select').value;
+
+        // 2. 유효성 검사 (입력값이 없으면 토스에서 에러가 납니다)
+        if (!recipient) { alert("수령인 이름을 입력해주세요."); return; }
+        if (!phone) { alert("연락처를 입력해주세요."); return; }
+        if (!address) { alert("배송 주소를 입력해주세요."); return; }
 
         try {
+            // 서버에 임시 정보 저장
             const response = await fetch('/order/save_temp_info', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     recipient: recipient,
                     phone: phone,
-                    address: address + " " + address_detail
+                    address: address + " " + address_detail,
+                    coupon_id: couponId !== "0" ? couponId : null
                 })
             });
 
             if (!response.ok) throw new Error("세션 저장 실패");
 
+            // 3. 토스 결제 실행
             await widgets.requestPayment({
                 orderId: "order_temp_{{ now_ts }}",
                 orderName: "ConnectShop 상품 결제",
                 successUrl: window.location.origin + "/order/success",
                 failUrl: window.location.origin + "/order/fail",
-                customerName: recipient,
+                customerName: recipient, // 이제 recipient가 문자열로 확실히 전달됩니다.
             });
         } catch (error) {
             console.error("결제 중 오류 발생:", error);
@@ -140,6 +195,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     };
 
+    // [우편번호 및 전화번호 포맷 함수]
     window.execDaumPostcode = function() {
         new daum.Postcode({
             oncomplete: function(data) {

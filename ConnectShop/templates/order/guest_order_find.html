@@ -1,57 +1,55 @@
 {% extends 'base.html' %}
 {% block content %}
 
-{% set flushed_messages = get_flashed_messages() %}
-
 <link rel="stylesheet" href="{{ url_for('static', filename='auth_style.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='order.css') }}">
 
 <div class="auth-container">
-    <h5 class="login-title">비회원 주문조회</h5>
+    <h1 class="auth-title">비회원 주문조회</h1>
 
-    <p style="text-align: center; color: #86868b; font-size: 14px; margin-bottom: 30px;">
+    <p style="width: 460px; color: #666; font-size: 14px; margin: -20px 0 30px 0; text-align: left;">
         주문 시 입력하신 이름과 연락처를 입력해 주세요.
     </p>
 
     <form method="post" class="login-form">
         {% with messages = get_flashed_messages() %}
             {% if messages %}
-                <div class="alert alert-danger" style="font-size: 14px; border-radius: 8px;">
-                    {% for message in messages %}
-                        {{ message }}
-                    {% endfor %}
+                <div class="alert-danger">
+                    {% for message in messages %} {{ message }} {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
 
         <div class="input-group">
-            <label for="recipient">이름 (수령인)</label>
-            <input type="text" name="recipient" id="recipient" class="form-control auth-input"
-                   placeholder="주문 시 입력한 이름을 입력하세요" required>
+            <input type="text" name="recipient" id="recipient" class="auth-input"
+                   placeholder="이름 (수령인)" required>
         </div>
 
         <div class="input-group">
-            <label for="phone">연락처</label>
-            <input type="text" name="phone" id="phone" class="form-control auth-input"
-                   placeholder="010-0000-0000" required>
+            <input type="text" name="phone" id="phone" class="auth-input"
+                   placeholder="연락처 (010-0000-0000)" maxlength="13" oninput="formatPhoneNumber(this)" required>
         </div>
 
         <button type="submit" class="auth-btn">주문내역 조회하기</button>
     </form>
 
-    <div class="login-links">
-        <span class="not-member-text">아직 회원이 아니신가요?</span>
-
-        <a href="{{ url_for('auth.signup') }}" style="font-weight: 600;">회원가입 하기</a>
-        <span class="sep">|</span>
-        <a href="{{ url_for('auth.login') }}">로그인 페이지로</a>
+    <div style="margin-top: 25px; font-size: 14px; color: #666; text-align: center;">
+        <span style="margin-right: 10px;">아직 회원이 아니신가요?</span>
+        <a href="{{ url_for('auth.signup') }}" style="color: #000; font-weight: bold; text-decoration: none;">회원가입 하기</a>
     </div>
 
-    <div class="back-to-main-section">
-        <a href="{{ url_for('main.index') }}" class="btn-outline-secondary">
-            메인 페이지로 돌아가기
-        </a>
+    <div style="margin-top: 20px;">
+        <a href="{{ url_for('main.index') }}" style="color: #888; text-decoration: none; font-size: 13px;">메인으로 돌아가기</a>
     </div>
 </div>
 
+<script>
+    function formatPhoneNumber(target) {
+        let val = target.value.replace(/\D/g, "");
+        let res = "";
+        if (val.length <= 3) res = val;
+        else if (val.length <= 7) res = val.substr(0, 3) + "-" + val.substr(3);
+        else res = val.substr(0, 3) + "-" + val.substr(3, 4) + "-" + val.substr(7, 4);
+        target.value = res;
+    }
+</script>
 {% endblock %}

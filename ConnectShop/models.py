@@ -124,7 +124,8 @@ class Order(db.Model):
     current_location = db.Column(db.String(100), default='상품 준비 중')
     delivery_message = db.Column(db.String(200), default='주문이 확인되어 배송을 준비하고 있습니다.')
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
+    coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=True)
+    coupon = db.relationship('Coupon', backref='orders')
 
 
 # 7. 주문 상세(OrderItem) 테이블: 영수증 안에 적힌 구체적인 상품 내역입니다. (한 번 주문에 여러 개를 살 수 있으니까요)

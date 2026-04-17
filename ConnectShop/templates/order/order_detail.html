@@ -27,7 +27,15 @@
                                 <img src="{{ url_for('static', filename='images/menu/' + item.product.image_path) }}" alt="{{ item.product.name }}">
                             </div>
                             <div class="product-item-info">
-                                <p class="item-name">{{ item.product.name }}</p>
+                                <p class="item-name">
+                                    {{ item.product.name }}
+                                    {# --- 배지 위치를 이름 바로 뒤(p태그 안)로 이동 --- #}
+                                    {% if item.status == '환불완료' %}
+                                        <span class="badge bg-danger ms-2" style="font-size: 11px; vertical-align: middle; display: inline-block;">환불완료</span>
+                                    {% elif item.status == '교환신청' %}
+                                        <span class="badge bg-warning text-dark ms-2" style="font-size: 11px; vertical-align: middle; display: inline-block;">교환신청</span>
+                                    {% endif %}
+                                </p>
                                 <p class="item-meta">{{ item.quantity }}개 / {{ "{:,}".format(item.price) }}원</p>
                             </div>
                         </div>
@@ -35,15 +43,32 @@
                     </div>
 
                     {% if can_refund %}
-                    <div class="item-action-btns" >
-                        <a href="{{ url_for('order.refund_request', order_id=order.id, item_id=item.id, type='교환') }}"
-                           class="btn-item-action">교환 신청</a>
-                        <a href="{{ url_for('order.refund_request', order_id=order.id, item_id=item.id, type='환불') }}"
-                           class="btn-item-action danger">환불 신청</a>
-                    </div>
+                        <div class="item-action-btns">
+                            {% if not item.status %}
+                                {# 아직 아무 신청도 안 한 경우에만 버튼 노출 #}
+                                <button type="button"
+                                        onclick="openRefundModal('{{ order.id }}', '{{ item.id }}', '{{ item.product.name }}')"
+                                        class="btn-item-action">
+                                    교환 · 환불 신청
+                                </button>
+                            {% else %}
+                                {# 이미 신청한 경우 안내 문구 표시 #}
+                                <span style="font-size: 13px; color: #86868b; padding-right: 10px;">
+                                    <i class="bi bi-check-circle"></i> {{ item.status }} 처리가 진행 중입니다.
+                                </span>
+                            {% endif %}
+                        </div>
                     {% endif %}
                 </div>
                 {% endfor %}
+
+                {% set is_membership = order.user and order.user.is_membership %}
+                {% if not is_membership %}
+                <div class="detail-shipping-fee" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 10px; margin-top: 10px; background-color: #fbfbfd; border-radius: 10px;">
+                    <span style="color: #86868b; font-size: 14px;">배송비</span>
+                    <span style="font-weight: 600; color: #1d1d1f;">3,000원</span>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -62,7 +87,23 @@
             <div class="info-row"><span>받는 분</span><span class="info-value">{{ order.recipient }}</span></div>
             <div class="info-row"><span>연락처</span><span class="info-value">{{ order.phone }}</span></div>
             <div class="info-row"><span>배송 주소</span><span class="info-value">{{ order.address }}</span></div>
+
             <hr class="section-hr">
+
+            {% if order.coupon_id %}
+            {% set coupon = order.coupon %}
+            <div class="info-row" style="color: #ff3b30;">
+                <span>쿠폰 할인</span>
+                <span class="info-value">
+                    {% if coupon %}
+                        {{ coupon.name }} -{{ "{:,}".format(coupon.discount_amount) }}원
+                    {% else %}
+                        쿠폰 할인 적용됨
+                    {% endif %}
+                </span>
+            </div>
+        {% endif %}
+
             <div class="info-row"><span>결제 수단</span><span class="info-value">{{ order.payment_method }}</span></div>
             <div class="info-row total-row"><span>총 결제 금액</span><span class="info-value">{{ "{:,}".format(order.total_price) }}원</span></div>
         </div>
@@ -103,6 +144,53 @@
     </div>
 </div>
 
+<div class="modal fade" id="refundModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content custom-modal">
+            <form id="refundForm" method="GET"> <div class="modal-header">
+                    <h5 class="modal-title">교환 및 환불 신청</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="refund-item-info mb-4" style="background: #f5f5f7; padding: 15px; border-radius: 10px;">
+                        <p style="font-size: 12px; color: #86868b; margin-bottom: 5px;">신청 상품</p>
+                        <p id="modal_product_name" style="font-weight: 600; margin: 0;"></p>
+                    </div>
+
+                    <div class="input-group-custom mb-3">
+                        <label>신청 유형</label>
+                        <div class="d-flex gap-4 mt-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="request_type" id="type_exchange" value="교환" checked>
+                                <label class="form-check-label" for="type_exchange">교환</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="request_type" id="type_refund" value="환불">
+                                <label class="form-check-label" for="type_refund">환불</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group-custom">
+                        <label>신청 사유</label>
+                        <select name="reason" class="form-control" required>
+                            <option value="">사유를 선택해주세요</option>
+                            <option value="변심">단순 변심</option>
+                            <option value="불량">상품 불량/파손</option>
+                            <option value="오배송">오배송</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-modal-close" data-bs-dismiss="modal">취소</button>
+                    <button type="submit" class="btn-modal-save">신청 완료</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="addressModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content custom-modal">
@@ -139,8 +227,32 @@
     </div>
 </div>
 
+
+
 <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>
+    function openRefundModal(orderId, itemId, productName) {
+    document.getElementById('modal_product_name').innerText = productName;
+    const form = document.getElementById('refundForm');
+
+    form.onsubmit = function(e) {
+        const typeElement = document.querySelector('input[name="request_type"]:checked');
+        if (!typeElement) {
+            alert("신청 유형을 선택해주세요.");
+            return false;
+        }
+
+        const type = typeElement.value;
+
+        form.action = `/order/refund/${orderId}/${itemId}/${type}`;
+
+        return true;
+    };
+
+    const refundModal = new bootstrap.Modal(document.getElementById('refundModal'));
+    refundModal.show();
+}
+
     function execDaumPostcode() {
         new daum.Postcode({
             oncomplete: function(data) {

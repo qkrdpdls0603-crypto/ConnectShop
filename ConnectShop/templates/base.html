@@ -612,7 +612,11 @@
                         <div class="fs-3 fw-bold mb-3">
                             <span id="panel-total-price">
                                 {% if total_price %}
-                                    {{ "{:,}".format(total_price) }}원
+                                    {% if g.user and g.user.is_membership %}
+                                        {{ "{:,}".format(total_price) }}원
+                                    {% else %}
+                                        {{ "{:,}".format(total_price - 3000) }}원
+                                    {% endif %}
                                 {% else %}
                                     0원
                                 {% endif %}

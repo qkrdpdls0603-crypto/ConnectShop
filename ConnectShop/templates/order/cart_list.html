@@ -82,15 +82,22 @@
             {% endfor %}
         </form>
 
-        {# 요약 영역 #}
+       {# 요약 영역 #}
         <div class="cart-summary">
             <div class="summary-line">
                 <span>주문 금액</span>
-                <span id="summary-subtotal">{{ "{:,}".format(total_price|int) }}원</span>
+                <span id="summary-subtotal">
+                    {# 서버에서 온 total_price가 배송비 포함이라면, 일반 사용자일 때 3000원을 빼서 표시 #}
+                    {% if g.user and g.user.is_membership %}
+                        {{ "{:,}".format(total_price|int) }}원
+                    {% else %}
+                        {{ "{:,}".format(total_price|int - 3000) }}원
+                    {% endif %}
+                </span>
             </div>
-            <div class="summary-line" style="font-size: 0.9rem; color: #666; margin-top: 5px;">
+            <div class="summary-line">
                 <span>배송비</span>
-               <span class="info-value" id="shipping-fee-display">
+                <span class="info-value" id="shipping-fee-display">
                     {% if g.user and g.user.is_membership %}
                         0원 (멤버십 혜택 적용)
                     {% else %}
@@ -101,11 +108,8 @@
             <div class="summary-line summary-total">
                 <span>총 결제 금액</span>
                 <span id="summary-total">
-                    {% if g.user and g.user.is_membership %}
-                        {{ "{:,}".format(total_price|int) }}원
-                    {% else %}
-                        {{ "{:,}".format(total_price|int + 3000) }}원
-                    {% endif %}
+                    {# 총 결제 금액은 서버에서 온 값 그대로 표시 #}
+                    {{ "{:,}".format(total_price|int) }}원
                 </span>
             </div>
             <a href="{{ url_for('order.checkout') }}" style="text-decoration: none;">

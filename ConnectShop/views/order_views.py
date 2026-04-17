@@ -6,8 +6,8 @@ from types import SimpleNamespace
 from flask import Blueprint, render_template, redirect, url_for, session, g, flash, jsonify, request
 
 from ConnectShop import db
-from ConnectShop.models import Cart, Product, Order, OrderItem
-from ConnectShop.views.auth_views import login_required
+from ConnectShop.models import Cart, Product, Order, OrderItem, Coupon
+from ConnectShop.views.auth_views import login_required, cart_list
 
 bp = Blueprint('order', __name__, url_prefix='/order')
 
@@ -239,13 +239,20 @@ def checkout():
 
     now_ts = datetime.now().strftime('%Y%m%d%H%M%S')
 
+    available_coupons = []
+    if g.user:
+        available_coupons = Coupon.query.filter_by(user_id=g.user.id, is_used=False).all()
+
     product_total = sum(item.product.price * item.quantity for item in cart_list)
     shipping_fee = 0 if (g.user and g.user.is_membership) else 3000
     final_total = product_total + shipping_fee
 
     return render_template('order/checkout.html',
                            cart_list=cart_list,
-                           total_price=final_total,  # 배송비가 포함된 금액을 넘겨줌
+                           total_price=final_total,
+                           product_total=product_total,
+                           shipping_fee=shipping_fee,
+                           available_coupons=available_coupons,
                            now_ts=now_ts)
 
 @bp.route('/save_temp_info', methods=['POST'])
@@ -254,6 +261,7 @@ def save_temp_info():
     session['temp_recipient'] = data.get('recipient')
     session['temp_phone'] = data.get('phone')
     session['temp_address'] = data.get('address')
+    session['applied_coupon_id'] = data.get('coupon_id')
     return jsonify({"success": True})
 
 
@@ -263,6 +271,10 @@ def success():
     order_id = request.args.get('orderId')
     amount = request.args.get('amount')
 
+    # 세션에서 쿠폰 ID 가져오기
+    coupon_id = session.get('applied_coupon_id')
+
+    # 토스페이먼츠 승인 API 호출 설정
     secret_key = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6" + ":"
     encoded_key = base64.b64encode(secret_key.encode()).decode()
     url = "https://api.tosspayments.com/v1/payments/confirm"
@@ -275,45 +287,64 @@ def success():
     res_data = response.json()
 
     if response.status_code == 200:
-        from ConnectShop.models import Order, OrderItem, Product, Cart
+        # 1. 쿠폰 할인액 재검증 및 사용 처리
+        discount_amount = 0
+        if coupon_id and g.user:
+            coupon = Coupon.query.filter_by(id=coupon_id, user_id=g.user.id, is_used=False).first()
+            if coupon:
+                discount_amount = coupon.discount_amount
+                coupon.is_used = True
+                coupon.used_date = datetime.now()
 
-        clean_id = order_id.replace("order_temp_", "") if "order_temp_" in order_id else order_id
-        order = Order.query.get(clean_id) if clean_id.isdigit() else None
+        # 2. 주문 객체 생성 (UnboundLocalError 해결을 위해 바로 생성)
+        order = Order(
+            user_id=g.user.id if g.user else None,
+            recipient=session.get('temp_recipient'),
+            phone=session.get('temp_phone'),
+            address=session.get('temp_address'),
+            total_price=int(amount),
+            payment_method=res_data.get('method', '카드/간편결제'),
+            status='결제완료',
+            coupon_id=coupon_id  # 모델에 컬럼이 있는 경우
+        )
 
-        if not order:
-            cart_list = get_cart_items()
-            method = res_data.get('method', '카드/간편결제')
+        db.session.add(order)
+        db.session.commit()  # ID 생성을 위해 먼저 커밋
 
-            # 세션에서 진짜 사용자가 입력한 정보를 꺼내옵니다.
-            # 만약 세션에도 없다면 그때만 기본값을 넣습니다.
-            order = Order(
-                user_id=g.user.id if g.user else None,
-                recipient=session.get('temp_recipient'),
-                phone=session.get('temp_phone'),
-                address=session.get('temp_address'),
-                total_price=int(amount),
-                payment_method=method,
-                status='결제완료'
+        # 3. 주문 아이템 생성 및 재고 차감
+        # 주의: get_cart_items() 함수를 호출하여 리스트를 가져와야 합니다.
+        cart_items = get_cart_items()
+        for item in cart_items:
+            order_item = OrderItem(
+                order=order,
+                product_id=item.product.id,
+                quantity=item.quantity,
+                price=item.product.price
             )
-            db.session.add(order)
-            db.session.commit()  # 여기서 실제 DB에 저장됨
+            db.session.add(order_item)
 
-            for item in cart_list:
-                order_item = OrderItem(order=order, product_id=item.product.id, quantity=item.quantity,
-                                       price=item.product.price)
-                db.session.add(order_item)
-                product = Product.query.get(item.product.id)
-                if product: product.stock -= item.quantity
+            # 재고 차감
+            product = db.session.get(Product, item.product.id)
+            if product:
+                product.stock -= item.quantity
 
-            if g.user:
-                Cart.query.filter_by(user_id=g.user.id).delete()
-            else:
-                session.pop('guest_cart', None)
+        # 4. 장바구니 비우기 및 세션 정리
+        if g.user:
+            Cart.query.filter_by(user_id=g.user.id).delete()
+        else:
+            session.pop('guest_cart', None)
 
-            db.session.commit()
+        session.pop('applied_coupon_id', None)
+        session.pop('temp_recipient', None)
+        session.pop('temp_phone', None)
+        session.pop('temp_address', None)
+
+        db.session.commit()
 
         return render_template('order/order_complete.html', order=order, order_id=order.id)
     else:
+        # 결제 실패 시 에러 메시지와 함께 리다이렉트
+        flash(f"결제 승인 실패: {res_data.get('message')}")
         return redirect(url_for('order.checkout'))
 
 
@@ -472,6 +503,12 @@ def cancel_order(order_id):
             if product:
                 product.stock += item.quantity
 
+        if hasattr(order, 'coupon_id') and order.coupon_id:
+            coupon = Coupon.query.get(order.coupon_id)
+            if coupon:
+                coupon.is_used = False
+                coupon.used_date = None
+
         order.status = '주문취소'
         db.session.commit()
         flash(f"주문 #{order_id}번 건이 정상적으로 취소되었습니다.")
@@ -618,9 +655,31 @@ def update_address(order_id):
     return redirect(url_for('order.order_detail', order_id=order_id))
 
 
-@bp.route('/refund/<int:order_id>/<int:item_id>/<string:type>')
+@bp.route('/refund/<int:order_id>/<int:item_id>/<string:type>', methods=['POST', 'GET'])
 def refund_request(order_id, item_id, type):
-    order = Order.query.get_or_404(order_id)
+    order = db.session.get(Order, order_id)
+    order_item = db.session.get(OrderItem, item_id)
 
-    flash(f"주문 #{order_id}번 상품의 {type} 신청이 접수되었습니다. (로직 구현 필요)")
+    if not order or not order_item:
+        flash("주문 정보를 찾을 수 없습니다.", "danger")
+        return redirect(url_for('order.order_detail', order_id=order_id))
+
+    # 1. 환불일 경우: 금액 차감 및 상태 변경
+    if type == '환불':
+        refund_amount = order_item.price * order_item.quantity
+        # 주문의 총 결제 금액에서 환불 상품만큼 차감
+        order.total_price = max(0, order.total_price - refund_amount)
+        order_item.status = '환불완료'
+
+    # 2. 교환일 경우: 금액 유지 및 상태만 변경
+    elif type == '교환':
+        order_item.status = '교환신청'
+
+    try:
+        db.session.commit()
+        flash(f"{type} 신청이 정상적으로 완료되었습니다.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash("처리 중 오류가 발생했습니다.", "danger")
+
     return redirect(url_for('order.order_detail', order_id=order_id))
