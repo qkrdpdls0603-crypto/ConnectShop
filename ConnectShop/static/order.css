@@ -738,3 +738,91 @@ input[name="address_detail"] { margin-top: 8px !important; }
     }
     .bg-danger { background-color: #dc3545 !important; }
     .bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+
+
+/* ==========================================
+   기존 스타일 유지용 보완 및 추가 스타일
+   ========================================== */
+
+/* 1. 장바구니 옵션 출력 스타일 (아이템 이름 아래) */
+.item-option {
+    margin-top: 6px;
+    padding-left: 4px;
+}
+.item-option span {
+    color: #86868b !important;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+}
+
+/* 2. 장바구니 수량 조절 버튼 정밀 조정 */
+.item-quantity {
+    display: flex !important;
+    align-items: center;
+    background: #f5f5f7;
+    border-radius: 10px;
+    padding: 2px 8px;
+    height: fit-content;
+}
+.qty-btn {
+    border: none !important;
+    background: none !important;
+    font-size: 1.2rem;
+    color: #1d1d1f;
+    cursor: pointer;
+    padding: 0 5px;
+}
+.qty-num {
+    font-weight: 600;
+    min-width: 25px;
+    text-align: center;
+    font-size: 0.95rem;
+}
+
+/* 3. 품절 배지 및 상태 배지 강제 적용 */
+.badge {
+    display: inline-block;
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    margin-left: 5px;
+}
+.bg-danger { background-color: #ff3b30 !important; }
+.bg-warning { background-color: #ffc107 !important; color: #000 !important; }
+
+/* 4. 장바구니 요약(Summary) 영역 총액 강조 */
+.summary-total {
+    border-top: 1px solid #f5f5f7;
+    margin-top: 15px;
+    padding-top: 15px;
+}
+.summary-total span:last-child {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: #0071e3 !important;
+}
+
+/* 5. 버튼이 auth.css 등에 의해 460px로 고정되는 현상 방지 */
+.btn-checkout, .btn-apple-primary, .btn-apple-secondary {
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 50px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 6. 개당 단가(unit-price) 텍스트 정렬 */
+.item-price-group .text-muted {
+    font-size: 0.8rem;
+    margin-top: 2px;
+    display: block;
+}

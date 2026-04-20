@@ -42,12 +42,13 @@
             {% for item in cart_list %}
             <div class="cart-item">
                 <div class="item-checkbox">
-                    <input type="checkbox" name="selected_ids" value="{{ item.product.id }}" class="form-check-input item-check">
+                    {# value를 item.product_id로 유지하거나 item.id로 통일 (서버 로직에 맞게) #}
+                    <input type="checkbox" name="selected_ids" value="{{ item.id }}" class="form-check-input item-check">
                 </div>
 
                 <div class="item-image-box">
-                    {% if item.product.image_path %}
-                        <img src="{{ url_for('static', filename=item.product.image_path) }}" alt="상품 이미지">
+                    {% if item.image %}
+                        <img src="{{ url_for('static', filename='images/menu/' + item.image) }}" alt="상품 이미지">
                     {% else %}
                         <div class="image-placeholder">No Image</div>
                     {% endif %}
@@ -55,27 +56,43 @@
 
                 <div class="item-info">
                     <span class="item-name">
-                        {{ item.product.name }}
+                        {{ item.product_name }}
                         {% if item.product.stock <= 0 %}
                             <span class="badge bg-danger ms-2" style="font-size: 0.6rem;">품절</span>
                         {% endif %}
                     </span>
+
+                    {# 🌟 옵션 출력: 이 부분만 남기고 중복은 지웁니다 #}
+                    {% if item.selected_options %}
+                    <div class="item-option mt-1">
+                        <span class="text-secondary" style="font-size: 0.85rem;">
+                            <i class="bi bi-arrow-return-right me-1"></i>선택: {{ item.selected_options }}
+                        </span>
+                    </div>
+                    {% endif %}
+
                     <p class="item-description">
-                        {{ item.product.description if item.product.description else "이 제품에 대한 상세 설명이 이곳에 표시됩니다." }}
+                        {{ item.product.description if item.product and item.product.description else "상세 사양입니다." }}
                     </p>
                 </div>
 
                 <div class="item-quantity">
-                    <button type="button" class="qty-btn mx-2" onclick="updateQuantity({{ item.product.id }}, 'dec', this)">−</button>
-                    <span class="qty-num" id="qty-{{ item.product.id }}">{{ item.quantity }}</span>
-                    <button type="button" class="qty-btn mx-2" onclick="updateQuantity({{ item.product.id }}, 'inc', this)">+</button>
+                    {# 수량 조절 버튼 (item.id 사용) #}
+                    <button type="button" class="qty-btn mx-2" onclick="updateQuantity({{ item.id }}, 'dec', this)">−</button>
+                    <span class="qty-num" id="qty-{{ item.id }}">{{ item.quantity }}</span>
+                    <button type="button" class="qty-btn mx-2" onclick="updateQuantity({{ item.id }}, 'inc', this)">+</button>
                 </div>
 
                 <div class="item-price-group">
-                    <div class="item-price" id="item-total-{{ item.product.id }}">
-                        {{ "{:,}".format(item.product.price * item.quantity) }}원
+                    {# 옵션가 포함된 총액 #}
+                    <div class="item-price" id="item-total-{{ item.id }}">
+                        {{ "{:,}".format(item.price * item.quantity) }}원
                     </div>
-                    <a href="{{ url_for('order.delete', product_id=item.product.id) }}"
+                    {# 개당 단가 표시 #}
+                    <div class="text-muted small">
+                        개당 <span class="unit-price-{{ item.id }}">{{ "{:,}".format(item.price) }}</span>원
+                    </div>
+                    <a href="{{ url_for('order.delete', cart_id=item.id) }}"
                        class="item-delete-link" onclick="return confirm('삭제하시겠습니까?')">삭제</a>
                 </div>
             </div>

@@ -111,6 +111,8 @@ class Cart(db.Model):
     quantity = db.Column(db.Integer, default=1, nullable=False)
     # product: 파이썬에서 '장바구니.product.name' 처럼 상품 정보를 쉽게 꺼내오기 위한 끈입니다.
     product = db.relationship('Product')
+    selected_options = db.Column(db.String(255), nullable=True)
+    option_price = db.Column(db.Integer, default=0)
 
 # 6. 주문(Order) 테이블: 결제가 완료된 영수증 껍데기(메인 정보)입니다.
 class Order(db.Model):
@@ -130,7 +132,9 @@ class Order(db.Model):
     last_updated = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=True)
     coupon = db.relationship('Coupon', backref='orders')
-
+    memo = db.Column(db.String(200), nullable=True)
+    reward_point = db.Column(db.Integer, default=0)
+    is_point_paid = db.Column(db.Boolean, default=False)
 
 # 7. 주문 상세(OrderItem) 테이블: 영수증 안에 적힌 구체적인 상품 내역입니다. (한 번 주문에 여러 개를 살 수 있으니까요)
 class OrderItem(db.Model):
@@ -146,6 +150,7 @@ class OrderItem(db.Model):
     order = db.relationship('Order', backref=db.backref('items', cascade='all, delete-orphan'))
     product = db.relationship('Product')
     status = db.Column(db.String(20), nullable=True)
+    selected_options = db.Column(db.String(255), nullable=True)
 
 # =========================================================
 # [팀원 4: 이강토(본인) 담당] 고객센터 및 리뷰 그룹

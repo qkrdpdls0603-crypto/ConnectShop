@@ -51,19 +51,19 @@
         <h3>주문 요약</h3>
 
         <div class="form-section" style="border: none; padding: 0; margin-bottom: 20px;">
-    <div class="field-label">쿠폰 적용</div>
-    <select id="coupon-select" class="form-control" onchange="updateTotalAmount()">
-        <option value="0" data-type="fixed" data-value="0">사용 가능한 쿠폰 선택</option>
-        {% for coupon in available_coupons %}
-            {# 🌟 이름에 '%'가 있는지 확인하여 타입(percent/fixed) 결정 #}
-            {% set is_percent = '%' in coupon.name %}
-            <option value="{{ coupon.id }}"
-                    data-type="{{ 'percent' if is_percent else 'fixed' }}"
-                    data-value="{{ coupon.discount_amount }}">
-                {{ coupon.name }} (-{{ "{:,}".format(coupon.discount_amount) }}{{ '%' if is_percent else '원' }})
-            </option>
-        {% endfor %}
-    </select>
+            <div class="field-label">쿠폰 적용</div>
+            <select id="coupon-select" class="form-control" onchange="updateTotalAmount()">
+                <option value="0" data-type="fixed" data-value="0">사용 가능한 쿠폰 선택</option>
+                {% for coupon in available_coupons %}
+                    {# 🌟 이름에 '%'가 있는지 확인하여 타입(percent/fixed) 결정 #}
+                    {% set is_percent = '%' in coupon.name %}
+                    <option value="{{ coupon.id }}"
+                            data-type="{{ 'percent' if is_percent else 'fixed' }}"
+                            data-value="{{ coupon.discount_amount }}">
+                        {{ coupon.name }} (-{{ "{:,}".format(coupon.discount_amount) }}{{ '%' if is_percent else '원' }})
+                    </option>
+                {% endfor %}
+            </select>
         </div>
 
         <div class="summary-row">
@@ -81,6 +81,18 @@
         <div class="summary-row" style="color: #ff3b30;">
             <span>쿠폰 할인</span>
             <span id="display-discount">0원</span>
+        </div>
+
+        <div class="summary-row" style="color: #007bff;">
+            <span>멤버십 적립 (3%)</span>
+            <span id="display-reward">
+                {% if g.user and g.user.is_membership %}
+                    {% set initial_reward = ((total_price|int - (0 if g.user.is_membership else 3000)) * 0.03)|int %}
+                    +{{ "{:,}".format(initial_reward) }}원
+                {% else %}
+                    0원
+                {% endif %}
+            </span>
         </div>
 
         <div class="info-row">
@@ -166,44 +178,55 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     }
 
-    // [금액 업데이트 함수]
+    // [금액 업데이트 함수 - 🌟 병합 완료 로직]
     window.updateTotalAmount = async function() {
         const couponSelect = document.getElementById('coupon-select');
         const selectedOption = couponSelect.options[couponSelect.selectedIndex];
 
-        // 쿠폰 정보 가져오기
+        // 1. 기본 정보 및 팀원 분의 쿠폰 타입 정보 추출
         const type = selectedOption.getAttribute('data-type'); // fixed 또는 percent
-        const val = parseInt(selectedOption.getAttribute('data-value')) || 0;
-
-        const originalTotal = {{ total_price|int }}; // 배송비 포함 총액
-
-        // 실제 상품가(Pure Total) 추출 (배송비 3,000원을 제외한 금액에만 할인을 적용하는 게 일반적임)
+        const val = parseInt(selectedOption.getAttribute('data-value')) || 0; // data-value 사용 (data-discount 통일)
+        const originalTotal = {{ total_price|int }};
         const isMembership = {{ 'true' if g.user and g.user.is_membership else 'false' }};
         const shippingFee = isMembership ? 0 : 3000;
         const pureProductPrice = originalTotal - shippingFee;
 
+        // 2. 할인액 계산 (팀원 분의 % 계산 로직)
         let discount = 0;
-
-        // [할인 로직 핵심]
         if (type === 'percent') {
-            // 상품 금액의 n% 계산
             discount = Math.floor(pureProductPrice * (val / 100));
         } else {
-            // 기존의 정액 할인
             discount = val;
         }
 
         const updatedFinalAmount = Math.max(0, originalTotal - discount);
 
-        // UI 업데이트
+        // 3. 🌟 실시간 적립금 계산 (팀장님의 배송비 제외 상품가에서 쿠폰할인 뺀 금액의 3% 로직)
+        let rewardPoint = 0;
+        if (isMembership) {
+            const rewardBase = pureProductPrice - discount;
+            rewardPoint = Math.floor(Math.max(0, rewardBase) * 0.03);
+        }
+
+        // 4. UI 업데이트
+        // 쿠폰 할인 표시
         document.getElementById('display-discount').innerText = (discount > 0 ? "-" : "") + discount.toLocaleString() + "원";
+
+        // 🌟 적립 예정 금액 표시 업데이트
+        const rewardDisplay = document.getElementById('display-reward');
+        if (rewardDisplay) {
+            rewardDisplay.innerText = (rewardPoint > 0 ? "+" : "") + rewardPoint.toLocaleString() + "원";
+        }
+
+        // 총 결제 금액 표시
         const finalTotalDisplay = document.querySelector('.summary-total span:last-child');
         if (finalTotalDisplay) finalTotalDisplay.innerText = updatedFinalAmount.toLocaleString() + "원";
 
+        // 결제 버튼 텍스트
         const payButton = document.getElementById('payment-button');
         if (payButton) payButton.innerText = updatedFinalAmount.toLocaleString() + "원 결제하기";
 
-        // 토스 위젯 금액 갱신
+        // 토스 위젯 업데이트
         if (widgets) {
             await widgets.setAmount({
                 currency: "KRW",

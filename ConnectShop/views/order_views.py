@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from flask import Blueprint, render_template, redirect, url_for, session, g, flash, jsonify, request
 
 from ConnectShop import db
-from ConnectShop.models import Cart, Product, Order, OrderItem, Coupon
+from ConnectShop.models import Cart, Product, Order, OrderItem, Coupon, ProductOption
 from ConnectShop.views.auth_views import login_required, cart_list
 
 bp = Blueprint('order', __name__, url_prefix='/order')
@@ -23,38 +23,85 @@ def save_guest_cart(cart):
     session.modified = True
 
 
+from types import SimpleNamespace
+
+
+def calculate_extra_price(product_id, selected_options):
+    """
+    사용자가 선택한 전체 옵션 문자열 안에
+    DB에 등록된 옵션명(oname)이 포함되어 있는지 대조하여 추가금을 합산합니다.
+    """
+    if not selected_options:
+        return 0
+
+    # 해당 상품의 모든 옵션을 DB에서 가져옴
+    all_options = ProductOption.query.filter_by(product_id=product_id).all()
+    total_extra = 0
+
+    # 예: selected_options가 "용량: 512GB ㅣ 12GB / 색상: 블랙" 일 때
+    # DB의 oname인 "512GB ㅣ 12GB"가 포함되어 있는지 체크
+    for opt in all_options:
+        if opt.oname in selected_options:
+            total_extra += opt.add_price
+            print(f"--- [매칭성공] {opt.oname}: +{opt.add_price}원")
+
+    return total_extra
+
+
 def get_cart_items():
-    if g.user:
-        return Cart.query.filter_by(user_id=g.user.id).all()
-
-    guest_cart = get_guest_cart()
     cart_list = []
-    for item in guest_cart:
-        product = db.session.get(Product, item['product_id'])
-        if product:
-            cart_list.append(SimpleNamespace(product=product, quantity=item['quantity'], product_id=product.id))
-    return cart_list
+    if g.user:
+        items = Cart.query.filter_by(user_id=g.user.id).all()
+        for item in items:
+            # DB에서 가져온 원본 텍스트
+            raw_opt = item.selected_options if item.selected_options else ""
+            extra_price = calculate_extra_price(item.product_id, raw_opt)
 
+            cart_list.append(SimpleNamespace(
+                id=item.id,
+                # 🌟 HTML이 헤매지 않게 이름을 다 꽂아줍니다.
+                selected_options=raw_opt,
+                options=raw_opt,
+                opt_str=raw_opt,
+
+                price=item.product.price + extra_price,
+                product_name=item.product.name,
+                image=item.product.image_path,
+                quantity=item.quantity,
+                product=item.product
+            ))
+    else:
+        # 비회원 로직도 동일하게 'opt_name' 추가
+        guest_cart = get_guest_cart()
+        for i, item in enumerate(guest_cart):
+            product = db.session.get(Product, item['product_id'])
+            if product:
+                opt_str = item.get('options', '') or item.get('selected_options', '')
+                extra_price = calculate_extra_price(product.id, opt_str)
+
+                cart_list.append(SimpleNamespace(
+                    id=i,
+                    selected_options=opt_str,
+                    options=opt_str,
+                    price=product.price + extra_price,
+                    image=product.image_path,
+                    product_name=product.name,
+                    quantity=item.get('quantity', 1),
+                    product=product
+                ))
+    return cart_list
 
 # --- Routes ---
 @bp.route('/list')
 def _list():
+    # 1. 여기서 우리가 고친 '가공된' 리스트를 가져옵니다.
     cart_list = get_cart_items()
-    stock_warnings = []
 
-    for item in cart_list:
-        product = item.product
-        requested_qty = item.quantity
+    # [디버깅] 서버 터미널에 진짜로 데이터가 담겼는지 마지막으로 찍어봅니다.
+    if cart_list:
+        print(f"--- [최종체크] 첫번째 아이템 옵션: {getattr(cart_list[0], 'selected_options', '없음')}")
 
-        if product.stock <= 0:
-            stock_warnings.append(f"'{product.name}' 상품은 현재 품절되었습니다.")
-        elif product.stock < requested_qty:
-            stock_warnings.append(
-                f"'{product.name}' 상품의 재고가 부족합니다. "
-                f"(현재 재고: {product.stock}개 / 요청 수량: {requested_qty}개)"
-            )
-
-    product_total = sum(item.product.price * item.quantity for item in cart_list)
+    product_total = sum(item.price * item.quantity for item in cart_list)
 
     shipping_fee = 3000
     if g.user and g.user.is_membership:
@@ -62,46 +109,78 @@ def _list():
 
     final_total = product_total + shipping_fee
 
+    # 2. 반드시 '가공된' cart_list를 템플릿으로 넘깁니다.
     return render_template('order/cart_list.html',
                            cart_list=cart_list,
                            product_total=product_total,
                            shipping_fee=shipping_fee,
-                           total_price=final_total,
-                           stock_warnings=stock_warnings)
+                           total_price=final_total)
 
 
-@bp.route('/add/<int:product_id>', methods=['GET', 'POST']) # POST 허용
+@bp.route('/add/<int:product_id>', methods=['POST'])
 def add(product_id):
+    if request.is_json:
+        data = request.get_json()
+        quantity = int(data.get('quantity', 1))
+        # 🌟 .strip()을 추가하여 양끝 공백을 제거합니다.
+        selected_options = data.get('options', "").strip()
+    else:
+        quantity = int(request.form.get('quantity', 1))
+        selected_options = request.form.get('options', "").strip()
+
+    # [디버깅] 옵션 문자열이 DB의 것과 완벽히 일치하는지 확인용
+    print(f"--- [DEBUG] 처리할 옵션: [{selected_options}]")
+
     if g.user:
-        cart = Cart.query.filter_by(user_id=g.user.id, product_id=product_id).first()
+        # DB에서 동일 상품 + 동일 옵션 검색
+        cart = Cart.query.filter_by(
+            user_id=g.user.id,
+            product_id=product_id,
+            selected_options=selected_options
+        ).first()
+
         if cart:
-            cart.quantity += 1
+            cart.quantity += quantity
         else:
-            db.session.add(Cart(user_id=g.user.id, product_id=product_id, quantity=1))
+            db.session.add(Cart(
+                user_id=g.user.id,
+                product_id=product_id,
+                quantity=quantity,
+                selected_options=selected_options
+            ))
         db.session.commit()
     else:
+        # 🌟 비로그인(게스트) 장바구니 중복 처리 추가
         guest_cart = get_guest_cart()
-        item = next((i for i in guest_cart if i['product_id'] == product_id), None)
-        if item:
-            item['quantity'] += 1
-        else:
-            guest_cart.append({'product_id': product_id, 'quantity': 1})
+        found = False
+        for item in guest_cart:
+            # 게스트 카트에서도 상품ID와 옵션이 같으면 수량만 추가
+            if item['product_id'] == product_id and item.get('options', "").strip() == selected_options:
+                item['quantity'] += quantity
+                found = True
+                break
+
+        if not found:
+            guest_cart.append({
+                'product_id': product_id,
+                'quantity': quantity,
+                'options': selected_options
+            })
         save_guest_cart(guest_cart)
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        # 최신 장바구니 데이터를 다시 조회
-        if g.user:
-            cart_items = Cart.query.filter_by(user_id=g.user.id).all()
-        else:
-            cart_items = get_guest_cart()  # 비회원 로직에 맞춰 수정
+        current_cart_list = get_cart_items()
+        total_count = sum(item.quantity for item in current_cart_list)
+        # 옵션가가 포함된 단가(item.price)를 사용하여 합계 계산
+        product_total_val = sum(item.price * item.quantity for item in current_cart_list)
 
         return jsonify({
             'success': True,
-            'cart_count': len(cart_items)  # 장바구니 아이템 개수 등 전달
+            'cart_count': total_count,
+            'total_price': "{:,}".format(product_total_val)
         })
 
     return redirect(url_for('order._list'))
-
 
 @bp.route('/delete_soldout', methods=['POST'])
 def delete_soldout():
@@ -132,6 +211,7 @@ def delete_soldout():
 
 @bp.route('/delete_selected', methods=['POST'])
 def delete_selected():
+    # HTML에서 넘어온 선택된 ID 리스트 (cart_id 또는 guest_index)
     selected_ids = request.form.getlist('selected_ids', type=int)
 
     if not selected_ids:
@@ -139,79 +219,85 @@ def delete_selected():
         return redirect(url_for('order._list'))
 
     if g.user:
+        # 🌟 회원: Cart 테이블의 PK(id)가 선택된 리스트에 포함된 것만 삭제
+        # product_id가 아닌 id로 필터링해야 정확히 선택한 항목만 지워집니다.
         Cart.query.filter(
             Cart.user_id == g.user.id,
-            Cart.product_id.in_(selected_ids)
+            Cart.id.in_(selected_ids)
         ).delete(synchronize_session=False)
         db.session.commit()
     else:
-        guest_cart = [i for i in get_guest_cart() if i['product_id'] not in selected_ids]
-        save_guest_cart(guest_cart)
+        # 🌟 비회원: 선택된 인덱스(selected_ids)를 제외하고 새로운 리스트 생성
+        guest_cart = get_guest_cart()
+        # 선택되지 않은(리스트에 없는) 인덱스의 아이템들만 남깁니다.
+        new_guest_cart = [
+            item for idx, item in enumerate(guest_cart)
+            if idx not in selected_ids
+        ]
+        save_guest_cart(new_guest_cart)
 
     flash(f"선택하신 {len(selected_ids)}개의 상품을 삭제했습니다.")
     return redirect(url_for('order._list'))
 
 
-@bp.route('/modify/<int:product_id>/<string:action>', methods=['POST', 'GET'])
-def modify(product_id, action):
+@bp.route('/modify/<int:cart_id>/<string:action>', methods=['POST', 'GET'])
+def modify(cart_id, action):
     new_quantity = 0
-    unit_price = 0
     is_deleted = False
 
     if g.user:
-        cart_item = Cart.query.filter_by(user_id=g.user.id, product_id=product_id).first()
-        if cart_item:
-            # [핵심] 삭제되기 전에 상품 가격을 미리 변수에 저장합니다.
-            unit_price = cart_item.product.price
-
+        # 1. 회원: DB의 Primary Key(cart_id)로 조회
+        cart_item = db.session.get(Cart, cart_id)
+        if cart_item and cart_item.user_id == g.user.id:
             if action in ['inc', 'increase']:
                 cart_item.quantity += 1
-                new_quantity = cart_item.quantity
             elif action in ['dec', 'decrease']:
                 if cart_item.quantity > 1:
                     cart_item.quantity -= 1
-                    new_quantity = cart_item.quantity
                 else:
-                    # 여기서 삭제되므로, 이 이후에 cart_item을 사용하면 에러가 납니다.
                     db.session.delete(cart_item)
                     is_deleted = True
-                    new_quantity = 0
             db.session.commit()
+            new_quantity = 0 if is_deleted else cart_item.quantity
     else:
-        # 비회원 로직
-        guest_cart = get_guest_cart()
-        new_guest_cart = []
-        product = db.session.get(Product, product_id)
-        unit_price = product.price if product else 0
+        # 2. 비회원: 세션 리스트의 인덱스(cart_id) 활용
+        guest_cart = session.get('guest_cart', [])
+        if 0 <= cart_id < len(guest_cart):
+            item = guest_cart[cart_id]
+            if action in ['inc', 'increase']:
+                item['quantity'] += 1
+            elif action in ['dec', 'decrease']:
+                if item['quantity'] > 1:
+                    item['quantity'] -= 1
+                else:
+                    guest_cart.pop(cart_id)  # 리스트에서 제거
+                    is_deleted = True
 
-        for item in guest_cart:
-            if item['product_id'] == product_id:
-                if action in ['inc', 'increase']:
-                    item['quantity'] += 1
-                    new_guest_cart.append(item)
-                    new_quantity = item['quantity']
-                elif action in ['dec', 'decrease']:
-                    if item['quantity'] > 1:
-                        item['quantity'] -= 1
-                        new_guest_cart.append(item)
-                        new_quantity = item['quantity']
-                    else:
-                        is_deleted = True
-                        new_quantity = 0
-            else:
-                new_guest_cart.append(item)
-        save_guest_cart(new_guest_cart)
+            session['guest_cart'] = guest_cart
+            session.modified = True
+            new_quantity = 0 if is_deleted else item['quantity']
 
-    # 전체 금액 재계산
+        # --- 금액 재계산 영역 ---
     cart_list = get_cart_items()
-    pure_total = sum(item.product.price * item.quantity for item in cart_list)
+    pure_total = sum(item.price * item.quantity for item in cart_list)
+    total_count = sum(item.quantity for item in cart_list)
 
-    shipping_fee = 0
-    if pure_total > 0:
-        if g.user and getattr(g.user, 'is_membership', False):
-            shipping_fee = 0
+
+    unit_price = 0
+    if not is_deleted:
+        if g.user:
+            # 회원은 DB의 PK(cart_id)와 객체의 id를 비교
+            current_item = next((i for i in cart_list if i.id == cart_id), None)
         else:
-            shipping_fee = 3000
+            # 비회원은 SimpleNamespace에 담긴 id(인덱스)와 cart_id를 비교
+            current_item = next((i for i in cart_list if getattr(i, 'id', None) == cart_id), None)
+
+        # [중요] 여기서 옵션가가 포함된 item.price를 가져와야 합니다.
+        unit_price = current_item.price if current_item else 0
+
+    shipping_fee = 3000
+    if pure_total == 0 or (g.user and getattr(g.user, 'is_membership', False)):
+        shipping_fee = 0
 
     final_total = pure_total + shipping_fee
 
@@ -220,26 +306,32 @@ def modify(product_id, action):
             'success': True,
             'new_quantity': new_quantity,
             'is_deleted': is_deleted,
+            'item_unit_price': format(unit_price, ','), # 이 이름이 JS와 매칭됩니다
             'item_total': format(unit_price * new_quantity, ','),
-            'pure_total': format(pure_total, ','),  # 화면 표시용
-            'total_price': format(final_total, ','),  # 화면 표시용
-            'raw_pure_total': pure_total,  # ★ JS 계산용 숫자
-            'raw_total_price': final_total  # ★ JS 계산용 숫자
+            'pure_total': format(pure_total, ','),
+            'total_price': format(final_total, ','),
+            'cart_count': total_count,
         })
 
     return redirect(request.referrer or url_for('order._list'))
 
 
-@bp.route('/delete/<int:product_id>')
-def delete(product_id):
+# 라우트 파라미터 이름을 cart_id로 변경합니다.
+@bp.route('/delete/<int:cart_id>')
+def delete(cart_id):
     if g.user:
-        cart_item = Cart.query.filter_by(user_id=g.user.id, product_id=product_id).first()
-        if cart_item:
+        cart_item = Cart.query.get(cart_id)
+
+        if cart_item and cart_item.user_id == g.user.id:
             db.session.delete(cart_item)
             db.session.commit()
     else:
-        guest_cart = [i for i in get_guest_cart() if i['product_id'] != product_id]
-        save_guest_cart(guest_cart)
+        guest_cart = get_guest_cart()
+
+        if 0 <= cart_id < len(guest_cart):
+            guest_cart.pop(cart_id)
+            save_guest_cart(guest_cart)
+
     return redirect(url_for('order._list'))
 
 
@@ -294,7 +386,7 @@ def checkout():
     if g.user:
         available_coupons = Coupon.query.filter_by(user_id=g.user.id, is_used=False).all()
 
-    product_total = sum(item.product.price * item.quantity for item in cart_list)
+    product_total = sum(item.price * item.quantity for item in cart_list)
     shipping_fee = 0 if (g.user and g.user.is_membership) else 3000
     final_total = product_total + shipping_fee
 
@@ -315,6 +407,7 @@ def save_temp_info():
     session['temp_phone'] = data.get('phone')
     session['temp_address'] = data.get('address')
     session['applied_coupon_id'] = data.get('coupon_id')
+    session['temp_memo'] = data.get('memo')
     return jsonify({"success": True})
 
 
@@ -349,13 +442,30 @@ def success():
                 coupon.is_used = True
                 coupon.used_date = datetime.now()
 
+        memo = session.get('temp_memo')
+
+        cart_items = get_cart_items()
+        pure_product_total = sum(item.price * item.quantity for item in cart_items)
+
+        # 2. 멤버십일 때만 순수 상품 금액의 3% 계산
+        reward_point = 0
+        if g.user and g.user.is_membership:
+            # 결제 총액(amount)이 아니라 pure_product_total을 사용합니다.
+            discount = coupon.discount_amount if coupon else 0
+            reward_base = pure_product_total - discount
+            reward_point = int(reward_base * 0.03)
+            print(f"--- [계산체크] 상품총액: {pure_product_total}원 -> 적립금: {reward_point}원")
+
         # 2. 주문 객체 생성 (UnboundLocalError 해결을 위해 바로 생성)
         order = Order(
             user_id=g.user.id if g.user else None,
             recipient=session.get('temp_recipient'),
             phone=session.get('temp_phone'),
             address=session.get('temp_address'),
+            memo=memo,
             total_price=int(amount),
+            reward_point=reward_point,
+            is_point_paid=False,
             payment_method=res_data.get('method', '카드/간편결제'),
             status='결제완료',
             coupon_id=coupon_id  # 모델에 컬럼이 있는 경우
@@ -367,19 +477,22 @@ def success():
         # 3. 주문 아이템 생성 및 재고 차감
         # 주의: get_cart_items() 함수를 호출하여 리스트를 가져와야 합니다.
         cart_items = get_cart_items()
-        for item in cart_items:
+        for cart in cart_items:
             order_item = OrderItem(
-                order=order,
-                product_id=item.product.id,
-                quantity=item.quantity,
-                price=item.product.price
+                order_id=order.id,
+                # cart.product 객체 안에 있는 id를 가져옵니다.
+                product_id=cart.product.id,
+                quantity=cart.quantity,
+                price=cart.price,
+                selected_options=cart.selected_options
             )
+
             db.session.add(order_item)
 
             # 재고 차감
-            product = db.session.get(Product, item.product.id)
+            product = db.session.get(Product, cart.product.id)  # cart.product.id 사용
             if product:
-                product.stock -= item.quantity
+                product.stock -= cart.quantity
 
         # 4. 장바구니 비우기 및 세션 정리
         if g.user:
@@ -391,6 +504,8 @@ def success():
         session.pop('temp_recipient', None)
         session.pop('temp_phone', None)
         session.pop('temp_address', None)
+        session.pop('temp_memo', None)
+
 
         db.session.commit()
 
@@ -579,17 +694,27 @@ def cancel_order(order_id):
 @bp.route('/my_cancel_list')
 @login_required
 def my_cancel_list():
+    # 1. 현재 로그인한 사용자의 최근 3개월 주문 내역 조회
     three_months_ago = datetime.now() - timedelta(days=90)
-
-    cancel_statuses = ['주문취소', '취소신청', '반품신청', '반품수거중', '반품완료']
-
-    order_list = Order.query.filter(
+    orders = Order.query.filter(
         Order.user_id == g.user.id,
-        Order.status.in_(cancel_statuses),
         Order.order_date >= three_months_ago
-    ).order_by(Order.order_date.desc()).all()
+    ).all()
 
-    return render_template('order/mypage_cancel_list.html', order_list=order_list)
+    # 2. 취소 또는 반품 상태가 있는 아이템만 추출 (교환 제외)
+    cancel_items = []
+    for order in orders:
+        for item in order.items:
+            # 주문 전체가 '주문취소' 상태이거나,
+            # 아이템 개별 상태(status)가 존재하면서 '교환'이 포함되지 않은 경우만 추가
+            if order.status == '주문취소' or (item.status and '교환' not in item.status):
+                item.parent_order = order
+                cancel_items.append(item)
+
+    # 3. 최신 주문 날짜 순으로 정렬
+    cancel_items.sort(key=lambda x: x.parent_order.order_date, reverse=True)
+
+    return render_template('order/mypage_cancel_list.html', cancel_items=cancel_items)
 
 
 @bp.route('/confirm_purchase/<int:order_id>', methods=['POST'])
@@ -598,13 +723,17 @@ def confirm_purchase(order_id):
     order = Order.query.get_or_404(order_id)
 
     if order.user_id != g.user.id:
-        flash("잘못된 접근입니다.")
-        return redirect(url_for('order.my_orders'))
+        return jsonify({"success": False, "message": "권한이 없습니다."})
 
     if order.status == '배송완료':
         order.status = '구매확정'
+
+        if not order.is_point_paid and order.reward_point > 0:
+            g.user.point += order.reward_point
+            order.is_point_paid = True
+
         db.session.commit()
-        flash("구매가 확정되었습니다. 이제 리뷰를 작성하실 수 있습니다!")
+        flash(f"구매가 확정되었습니다. {order.reward_point}원이 적립되었습니다.")
     else:
         flash("현재 상태에서는 구매 확정이 불가능합니다.")
 
@@ -742,19 +871,22 @@ def refund_request(order_id, item_id, type):
 
     return redirect(url_for('order.order_detail', order_id=order_id))
 
-
 @bp.app_context_processor
 def inject_cart_totals():
     cart_list = get_cart_items()
-    product_total = sum(item.product.price * item.quantity for item in cart_list)
 
-    return dict(product_total=product_total)
+    product_total = sum(item.price * item.quantity for item in cart_list)
 
+    # 템플릿에서 사용할 변수 이름으로 반환
+    return dict(
+        cart_list=cart_list,
+        product_total=product_total
+    )
 
-# 파일 상단에 g, render_template 등이 임포트 되어있는지 확인하세요!
-# (팀의 로그인 데코레이터 이름이 @login_required 라면 꼭 붙여주세요)
-
+# ==========================================================
+# 🌟 마이페이지 - 찜목록 모아보기 라우트
+# ==========================================================
 @bp.route('/wishlist')
-@login_required  # 🌟 이 마법사를 달아주면 아래의 if문이 필요 없어집니다!
+@login_required  # 로그인이 안 되어있으면 자동으로 로그인 창으로 보냄
 def wishlist():
     return render_template('order/wishlist.html')

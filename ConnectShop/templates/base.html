@@ -379,65 +379,76 @@
             </div>
         </div>
         <div id="cartPanel" class="cart-panel shadow-sm">
-            <div class="container">
+            <div class="container py-4">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="fw-bold">장바구니</h2>
+                    <h2 class="fw-bold m-0">장바구니</h2>
                     <button type="button" class="btn-close" id="cartCloseBtn"></button>
                 </div>
 
                 <div class="row">
                     <div class="col-md-8">
-                        {% if cart_items %}
-                            {% for item in cart_items[:3] %}
-                            <div class="cart-brief-item d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ url_for('static', filename='images/' + item.image) }}"
-                                         style="width: 50px; height: 50px; object-fit: contain;" class="me-3">
-                                    <div>
-                                        <span class="fw-bold d-block">{{ item.product_name }}</span>
-                                        <div class="d-flex align-items-center mt-1 qty-control">
-                                            <a href="javascript:void(0);"
-                                               class="btn-circle-qty mx-2"
-                                               onclick="updateQuantity({{ item.product_id }}, 'dec', this); return false;">-</a>
+                        {# 🌟 변수명을 cart_list로 통일 #}
+                        {% if cart_list %}
+                            {% for item in cart_list %}
+                            <div class="cart-brief-item d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                                <div class="d-flex align-items-center flex-grow-1">
+                                    {# 🌟 이미지 경로 수정 (item.image에 이미 경로가 포함되어 있음) #}
+                                    <img src="{{ url_for('static', filename='images/menu/' + item.image) }}"
+                                         style="width: 60px; height: 60px; object-fit: contain;" class="me-3 rounded bg-light border">
 
-                                            <span class="qty-text" id="qty-{{ item.product_id }}">{{ item.quantity }}</span>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-bold mb-1" style="font-size: 1rem;">{{ item.product_name }}</div>
 
-                                            <a href="javascript:void(0);"
-                                               class="btn-circle-qty mx-2"
-                                               onclick="updateQuantity({{ item.product_id }}, 'inc', this); return false;">+</a>
+                                        {# 🌟 옵션 출력 로직 #}
+                                        {% if item.selected_options %}
+                                            <span class="text-secondary" style="font-size: 0.85rem;">
+                                                <i class="bi bi-arrow-return-right me-1"></i>{{ item.selected_options }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted" style="font-size: 0.85rem;">(옵션 없음)</span>
+                                        {% endif %}
 
-                                            <span class="ms-2 text-muted small">/ {{ "{:,}".format(item.price) }}원</span>
+                                        <div class="d-flex align-items-center qty-control mt-2">
+                                            <a href="javascript:void(0);" class="btn-circle-qty" onclick="updateQuantity('{{ item.id }}', 'dec', this);">-</a>
+                                            <span class="qty-text px-3 qty-item-{{ item.id }}">{{ item.quantity }}</span>
+                                            <a href="javascript:void(0);" class="btn-circle-qty" onclick="updateQuantity('{{ item.id }}', 'inc', this);">+</a>
+
+                                            <span class="ms-3 text-muted small">
+                                               / <strong class="text-dark unit-price-{{ item.id }}">
+                                                    {# 🌟 단가는 이미 옵션가가 합산된 item.price를 사용 #}
+                                                    {{ "{:,}".format(item.price) }}
+                                                </strong>원
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
-
-                                <a href="{{ url_for('order.delete', product_id=item.product_id) }}" class="text-danger ms-2">
-                                    <i class="bi bi-x-circle"></i>
-                                </a>
+                                <div id="cart-item-{{ item.id }}" class="cart-item-row">
+                                    <a href="javascript:void(0);"
+                                       onclick="deleteCartItem('{{ item.id }}')"
+                                       class="text-danger ms-3">
+                                        <i class="bi bi-x-circle fs-5"></i>
+                                    </a>
+                                </div>
                             </div>
                             {% endfor %}
-                            <div class="mt-3">
-                                <a href="{{ url_for('order._list') }}" class="btn btn-outline-dark btn-sm rounded-pill">장바구니 전체보기</a>
-                            </div>
                         {% else %}
-                            <p class="py-4 text-muted">장바구니가 비어 있습니다.</p>
+                            <p class="py-5 text-center text-muted">장바구니가 비어 있습니다.</p>
                         {% endif %}
                     </div>
 
-                    <div class="col-md-4 text-end">
-                        <div class="text-muted small">총 금액</div>
-                        <div class="fs-3 fw-bold mb-3">
-                            <span id="panel-total-price">
-                                {% if product_total %}
-                                    {{ "{:,}".format(product_total) }}원
-                                {% else %}
-                                    0원
-                                {% endif %}
-                            </span>
+                    <div class="col-md-4">
+                        <div class="p-4 bg-light rounded-4">
+                            <div class="text-muted small mb-1">총 결제 금액</div>
+                            <div class="fs-2 fw-bold mb-4 text-primary">
+                                <span id="panel-total-price">{{ "{:,}".format(product_total) if product_total else '0' }}</span>원
+                            </div>
+                            <a href="{{ url_for('order._list') }}" class="btn btn-outline-primary w-100 py-2 mb-2 rounded-4 fw-bold">
+                                장바구니 보기
+                            </a>
+                            <a href="{{ url_for('order.checkout') }}" class="btn btn-primary w-100 py-3 rounded-4 fw-bold {% if not cart_list %}disabled{% endif %}">
+                                바로 구매하기
+                            </a>
                         </div>
-                        <a href="{{ url_for('order.checkout') }}" class="btn btn-primary w-100 py-3 rounded-4 {% if not cart_items %}disabled{% endif %}">
-                            바로 구매하기
-                        </a>
                     </div>
                 </div>
             </div>
@@ -546,53 +557,41 @@
             // ==========================================
         });
 
-        async function updateQuantity(productId, action, btnElement) {
-            // [수정] ID에 의존하지 않고, 클릭된 버튼 바로 옆의 수량(span)을 직접 찾습니다.
-            const parent = btnElement.closest('.item-quantity') || btnElement.closest('.qty-control');
-            const qtySpan = parent.querySelector('.qty-num, .qty-text');
-
+        async function updateQuantity(cartId, action, btnElement) {
+            const qtySpan = document.querySelector(`.qty-item-${cartId}`);
             if (!qtySpan) return;
 
-            // 현재 수량 파악
-            let currentQty = parseInt(qtySpan.innerText) || 0;
-
-            // [확인창 로직] 수량이 1인데 마이너스(-)를 누른 경우에만 실행
-            if (action === 'dec' && currentQty === 1) {
-                if (!confirm("상품을 장바구니에서 삭제하시겠습니까?")) {
-                    return;
-                }
-            }
-
             try {
-                // 서버에 요청을 보냅니다.
-                const response = await fetch(`/order/modify/${productId}/${action}`, {
+                const response = await fetch(`/order/modify/${cartId}/${action}`, {
                     method: 'POST',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
-
                 const data = await response.json();
 
                 if (data.success) {
                     if (data.is_deleted) {
                         location.reload();
                     } else {
-                        // 1. 모든 수량 표시 UI 동기화
-                        document.querySelectorAll(`[id="qty-${productId}"]`).forEach(el => {
-                            el.innerText = data.new_quantity;
-                        });
+                        qtySpan.innerText = data.new_quantity;
 
-                        // 2. 품목별 가격 업데이트
-                        document.querySelectorAll(`[id="item-total-${productId}"]`).forEach(el => {
-                            el.innerText = data.item_total + '원';
-                        });
+                        // 1. 개당 단가 업데이트
+                        const unitPriceSpan = document.querySelector(`.unit-price-${cartId}`);
+                        if (unitPriceSpan && data.item_unit_price) {
+                            let price = data.item_unit_price.toString().replace(/[^0-9]/g, '');
+                            unitPriceSpan.innerText = parseInt(price).toLocaleString();
+                        }
 
-                        // 3. 전체 합계 업데이트 (서버에서 받은 data 전체를 넘김)
+                        // 🌟 2. 해당 상품의 총액(단가 * 수량) 업데이트 추가
+                        const itemTotalEl = document.getElementById(`item-total-${cartId}`);
+                        if (itemTotalEl && data.item_total) {
+                            itemTotalEl.innerText = data.item_total + '원';
+                        }
+
+                        // 3. 하단 요약 디스플레이 업데이트
                         updateAllTotalDisplays(data);
                     }
                 }
-            } catch (error) {
-                console.error('Error:', error);
-            }
+            } catch (error) { console.error('Error:', error); }
         }
 
         function updateAllTotalDisplays(data) {
@@ -600,17 +599,21 @@
             const totalEl = document.getElementById('summary-total');
             const panelTotalEl = document.getElementById('panel-total-price');
             const shippingEl = document.getElementById('shipping-fee-display');
+            const cartBadge = document.getElementById('cart-count-badge');
 
-            // 1. 상품 합계 (콤마가 포함된 문자열 그대로 사용)
-            if (subtotalEl) subtotalEl.innerText = data.pure_total + '원';
+            const formatPrice = (val) => {
+                if (!val) return '0원';
+                return val.toString().includes('원') ? val : val.toLocaleString() + '원';
+            };
 
-            // 2. 최종 결제 금액 (배송비 포함 문자열 그대로 사용)
-            if (totalEl) totalEl.innerText = data.total_price + '원';
+            if (panelTotalEl) panelTotalEl.innerText = data.pure_total;
+            if (subtotalEl) subtotalEl.innerText = data.pure_total;
+            if (totalEl) totalEl.innerText = data.total_price;
 
-            // 3. 요약 패널 총 금액 (메인과 동일하게 최종가 표시)
-            if (panelTotalEl) {
-                panelTotalEl.innerText = data.pure_total + '원';
-            }
+            ['summary-subtotal', 'summary-total'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = cleanAndFormat(data.total_price || data.pure_total) + '원';
+            });
 
             // 4. 배송비 표시 업데이트 (숫자형 데이터로 비교)
             if (shippingEl) {
@@ -618,7 +621,14 @@
                 const isFree = data.raw_pure_total === data.raw_total_price;
                 shippingEl.innerText = isFree ? '0원 (멤버십 무료)' : '3,000원';
             }
+
+            if (cartBadge && data.cart_count !== undefined) {
+                cartBadge.innerText = data.cart_count;
+            }
         }
+
+
+
     </script>
 
     {% with messages = get_flashed_messages() %}

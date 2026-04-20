@@ -39,6 +39,13 @@
                                         <span class="badge bg-success">교환완료</span>
                                     {% endif %}
                                 </p>
+
+                                {% if item.selected_options %}
+                                <div class="item-option-detail mb-1" style="font-size: 0.85rem; color: #86868b;">
+                                    <i class="bi bi-arrow-return-right me-1"></i>{{ item.selected_options }}
+                                </div>
+                                {% endif %}
+
                                 <p class="item-meta">{{ item.quantity }}개 / {{ "{:,}".format(item.price) }}원</p>
                             </div>
                         </div>
@@ -51,7 +58,7 @@
                             <button type="button"
                                     onclick="openRefundModal('{{ order.id }}', '{{ item.id }}', '{{ item.product.name }}')"
                                     class="btn-item-action">
-                                교환 · 환불 신청
+                                반품 · 환불 신청
                             </button>
                         {% else %}
                             <span style="font-size: 13px; color: #86868b; font-weight: 500;">
@@ -93,6 +100,13 @@
             <div class="info-row"><span>연락처</span><span class="info-value">{{ order.phone }}</span></div>
             <div class="info-row"><span>배송 주소</span><span class="info-value">{{ order.address }}</span></div>
 
+            <div class="info-row">
+                <span>배송 요청사항</span>
+                <span class="info-value">
+                    {{ order.memo if order.memo else '선택된 요청사항이 없습니다.' }}
+                </span>
+            </div>
+
             <hr class="section-hr">
 
             {% if order.coupon_id %}
@@ -121,7 +135,13 @@
                 <form action="{{ url_for('order.cancel_order', order_id=order.id) }}" method="POST">
                     {% if not g.user %}
                         <p class="small-info">비회원 주문 취소를 위해 연락처를 입력해주세요.</p>
-                        <input type="text" name="phone" class="form-control cancel-input" placeholder="010-0000-0000" required>
+                        <input type="text"
+                               name="phone"
+                               class="form-control cancel-input"
+                               placeholder="010-0000-0000"
+                               maxlength="13"
+                               oninput="formatPhoneNumber(this)"
+                               required>
                     {% else %}
                         <p class="small-info">주문을 취소하시겠습니까? 취소 후에는 되돌릴 수 없습니다.</p>
                     {% endif %}
@@ -171,7 +191,7 @@
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="request_type" id="type_refund" value="환불">
-                                <label class="form-check-label" for="type_refund">환불</label>
+                                <label class="form-check-label" for="type_refund">반품 · 환불</label>
                             </div>
                         </div>
                     </div>
