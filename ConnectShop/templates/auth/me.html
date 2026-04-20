@@ -1,12 +1,16 @@
+
 {% extends 'base.html' %}
 
 {% block content %}
+<script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='me.css') }}">
 
 <div class="container mt-5 mb-5">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card shadow-sm">
+
+                <!-- 헤더 -->
                 <div class="card-header bg-white py-3">
                     <h4 class="mb-0 fw-bold">내 정보 관리</h4>
                 </div>
@@ -18,7 +22,7 @@
                         <div class="col-4 border-end">
                             <p class="text-muted small mb-1">멤버십</p>
                             <span class="badge {{ 'bg-primary' if user.is_membership else 'bg-secondary' }}">
-                                {{ '맴버십 혜택 적용 중' if user.is_membership else '일반 회원' }}
+                                {{ '멤버십 혜택 적용 중' if user.is_membership else '일반 회원' }}
                             </span>
                         </div>
 
@@ -35,72 +39,87 @@
 
                     <hr class="my-4">
 
-                    <!-- 정보 수정 폼 -->
-                    <form method="post" novalidate>
-                        <div class="row">
+                    <!-- 개인정보 표시 영역 (form X) -->
+                    <div class="row">
 
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">이름</label>
-                                <input type="text" class="form-control bg-light" value="{{ user.username }}" readonly>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold">이메일</label>
-                                <input type="email" class="form-control bg-light" value="{{ user.email }}" readonly>
-                            </div>
-
-                            <div class="col-12 mb-3">
-                                <a href="{{ url_for('auth.find_id') }}" class="btn btn-outline-danger btn-sm">
-                                    비밀번호 변경하기
-                                </a>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                {{ form.phone.label(class="form-label fw-semibold") }}
-                                {{ form.phone(class="form-control bg-light", readonly=True) }}
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-semibold text-muted">가입일</label>
-                                <p class="form-control-plaintext small">{{ user.join_date.strftime('%Y-%m-%d') }}</p>
-                            </div>
-
-                            <hr class="my-3">
-
-                            <!-- 기본 결제수단 -->
-                            <div class="col-12 mb-4">
-                                <label class="form-label fw-semibold">기본 결제수단</label>
-                                <div class="p-3 border rounded d-flex justify-content-between align-items-center">
-                                    <span>{{ user.payment_method if user.payment_method else '등록된 결제수단이 없습니다.' }}</span>
-                                    <button type="button" class="btn btn-sm btn-link text-decoration-none">변경</button>
-                                </div>
-                            </div>
-
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">이름</label>
+                            <input type="text" class="form-control bg-light" value="{{ user.username }}" readonly>
                         </div>
 
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">정보 수정하기</button>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">이메일</label>
+                            <input type="email" class="form-control bg-light" value="{{ user.email }}" readonly>
                         </div>
-                    </form>
+
+                        <div class="col-12 mb-3">
+                            <a href="{{ url_for('auth.find_id') }}" class="btn btn-outline-danger btn-sm">
+                                비밀번호 변경하기
+                            </a>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">휴대폰 번호</label>
+                            {{ form.phone(class="form-control bg-light", readonly=True) }}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold text-muted">가입일</label>
+                            <p class="form-control-plaintext small">
+                                {{ user.join_date.strftime('%Y-%m-%d') }}
+                            </p>
+                        </div>
+                    </div>
 
                     <hr class="my-4">
 
-                    <!-- 최근 배송지 -->
-                    <div class="col-12 mb-3">
-                        <label class="form-label fw-semibold">최근 배송지 (주문 기록 기반)</label>
-                        <input type="text" class="form-control bg-light" value="{{ address }}" readonly>
-                        <small class="text-muted">* 주소 수정은 상품 주문 시 새로 입력 가능합니다.</small>
-                    </div>
+                    <!-- 배송지 관리 FORM -->
+                    <form id="edit-info-form" method="post" action="{{ url_for('auth.me') }}">
+                        {{ form.csrf_token }}
 
-                    <hr class="my-3">
+                        <div class="row">
+                            <!-- 앵커 이동 대상 -->
+                            <div id="recent-address" class="col-12 mb-3">
+                                <label class="form-label fw-semibold">배송지 관리</label>
 
-                    <!-- 최근 결제수단 -->
-                    <div class="col-12 mb-4">
-                        <label class="form-label fw-semibold">최근 결제수단</label>
-                        <div class="p-3 border rounded d-flex justify-content-between align-items-center bg-light">
-                            <span>{{ payment_method }}</span>
+                                <div class="input-group mb-2">
+                                    <input type="text" id="postcode" name="postcode"
+                                           class="form-control bg-light"
+                                           value="{{ postcode }}"
+                                           placeholder="우편번호" readonly>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="execDaumPostcode()">
+                                        우편번호 찾기
+                                    </button>
+                                </div>
+
+                                <input type="text" id="address" name="address"
+                                       class="form-control bg-light mb-2"
+                                       value="{{ address }}"
+                                       placeholder="기본 주소" readonly>
+
+                                <input type="text" id="address_detail" name="address_detail"
+                                       class="form-control"
+                                       value="{{ address_detail }}"
+                                       placeholder="상세 주소를 입력하세요">
+                            </div>
+
+                            <div class="col-12 mb-4">
+                                <label class="form-label fw-semibold">기본 결제수단</label>
+                                <div class="p-3 border rounded d-flex justify-content-between align-items-center">
+                                    <span>
+                                        {{ user.payment_method if user.payment_method else '등록된 결제수단이 없습니다.' }}
+                                    </span>
+                                    <small class="text-muted">결제 시 자동 업데이트됩니다</small>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                배송지 정보 업데이트
+                            </button>
+                        </div>
+                    </form>
 
                 </div>
             </div>
@@ -108,4 +127,19 @@
     </div>
 </div>
 
+<script>
+function execDaumPostcode() {
+    new daum.Postcode({
+        oncomplete: function(data) {
+            const addr = data.userSelectedType === 'R'
+                ? data.roadAddress
+                : data.jibunAddress;
+
+            document.getElementById('postcode').value = data.zonecode;
+            document.getElementById('address').value = addr;
+            document.getElementById('address_detail').focus();
+        }
+    }).open();
+}
+</script>
 {% endblock %}
