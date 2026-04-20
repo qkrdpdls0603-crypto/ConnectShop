@@ -242,29 +242,53 @@ def delete(product_id):
         save_guest_cart(guest_cart)
     return redirect(url_for('order._list'))
 
+
 @bp.route('/checkout', methods=['GET', 'POST'])
 def checkout():
+    # 1. 사용자가 결제창에서 입력한 배송지 정보를 세션에 저장 (POST 요청 시)
     if request.method == 'POST':
-        # 사용자가 입력한 정보를 세션에 임시 저장
         session['temp_order_info'] = {
             'recipient': request.form.get('recipient'),
             'phone': request.form.get('phone'),
             'address': f"{request.form.get('address')} {request.form.get('address_detail')}"
         }
 
-    cart_list = get_cart_items()
+    # 2. 어떤 상품을 결제할지 결정 (바로구매 vs 장바구니)
+    is_direct = request.args.get('direct_buy') == 'true'
 
+    if is_direct:
+        # [바로 구매] 상세 페이지에서 넘어온 단일 상품 정보로 리스트 구성
+        p_id = request.args.get('product_id', type=int)
+        qty = request.args.get('quantity', type=int, default=1)
+        coupon_id = request.args.get('coupon_id')
+
+        product = db.session.get(Product, p_id)
+        if not product:
+            flash("존재하지 않는 상품입니다.")
+            return redirect(url_for('main.index'))
+
+        # 템플릿 호환성을 위해 리스트 형태로 감싸줌
+        cart_list = [SimpleNamespace(product=product, quantity=qty, product_id=p_id)]
+
+        # 적용된 쿠폰 ID가 있다면 세션에 저장 (나중에 success 라우트에서 사용)
+        if coupon_id:
+            session['applied_coupon_id'] = coupon_id
+    else:
+        # [장바구니 구매] 기존 방식대로 장바구니 DB에서 가져옴
+        cart_list = get_cart_items()
+
+    # 3. 데이터 유무 및 재고 검증
     if not cart_list:
-        flash("장바구니가 비어 있습니다.")
+        flash("결제할 상품이 없습니다.")
         return redirect(url_for('order._list'))
 
     for item in cart_list:
         if item.product.stock < item.quantity:
             flash(f"상품 '{item.product.name}'의 재고가 부족합니다. (현재 재고: {item.product.stock}개)")
-            return redirect(url_for('cart.view_cart'))
+            return redirect(url_for('order._list'))
 
+    # 4. 금액 계산 및 렌더링 준비
     now_ts = datetime.now().strftime('%Y%m%d%H%M%S')
-
     available_coupons = []
     if g.user:
         available_coupons = Coupon.query.filter_by(user_id=g.user.id, is_used=False).all()

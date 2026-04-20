@@ -9,54 +9,41 @@
                      alt="{{ brand }} 로고"
                      class="me-2"
                      style="height: 1.5em; width: auto; object-fit: contain;">
-                <span>{{ brand }} 제품</span>
             </h3>
 
-            <div id="carousel-{{ loop.index }}" class="carousel slide" data-bs-ride="false">
-                <div class="carousel-inner p-1">
-                    <div class="carousel-item active">
-                        <div class="row g-4">
-                            {% for product in products %}
-                            <div class="col-md-3">
-                                <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
-                                    <div class="bg-light p-4 text-center">
-                                        <img src="{{ url_for('static', filename='images/menu/' + product.image_path) if product.image_path else '' }}"
-                                             class="img-fluid" style="height: 180px; object-fit: contain;" alt="{{ product.name }}">
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="text-muted small mb-1">{{ product.brand }}</p>
-                                        <h6 class="fw-bold text-truncate">{{ product.name }}</h6>
-                                        <p class="text-primary fw-bold mb-3">{{ "{:,}".format(product.price) }}원</p>
-                                        <a href="{{ url_for('product.page', product_id=product.id) }}"
-                                           class="btn btn-dark w-100 rounded-pill btn-sm mb-2">상세보기</a>
-
-                                        <button type="button"
-                                                onclick="addCartCatalog('{{ product.id }}')"
-                                                class="btn btn-outline-primary w-100 rounded-pill btn-sm">
-                                            <i class="bi bi-cart-plus me-1"></i> 담기
-                                        </button>
-                                    </div>
-                                </div>
+            <div class="product-slider-wrapper position-relative">
+                <div id="product-track-{{ loop.index }}" class="product-track d-flex" style="transition: transform 0.4s ease-in-out;">
+                    {% for product in products %}
+                    <div class="product-card-item col-12 col-sm-6 col-md-4 col-lg-3 p-2">
+                        <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+                            <div class="bg-light p-4 text-center">
+                                <img src="{{ url_for('static', filename='images/menu/' + product.image_path) if product.image_path else '' }}"
+                                     class="img-fluid" style="height: 180px; object-fit: contain;" alt="{{ product.name }}">
                             </div>
+                            <div class="card-body">
+                                <p class="text-muted small mb-1">{{ product.brand }}</p>
+                                <h6 class="fw-bold text-truncate">{{ product.name }}</h6>
+                                <p class="text-primary fw-bold mb-3">{{ "{:,}".format(product.price) }}원</p>
+                                <a href="{{ url_for('product.page', product_id=product.id) }}"
+                                   class="btn btn-dark w-100 rounded-pill btn-sm mb-2">상세보기</a>
 
-                            {# 4개마다 슬라이드 페이지 나누기 #}
-                            {% if loop.index % 4 == 0 and not loop.last %}
+                                <button type="button"
+                                        onclick="addCartCatalog('{{ product.id }}')"
+                                        class="btn btn-outline-primary w-100 rounded-pill btn-sm">
+                                    <i class="bi bi-cart-plus me-1"></i> 담기
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="carousel-item">
-                        <div class="row g-4">
-                            {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
+                    {% endfor %}
                 </div>
 
                 {% if products|length > 4 %}
-                <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ loop.index }}" data-bs-slide="prev" style="width: 5%; filter: invert(1);">
-                    <span class="carousel-control-prev-icon"></span>
+                <button class="slider-nav-btn prev" onclick="moveSlide('{{ loop.index }}', -1)">
+                    <i class="bi bi-chevron-left"></i>
                 </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ loop.index }}" data-bs-slide="next" style="width: 5%; filter: invert(1);">
-                    <span class="carousel-control-next-icon"></span>
+                <button class="slider-nav-btn next" onclick="moveSlide('{{ loop.index }}', 1)">
+                    <i class="bi bi-chevron-right"></i>
                 </button>
                 {% endif %}
             </div>
@@ -70,11 +57,88 @@
 </div>
 
 <style>
-    /* 마우스 올리면 살짝 들리는 효과 */
-    .card:hover { transform: translateY(-5px); transition: 0.3s; }
+    .product-track {
+    /* 기존 속성 삭제 후 아래 유지 */
+    display: flex;
+    will-change: transform;
+    }
+
+    .product-card-item {
+        /* scroll-snap-align 삭제 */
+        flex: 0 0 25%; /* 한 화면에 4개 보일 때 (lg 기준) */
+        display: block;
+    }
+
+    /* 태블릿/모바일 대응을 위해 flex 비율 조정 (선택사항) */
+    @media (max-width: 992px) { .product-card-item { flex: 0 0 33.333%; } }
+    @media (max-width: 768px) { .product-card-item { flex: 0 0 50%; } }
+    @media (max-width: 576px) { .product-card-item { flex: 0 0 100%; } }
+
+    .product-slider-wrapper {
+        overflow: hidden; /* 트랙이 삐져나가지 않게 부모에서 가려줌 */
+    }
+
+    /* 2. 카드 호버 효과 */
+    .card { transition: 0.3s; }
+    .card:hover { transform: translateY(-5px); }
+
+    /* 3. 커스텀 버튼 스타일 */
+    .slider-nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: 1px solid #eee;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.2s;
+    }
+    .slider-nav-btn:hover { background: #f8f9fa; transform: translateY(-50%) scale(1.1); }
+    .slider-nav-btn.prev { left: 10px; }
+    .slider-nav-btn.next { right: 10px; }
 </style>
 
 <script>
+    function moveSlide(index, direction) {
+    const track = document.getElementById(`product-track-${index}`);
+    const items = track.querySelectorAll('.product-card-item');
+    if (items.length <= 1) return;
+
+    const cardWidth = items[0].offsetWidth; // 한 칸의 너비
+
+    if (direction === 1) {
+        // [Next 버튼 클릭]
+        // 1. 트랙을 왼쪽으로 한 칸 이동 시킴
+        track.style.transition = "transform 0.4s ease-in-out";
+        track.style.transform = `translateX(-${cardWidth}px)`;
+
+        // 2. 애니메이션 완료 후 첫 요소를 맨 뒤로 보내고 위치 초기화
+        setTimeout(() => {
+            track.style.transition = "none";
+            track.appendChild(track.firstElementChild);
+            track.style.transform = `translateX(0)`;
+        }, 400);
+    } else {
+        // [Prev 버튼 클릭]
+        // 1. 애니메이션 없이 즉시 마지막 요소를 맨 앞으로 이동 시키고 위치 보정
+        track.style.transition = "none";
+        track.prepend(track.lastElementChild);
+        track.style.transform = `translateX(-${cardWidth}px)`;
+
+        // 2. 부드럽게 0 위치로 당겨옴
+        setTimeout(() => {
+            track.style.transition = "transform 0.4s ease-in-out";
+            track.style.transform = `translateX(0)`;
+        }, 10);
+    }
+}
+
     async function addCartCatalog(productId) {
     try {
         const response = await fetch(`/order/add/${productId}`, {

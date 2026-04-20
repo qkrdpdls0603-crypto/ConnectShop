@@ -19,6 +19,12 @@
     justify-content: center;
 }
 
+#section-images,
+#section-details {
+    /* 네비게이션 바 높이가 60px라면 그보다 조금 더 여유 있게(70~80px) 설정하세요 */
+    scroll-margin-top: 100px;
+}
+
 .product-title-small {
     font-size: 0.9rem;
     font-weight: 600;
