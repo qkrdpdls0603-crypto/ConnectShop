@@ -43,12 +43,8 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h2 class="fw-bold mb-0">{{ product.name }}</h2>
                     {% set is_wished = false %}
-                    {% if g.user %}
-                        {% for wish in g.user.wishlist_items %}
-                            {% if wish.product_id == product.id %}
-                                {% set is_wished = true %}
-                            {% endif %}
-                        {% endfor %}
+                    {% if g.user and product.id in g.user.wishlist_items|map(attribute='product_id')|list %}
+                        {% set is_wished = true %}
                     {% endif %}
 
                     <button class="border-0 bg-transparent" onclick="toggleWishlist(event, {{ product.id }}, this)">
@@ -617,7 +613,7 @@ function buyNow(productId) {
     location.href = `${baseUrl}?${params.toString()}`;
 }
 
-// 🌟 팀장님의 찜하기 토글 로직 추가
+// 🌟 무적의 찜하기(하트) 토글 로직
 function toggleWishlist(event, productId, btnElement) {
     event.preventDefault();
     event.stopPropagation();
@@ -645,15 +641,21 @@ function toggleWishlist(event, productId, btnElement) {
         return response.json();
     })
     .then(data => {
+        // 서버 처리가 무사히 끝났다면! (data.status 글자를 따지지 않음)
         if (data && data.success) {
             const icon = btnElement.querySelector('i');
+
+            // 🌟 쫀득한 하트 애니메이션
             icon.style.transform = "scale(1.2)";
             setTimeout(() => { icon.style.transform = "scale(1)"; }, 200);
 
-            if (data.status === 'added') {
+            // 🌟 핵심 해결책: 현재 눈에 보이는 클래스를 확인해서 무조건 반대로 뒤집기!
+            if (icon.classList.contains('bi-heart')) {
+                // 1. 현재 빈 하트였다면 -> 꽉 찬 빨간 하트로 변경!
                 icon.classList.remove('bi-heart', 'text-secondary');
                 icon.classList.add('bi-heart-fill', 'text-danger');
-            } else if (data.status === 'removed') {
+            } else {
+                // 2. 현재 꽉 찬 하트였다면 -> 빈 회색 하트로 변경!
                 icon.classList.remove('bi-heart-fill', 'text-danger');
                 icon.classList.add('bi-heart', 'text-secondary');
             }
@@ -661,5 +663,11 @@ function toggleWishlist(event, productId, btnElement) {
     })
     .catch(error => console.error('Error:', error));
 }
+    window.addEventListener('pageshow', function(event) {
+    // event.persisted가 true면 캐시된 과거 화면을 보고 있다는 뜻입니다.
+    if (event.persisted) {
+        location.reload();
+    }
+    });
 </script>
 {% endblock %}

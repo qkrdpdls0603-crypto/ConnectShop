@@ -143,77 +143,77 @@ document.addEventListener("DOMContentLoaded", async function() {
     ]);
 
     // ============================================
-    // 🌟 URL에서 쿠폰 정보를 읽어와서 자동으로 골라주기!
+    // 🌟 URL이나 서버 세션에서 쿠폰 정보를 읽어와서 자동으로 골라주기!
     // ============================================
     const urlParams = new URLSearchParams(window.location.search);
-    const preCouponId = urlParams.get('pre_coupon');
+    // 서버에서 넘겨준 쿠폰 ID가 있으면 먼저 쓰고, 없으면 URL에서 찾습니다.
+    const preCouponId = "{{ pre_selected_coupon_id or '' }}" || urlParams.get('coupon_id');
 
-    if (preCouponId) {
+    if (preCouponId && preCouponId !== 'None') {
         const couponSelect = document.getElementById('coupon-select');
         if (couponSelect) {
             for (let i = 0; i < couponSelect.options.length; i++) {
-                if (couponSelect.options[i].value === preCouponId) {
+                // 문자열로 변환하여 안전하게 비교
+                if (String(couponSelect.options[i].value) === String(preCouponId)) {
                     couponSelect.selectedIndex = i;
                     break;
                 }
             }
             // 쿠폰이 선택되었으니 자동으로 가격 계산 한 번 돌려줍니다!
-            setTimeout(() => { updateTotalAmount(); }, 100);
+            setTimeout(() => {
+                if(typeof updateTotalAmount === 'function') updateTotalAmount();
+            }, 150);
         }
     }
 
     // [금액 업데이트 함수]
     window.updateTotalAmount = async function() {
-    const couponSelect = document.getElementById('coupon-select');
-    const selectedOption = couponSelect.options[couponSelect.selectedIndex];
+        const couponSelect = document.getElementById('coupon-select');
+        const selectedOption = couponSelect.options[couponSelect.selectedIndex];
 
-    // 쿠폰 정보 가져오기
-    const type = selectedOption.getAttribute('data-type'); // fixed 또는 percent
-    const val = parseInt(selectedOption.getAttribute('data-value')) || 0;
+        // 쿠폰 정보 가져오기
+        const type = selectedOption.getAttribute('data-type'); // fixed 또는 percent
+        const val = parseInt(selectedOption.getAttribute('data-value')) || 0;
 
-    const originalTotal = {{ total_price|int }}; // 배송비 포함 총액
+        const originalTotal = {{ total_price|int }}; // 배송비 포함 총액
 
-    // 실제 상품가(Pure Total) 추출 (배송비 3,000원을 제외한 금액에만 할인을 적용하는 게 일반적임)
-    const isMembership = {{ 'true' if g.user and g.user.is_membership else 'false' }};
-    const shippingFee = isMembership ? 0 : 3000;
-    const pureProductPrice = originalTotal - shippingFee;
+        // 실제 상품가(Pure Total) 추출 (배송비 3,000원을 제외한 금액에만 할인을 적용하는 게 일반적임)
+        const isMembership = {{ 'true' if g.user and g.user.is_membership else 'false' }};
+        const shippingFee = isMembership ? 0 : 3000;
+        const pureProductPrice = originalTotal - shippingFee;
 
-    let discount = 0;
+        let discount = 0;
 
-    // [10% 할인 로직 핵심]
-    if (type === 'percent') {
-        // 상품 금액의 n% 계산
-        discount = Math.floor(pureProductPrice * (val / 100));
+        // [할인 로직 핵심]
+        if (type === 'percent') {
+            // 상품 금액의 n% 계산
+            discount = Math.floor(pureProductPrice * (val / 100));
+        } else {
+            // 기존의 정액 할인
+            discount = val;
+        }
 
-        // (선택사항) 최대 할인 금액 제한 로직을 일하는 척하며 추가해봅니다.
-        // if (discount > 10000) discount = 10000;
-    } else {
-        // 기존의 정액 할인
-        discount = val;
-    }
+        const updatedFinalAmount = Math.max(0, originalTotal - discount);
 
-    const updatedFinalAmount = Math.max(0, originalTotal - discount);
+        // UI 업데이트
+        document.getElementById('display-discount').innerText = (discount > 0 ? "-" : "") + discount.toLocaleString() + "원";
+        const finalTotalDisplay = document.querySelector('.summary-total span:last-child');
+        if (finalTotalDisplay) finalTotalDisplay.innerText = updatedFinalAmount.toLocaleString() + "원";
 
-    // UI 업데이트
-    document.getElementById('display-discount').innerText = (discount > 0 ? "-" : "") + discount.toLocaleString() + "원";
-    const finalTotalDisplay = document.querySelector('.summary-total span:last-child');
-    if (finalTotalDisplay) finalTotalDisplay.innerText = updatedFinalAmount.toLocaleString() + "원";
+        const payButton = document.getElementById('payment-button');
+        if (payButton) payButton.innerText = updatedFinalAmount.toLocaleString() + "원 결제하기";
 
-    const payButton = document.getElementById('payment-button');
-    if (payButton) payButton.innerText = updatedFinalAmount.toLocaleString() + "원 결제하기";
+        // 토스 위젯 금액 갱신
+        if (widgets) {
+            await widgets.setAmount({
+                currency: "KRW",
+                value: updatedFinalAmount
+            });
+        }
+    };
 
-    // 토스 위젯 금액 갱신
-    if (widgets) {
-        await widgets.setAmount({
-            currency: "KRW",
-            value: updatedFinalAmount
-        });
-    }
-};
-
-    // [결제 요청 함수 - 에러 해결 지점]
+    // [결제 요청 함수]
     window.requestPayment = async function() {
-        // 1. 입력 필드에서 값 가져오기 (이 부분이 누락되어 에러가 났습니다)
         const recipient = document.getElementById('recipient').value.trim();
         const phone = document.getElementById('phone').value.trim();
         const address = document.getElementById('address').value.trim();
@@ -228,7 +228,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         if (!recipient || !phone || !address) { alert("배송 정보를 모두 입력해주세요."); return; }
 
-        // 2. 유효성 검사 (입력값이 없으면 토스에서 에러가 납니다)
+        // 유효성 검사
         if (!recipient) { alert("수령인 이름을 입력해주세요."); return; }
         if (!phone) { alert("연락처를 입력해주세요."); return; }
         if (!address) { alert("배송 주소를 입력해주세요."); return; }
@@ -249,13 +249,13 @@ document.addEventListener("DOMContentLoaded", async function() {
 
             if (!response.ok) throw new Error("세션 저장 실패");
 
-            // 3. 토스 결제 실행
+            // 토스 결제 실행
             await widgets.requestPayment({
                 orderId: "order_temp_{{ now_ts }}",
                 orderName: "ConnectShop 상품 결제",
                 successUrl: window.location.origin + "/order/success",
                 failUrl: window.location.origin + "/order/fail",
-                customerName: recipient, // 이제 recipient가 문자열로 확실히 전달됩니다.
+                customerName: recipient,
             });
         } catch (error) {
             console.error("결제 중 오류 발생:", error);
@@ -286,15 +286,15 @@ document.addEventListener("DOMContentLoaded", async function() {
     };
 
     window.toggleDirectMemo = function(select) {
-    const directInput = document.getElementById('direct-memo-input');
-    if (select.value === 'direct') {
-        directInput.classList.remove('d-none');
-        directInput.focus();
-    } else {
-        directInput.classList.add('d-none');
-        directInput.value = ''; // 다른 거 선택하면 초기화
-    }
-};
+        const directInput = document.getElementById('direct-memo-input');
+        if (select.value === 'direct') {
+            directInput.classList.remove('d-none');
+            directInput.focus();
+        } else {
+            directInput.classList.add('d-none');
+            directInput.value = '';
+        }
+    };
 });
 </script>
 {% endblock %}

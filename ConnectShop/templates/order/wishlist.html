@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container py-5 my-5" style="min-height: 60vh;">
+    <div class="d-flex justify-content-between align-items-end mb-4">
+        <h2 class="fw-bold mb-0">내 찜목록 <span class="text-primary fs-4" id="wishlist-count">({{ g.user.wishlist_items|length if g.user else 0 }})</span></h2>
+    </div>
+
+    <hr class="mb-5">
+
+    {% if g.user and g.user.wishlist_items %}
+    <div class="row g-4" id="wishlist-container">
+        {% for wish in g.user.wishlist_items %}
+        {# 🌟 DB 관계 설정에 따라 wish.product 로 상품 정보를 가져옵니다 #}
+        {% set product = wish.product %}
+        <div class="col-12 col-sm-6 col-md-4 col-lg-3 wishlist-card-item" id="wish-card-{{ product.id }}">
+            <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative">
+
+                <button class="btn btn-light rounded-circle position-absolute top-0 end-0 m-3 shadow-sm z-1 d-flex align-items-center justify-content-center"
+                        onclick="removeWishlist(event, {{ product.id }})"
+                        style="width: 35px; height: 35px; padding: 0; transition: all 0.2s;">
+                    <i class="bi bi-trash3 text-danger"></i>
+                </button>
+
+                <div class="bg-light p-4 text-center" style="cursor: pointer;" onclick="location.href='{{ url_for('product.page', product_id=product.id) }}'">
+                    <img src="{{ url_for('static', filename='images/menu/' + product.image_path) if product.image_path else '' }}"
+                         class="img-fluid" style="height: 180px; object-fit: contain;" alt="{{ product.name }}">
+                </div>
+
+                <div class="card-body d-flex flex-column">
+                    <p class="text-muted small mb-1">{{ product.brand }}</p>
+                    <h6 class="fw-bold text-truncate mb-2">{{ product.name }}</h6>
+                    <p class="text-primary fw-bold mb-3">{{ "{:,}".format(product.price) }}원</p>
+
+                    <div class="mt-auto">
+                        <button type="button" onclick="addCartCatalog('{{ product.id }}')"
+                                class="btn btn-outline-dark w-100 rounded-pill btn-sm py-2 fw-medium">
+                            <i class="bi bi-cart-plus me-1"></i> 장바구니 담기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="empty-wishlist-msg" class="text-center py-5 my-5" style="display: none;">
+        <i class="bi bi-heart text-muted display-1 mb-3 d-block"></i>
+        <h4 class="text-muted fw-bold mb-3">아직 찜한 상품이 없습니다.</h4>
+        <p class="text-muted mb-4">마음에 드는 상품에 하트를 눌러보세요!</p>
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary rounded-pill px-4 py-2 fw-bold">쇼핑하러 가기</a>
+    </div>
+
+    {% else %}
+    <div class="text-center py-5 my-5">
+        <i class="bi bi-heart text-muted display-1 mb-3 d-block"></i>
+        <h4 class="text-muted fw-bold mb-3">아직 찜한 상품이 없습니다.</h4>
+        <p class="text-muted mb-4">마음에 드는 상품에 하트를 눌러보세요!</p>
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary rounded-pill px-4 py-2 fw-bold">쇼핑하러 가기</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// 🌟 1. 장바구니 담기 공통 함수 (카탈로그에서 쓰던 것 재활용)
+async function addCartCatalog(productId) {
+    try {
+        const response = await fetch(`/order/add/${productId}`, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await response.json();
+        if (data.success) {
+            if (confirm("장바구니에 상품을 담았습니다.\n지금 확인하시겠습니까?")) {
+                location.href = "{{ url_for('order._list') }}";
+            }
+        } else {
+            alert(data.message || "장바구니 담기에 실패했습니다.");
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert("통신 오류가 발생했습니다.");
+    }
+}
+
+// 🌟 2. 찜목록 페이지 전용 삭제 로직 (DOM 요소 부드럽게 제거)
+function removeWishlist(event, productId) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!confirm("이 상품을 찜목록에서 삭제하시겠습니까?")) return;
+
+    fetch(`/product/wishlist/${productId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data && data.success && data.status === 'removed') {
+            // 1. 해당 상품 카드 선택
+            const card = document.getElementById(`wish-card-${productId}`);
+
+            // 2. 부드럽게 사라지는 CSS 애니메이션 적용
+            card.style.transition = "opacity 0.3s ease, transform 0.3s ease";
+            card.style.opacity = "0";
+            card.style.transform = "scale(0.8)";
+
+            // 3. 애니메이션(0.3초)이 끝난 후 DOM에서 완전히 삭제
+            setTimeout(() => {
+                card.remove();
+
+                // 4. 남은 카드 개수 세기
+                const remainingCards = document.querySelectorAll('.wishlist-card-item');
+
+                // 헤더의 숫자(총 찜 개수) 업데이트
+                const titleCount = document.getElementById('wishlist-count');
+                if (titleCount) titleCount.innerText = `(${remainingCards.length})`;
+
+                // 만약 남은 카드가 0개라면? -> 빈 화면 메시지 띄우기
+                if (remainingCards.length === 0) {
+                    const container = document.getElementById('wishlist-container');
+                    if (container) container.style.display = 'none';
+                    document.getElementById('empty-wishlist-msg').style.display = 'block';
+                }
+            }, 300);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+
+{% endblock %}

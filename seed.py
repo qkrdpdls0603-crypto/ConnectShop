@@ -125,8 +125,8 @@ with app.app_context():
                 description='티타늄 디자인과 최고의 배터리', image_path='phone_app1.jpg'),
         Product(name='아이폰 17 프로', price=1550000, category='스마트폰', brand='애플', stock=15,
                 description='강력한 A18 Pro 칩셋 탑재', image_path='phone_app2.jpg'),
-        Product(name='아이폰 17 플러스', price=1350000, category='스마트폰', brand='애플', stock=10,
-                description='더 큰 디스플레이로 즐기는 일상', image_path='phone_app3.jpg'),
+        Product(name='아이폰 17 에어', price=1350000, category='스마트폰', brand='애플', stock=10,
+                description='역대 가장 슬림한 디자인, 상상을 뛰어넘는 가벼움', image_path='phone_app3.jpg'),
         Product(name='아이폰 17', price=1250000, category='스마트폰', brand='애플', stock=20, description='새로운 듀얼 카메라 시스템',
                 image_path='phone_app4.jpg'),
         Product(name='아이폰 16 프로', price=1450000, category='스마트폰', brand='애플', stock=12,
@@ -721,22 +721,29 @@ with app.app_context():
                 description='버스킹과 강연을 위한 무선 올인원 PA 시스템', image_path='spk_bose8.jpg'),
 
         # --- 브리츠 (Britz) 8개 ---
-        Product(name='BA-C1', price=49000, category='블루투스 스피커', brand='브리츠', stock=50,
-                description='레트로 라디오 감성의 인테리어 스피커', image_path='spk_britz1.jpg'),
-        Product(name='BZ-JB5606', price=159000, category='블루투스 스피커', brand='브리츠', stock=20,
-                description='고급스러운 우든 MDF 인클로저의 깊은 소리', image_path='spk_britz2.jpg'),
-        Product(name='BA-R9', price=25000, category='블루투스 스피커', brand='브리츠', stock=60,
-                description='국민 PC 사운드바 블루투스 버전', image_path='spk_britz3.jpg'),
-        Product(name='BZ-A10', price=35000, category='블루투스 스피커', brand='브리츠', stock=45,
-                description='캠핑장 텐트 안에 걸기 좋은 미니 스피커', image_path='spk_britz4.jpg'),
-        Product(name='BA-MK21', price=59000, category='블루투스 스피커', brand='브리츠', stock=35,
-                description='아날로그 감성을 더한 탁상용 시계 스피커', image_path='spk_britz5.jpg'),
-        Product(name='BZ-V90', price=45000, category='블루투스 스피커', brand='브리츠', stock=40,
-                description='클래식한 턴테이블 디자인의 감성템', image_path='spk_britz6.jpg'),
-        Product(name='BZ-T3400', price=99000, category='블루투스 스피커', brand='브리츠', stock=15,
-                description='TV와 완벽 호환되는 입문용 사운드바', image_path='spk_britz7.jpg'),
-        Product(name='BA-MS10', price=65000, category='블루투스 스피커', brand='브리츠', stock=30,
-                description='듀얼 풀레인지 유닛의 입체적인 사운드', image_path='spk_britz8.jpg'),
+        Product(name='BZ-B1', price=79900, category='블루투스 스피커', brand='브리츠', stock=50,
+                description='레트로 감성의 리얼 우드 인테리어 탁상용 라디오 스피커', image_path='spk_britz1.jpg'),
+
+        Product(name='BZ-WX3', price=69900, category='블루투스 스피커', brand='브리츠', stock=20,
+                description='캠핑에 제격인 TWS 지원 LED 무드등 블루투스 스피커', image_path='spk_britz2.jpg'),
+
+        Product(name='BZ-TK3', price=55000, category='블루투스 스피커', brand='브리츠', stock=60,
+                description='IPX4 생활방수와 화려한 LED 조명을 품은 아웃도어 스피커', image_path='spk_britz3.jpg'),
+
+        Product(name='BZ-TK1', price=25000, category='블루투스 스피커', brand='브리츠', stock=45,
+                description='유니크한 음료 캔 디자인과 히든 스트랩을 갖춘 휴대용 스피커', image_path='spk_britz4.jpg'),
+
+        Product(name='BZ-MK88', price=56000, category='블루투스 스피커', brand='브리츠', stock=35,
+                description='라디오, 시계, 알람 기능까지 품은 올인원 우든 탁상용 스피커', image_path='spk_britz5.jpg'),
+
+        Product(name='BZ-MV5000', price=75900, category='블루투스 스피커', brand='브리츠', stock=40,
+                description='클래식한 턴테이블을 연상시키는 레트로 디자인 스피커', image_path='spk_britz6.jpg'),
+
+        Product(name='BZ-MQ5', price=86900, category='블루투스 스피커', brand='브리츠', stock=15,
+                description='라디오와 시계가 더해진 손잡이 일체형 감성 블루투스 스피커', image_path='spk_britz7.jpg'),
+
+        Product(name='BZ-JB6800', price=195000, category='블루투스 스피커', brand='브리츠', stock=30,
+                description='압도적인 고출력을 자랑하는 프리미엄 앤틱 스테레오 스피커', image_path='spk_britz8.jpg'),
 
         # --- LG (lg) 8개 ---
         Product(name='XBOOM 360 XO3Q', price=299000, category='블루투스 스피커', brand='lg', stock=15,

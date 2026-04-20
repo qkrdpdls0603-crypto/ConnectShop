@@ -256,21 +256,22 @@ def checkout():
     # 2. 어떤 상품을 결제할지 결정 (바로구매 vs 장바구니)
     is_direct = request.args.get('direct_buy') == 'true'
 
+    # 🌟 [수정] 상세페이지에서 넘어온 쿠폰 ID 혹은 세션에 저장된 쿠폰 ID를 가져옵니다.
+    coupon_id = request.args.get('coupon_id') or session.get('applied_coupon_id')
+
     if is_direct:
         # [바로 구매] 상세 페이지에서 넘어온 단일 상품 정보로 리스트 구성
         p_id = request.args.get('product_id', type=int)
         qty = request.args.get('quantity', type=int, default=1)
-        coupon_id = request.args.get('coupon_id')
 
         product = db.session.get(Product, p_id)
         if not product:
             flash("존재하지 않는 상품입니다.")
             return redirect(url_for('main.index'))
 
-        # 템플릿 호환성을 위해 리스트 형태로 감싸줌
         cart_list = [SimpleNamespace(product=product, quantity=qty, product_id=p_id)]
 
-        # 적용된 쿠폰 ID가 있다면 세션에 저장 (나중에 success 라우트에서 사용)
+        # 🌟 [수정] 적용된 쿠폰 ID가 있다면 세션에 확실히 저장합니다.
         if coupon_id:
             session['applied_coupon_id'] = coupon_id
     else:
@@ -303,7 +304,9 @@ def checkout():
                            product_total=product_total,
                            shipping_fee=shipping_fee,
                            available_coupons=available_coupons,
-                           now_ts=now_ts)
+                           now_ts=now_ts,
+                           # 🌟 [추가] 템플릿에서 쓸 수 있도록 쿠폰 ID를 넘겨줍니다.
+                           pre_selected_coupon_id=coupon_id)
 
 @bp.route('/save_temp_info', methods=['POST'])
 def save_temp_info():
@@ -741,3 +744,12 @@ def inject_cart_totals():
     product_total = sum(item.product.price * item.quantity for item in cart_list)
 
     return dict(product_total=product_total)
+
+
+# 파일 상단에 g, render_template 등이 임포트 되어있는지 확인하세요!
+# (팀의 로그인 데코레이터 이름이 @login_required 라면 꼭 붙여주세요)
+
+@bp.route('/wishlist')
+@login_required  # 🌟 이 마법사를 달아주면 아래의 if문이 필요 없어집니다!
+def wishlist():
+    return render_template('order/wishlist.html')
