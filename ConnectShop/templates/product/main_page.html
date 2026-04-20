@@ -2,6 +2,53 @@
 
 {% block content %}
 <main>
+    <style>
+
+        /* 제품 카드 기본 설정 */
+.product-card {
+    transition: all 0.3s ease-in-out; /* 부드러운 움직임 필수! */
+    cursor: pointer;
+}
+
+/* 마우스를 올렸을 때 (Hover) */
+.product-card:hover {
+    transform: translateY(-10px); /* 위로 10px 이동 */
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1) !important; /* 그림자를 더 크고 부드럽게 */
+}
+
+/* 이미지 영역에 살짝 줌 효과 (선택사항) */
+.product-card:hover .image-area img {
+    transform: scale(1.05); /* 이미지가 5% 커짐 */
+    transition: transform 0.4s ease;
+}
+
+/* 정보 영역(글자 부분) 배경색 살짝 변경 */
+.product-card:hover .info-area {
+    background-color: #fcfcfc !important;
+}
+        .icon-box {
+    transition: all 0.3s ease-in-out; /* 변화를 부드럽게 만듦 */
+    cursor: pointer;
+}
+
+/* 마우스를 올렸을 때 (Hover) */
+.col:hover .icon-box {
+    transform: translateY(-8px); /* 1. 살짝 위로 이동 */
+    background-color: #f8f9fa !important; /* 2. 배경색을 살짝 밝게 (선택사항) */
+    shadow: 0 10px 20px rgba(0,0,0,0.15) !important; /* 3. 그림자를 더 깊게 */
+}
+
+/* 텍스트에도 효과를 주고 싶다면 */
+.col:hover p {
+    color: #0d6efd !important; /* 마우스 올리면 글자색을 파란색(Primary)으로 변경 */
+    transition: color 0.3s ease;
+}
+
+/* 클릭하는 순간 (Active) */
+.col:active .icon-box {
+    transform: scale(0.95); /* 살짝 눌리는 느낌 */
+}
+        </style>
     {% set banner_files = ['banner1.png', 'banner2.png', 'banner3.jpeg'] %}
 
     {% for i in range(1, 4) %}
@@ -87,7 +134,7 @@
     <div class="row row-cols-2 row-cols-sm-4 row-cols-lg-auto g-4 text-center justify-content-center">
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='스마트폰') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/smartphone.png') }}" class="w-75 h-75 object-fit-contain" alt="스마트폰">
             </div>
@@ -95,7 +142,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='무선이어폰') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/earbuds.png') }}" class="w-75 h-75 object-fit-contain" alt="무선이어폰">
             </div>
@@ -103,7 +150,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='스마트워치') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/smartwatch.png') }}" class="w-75 h-75 object-fit-contain" alt="스마트워치">
             </div>
@@ -111,7 +158,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='태블릿') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/tablet.png') }}" class="w-75 h-75 object-fit-contain" alt="태블릿">
             </div>
@@ -119,7 +166,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='노트북') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/laptop.png') }}" class="w-75 h-75 object-fit-contain" alt="노트북">
             </div>
@@ -127,7 +174,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='헤드폰') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/headphones.png') }}" class="w-75 h-75 object-fit-contain" alt="헤드폰">
             </div>
@@ -135,7 +182,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='스피커') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/speaker.png') }}" class="w-75 h-75 object-fit-contain" alt="스피커">
             </div>

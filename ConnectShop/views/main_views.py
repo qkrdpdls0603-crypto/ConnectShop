@@ -1,16 +1,11 @@
-<<<<<<< HEAD
-from flask import Blueprint, render_template
-from ConnectShop.models import FAQ, Product
-=======
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from ConnectShop.models import FAQ, Product
 
 # 🌟 이메일 발송을 위해 추가된 모듈
 from flask_mail import Message
 from ConnectShop import mail
->>>>>>> main
 
-# 'main'이라는 이름의 블루프린트 생성 (기본 접속 주소 '/')
+# 'main'이라는 ㅎ이름의 블루프린트 생성 (기본 접속 주소 '/')
 bp = Blueprint('main', __name__, url_prefix='/')
 
 
@@ -21,8 +16,6 @@ def index():
     products = Product.query.all()
     # 🌟 팀원이 만든 상품 메인 페이지로 연결
     return render_template('product/main_page.html', products=products)
-<<<<<<< HEAD
-=======
 
 
 # 회사 소개 페이지 라우트 함수
@@ -73,7 +66,6 @@ def faq_board():
 
     return render_template('support/faq_board.html', faq_list=faq_list, kw=kw)
 
->>>>>>> main
 
 # 준비 중 페이지 라우트 함수
 @bp.route('/preparing')

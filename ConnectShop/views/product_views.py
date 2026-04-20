@@ -4,8 +4,10 @@ from ConnectShop import db
 from ConnectShop.models import Product, Coupon, Review
 from collections import defaultdict
 from sqlalchemy import func
+
 # 'product'라는 이름의 블루프린트 생성
 bp = Blueprint('product', __name__, url_prefix='/product')
+
 
 @bp.route('/list')
 def product_list():
@@ -44,25 +46,21 @@ def product_list():
                            products_by_brand=products_by_brand,
                            search_kw=search_kw)  # 🌟 검색어 전달
 
+
 # 2. 상세 페이지 함수
 @bp.route('/page/<int:product_id>/')
 def page(product_id):
-<<<<<<< HEAD
-    # 1. DB에서 해당 ID의 상품을 가져옵니다.
-    # get_or_404는 상품이 없으면 알아서 404 에러 페이지를 띄워줍니다.
-=======
->>>>>>> main
     product = Product.query.get_or_404(product_id)
     # 아래 한줄 추가코드 product_page추천상품
     recommended_products = Product.query.filter(Product.id != product_id).order_by(func.random()).limit(8).all()
     # 🌟 충돌 해결: 쿠폰 목록과 리뷰 작성 여부를 모두 확인할 수 있게 합쳤습니다.
     coupons = []
     has_reviewed = False
-    
+
     if g.user:
         # 로그인한 사용자의 '사용 안 함(False)' 쿠폰만 가져오기
         coupons = Coupon.query.filter_by(user_id=g.user.id, is_used=False).all()
-        
+
         # 현재 로그인한 유저가 이 상품에 리뷰를 남겼는지 확인
         existing_review = Review.query.filter_by(user_id=g.user.id, product_id=product_id).first()
         if existing_review:
@@ -99,6 +97,7 @@ def inject_menu_data():
         menu_data[cat_name] = products
 
     return dict(menu_data=menu_data)
+
 
 # 🌟 [찜하기 기능] 하트를 클릭했을 때 처리하는 로직
 @bp.route('/wishlist/<int:product_id>', methods=['POST'])
