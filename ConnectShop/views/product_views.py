@@ -1,10 +1,13 @@
-from flask import Blueprint, render_template, request, abort, g
+from flask import Blueprint, render_template, request, abort, g, jsonify
+from ConnectShop import db
 # 🌟 충돌 해결: Coupon과 Review 모델을 둘 다 가져옵니다.
 from ConnectShop.models import Product, Coupon, Review
 from collections import defaultdict
+from sqlalchemy import func
 
 # 'product'라는 이름의 블루프린트 생성
 bp = Blueprint('product', __name__, url_prefix='/product')
+
 
 @bp.route('/list')
 def product_list():
@@ -43,28 +46,31 @@ def product_list():
                            products_by_brand=products_by_brand,
                            search_kw=search_kw)  # 🌟 검색어 전달
 
+
 # 2. 상세 페이지 함수
 @bp.route('/page/<int:product_id>/')
 def page(product_id):
     product = Product.query.get_or_404(product_id)
-    
+    # 아래 한줄 추가코드 product_page추천상품
+    recommended_products = Product.query.filter(Product.id != product_id).order_by(func.random()).limit(8).all()
     # 🌟 충돌 해결: 쿠폰 목록과 리뷰 작성 여부를 모두 확인할 수 있게 합쳤습니다.
     coupons = []
     has_reviewed = False
-    
+
     if g.user:
         # 로그인한 사용자의 '사용 안 함(False)' 쿠폰만 가져오기
         coupons = Coupon.query.filter_by(user_id=g.user.id, is_used=False).all()
-        
+
         # 현재 로그인한 유저가 이 상품에 리뷰를 남겼는지 확인
         existing_review = Review.query.filter_by(user_id=g.user.id, product_id=product_id).first()
         if existing_review:
             has_reviewed = True
 
-    return render_template('product/product_page.html', 
-                           product=product, 
-                           coupons=coupons, 
-                           has_reviewed=has_reviewed)
+    return render_template('product/product_page.html',
+                           product=product,
+                           coupons=coupons,
+                           has_reviewed=has_reviewed,
+                           recommended_products=recommended_products)
 
 
 # 🌟 팀원분이 추가한 메가 메뉴 동적 데이터 함수 (그대로 유지)
@@ -91,3 +97,28 @@ def inject_menu_data():
         menu_data[cat_name] = products
 
     return dict(menu_data=menu_data)
+
+
+# 🌟 [찜하기 기능] 하트를 클릭했을 때 처리하는 로직
+@bp.route('/wishlist/<int:product_id>', methods=['POST'])
+def toggle_wishlist(product_id):
+    # 로그인 안 한 유저가 누르면 거절
+    if not g.user:
+        return jsonify({'success': False, 'message': 'login_required'}), 401
+
+    from ConnectShop.models import Wishlist
+
+    # 이미 찜한 상품인지 DB에서 확인
+    wish = Wishlist.query.filter_by(user_id=g.user.id, product_id=product_id).first()
+
+    if wish:
+        # 이미 찜했으면 DB에서 삭제 (빈 하트로 변경 요청)
+        db.session.delete(wish)
+        db.session.commit()
+        return jsonify({'success': True, 'status': 'removed'})
+    else:
+        # 찜한 적 없으면 DB에 추가 (빨간 하트로 변경 요청)
+        new_wish = Wishlist(user_id=g.user.id, product_id=product_id)
+        db.session.add(new_wish)
+        db.session.commit()
+        return jsonify({'success': True, 'status': 'added'})

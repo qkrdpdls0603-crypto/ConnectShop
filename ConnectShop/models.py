@@ -47,6 +47,10 @@ class MembershipBenefit(db.Model):
 class Coupon(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+
+    # 🌟 추가된 부분: 쿠폰의 이름을 저장할 칸입니다!
+    name = db.Column(db.String(100), nullable=False)
+
     # discount_amount: 쿠폰의 할인 금액입니다. (예: 5000원)
     discount_amount = db.Column(db.Integer, nullable=False)
     # is_used: 쿠폰을 이미 썼는지 안 썼는지 상태를 표시합니다. (기본값 False: 안 썼음)
@@ -183,3 +187,17 @@ class WithdrawnEmail(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, index=True, nullable=False)
     withdrawn_at = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+# =========================================================
+# 10. 찜목록(Wishlist) 테이블
+# =========================================================
+class Wishlist(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    # 누가 찜했는지
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    # 어떤 상품을 찜했는지
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id', ondelete='CASCADE'), nullable=False)
+
+    # 파이썬 코드에서 쉽게 데이터를 꺼내오기 위한 관계 설정
+    user = db.relationship('User', backref=db.backref('wishlist_items', cascade='all, delete-orphan'))
+    product = db.relationship('Product', backref=db.backref('wishlisted_by', cascade='all, delete-orphan'))

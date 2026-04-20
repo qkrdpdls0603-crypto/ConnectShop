@@ -53,10 +53,14 @@
         <div class="form-section" style="border: none; padding: 0; margin-bottom: 20px;">
             <div class="field-label">쿠폰 적용</div>
             <select id="coupon-select" class="form-control" onchange="updateTotalAmount()">
-                <option value="0" data-discount="0">사용 가능한 쿠폰 선택</option>
+                <option value="0" data-type="fixed" data-value="0">사용 가능한 쿠폰 선택</option>
                 {% for coupon in available_coupons %}
-                    <option value="{{ coupon.id }}" data-discount="{{ coupon.discount_amount }}">
-                        {{ coupon.name }} (-{{ "{:,}".format(coupon.discount_amount) }}원)
+                    {# 🌟 이름에 '%'가 있는지 확인하여 타입(percent/fixed) 결정 #}
+                    {% set is_percent = '%' in coupon.name %}
+                    <option value="{{ coupon.id }}"
+                            data-type="{{ 'percent' if is_percent else 'fixed' }}"
+                            data-value="{{ coupon.discount_amount }}">
+                        {{ coupon.name }} (-{{ "{:,}".format(coupon.discount_amount) }}{{ '%' if is_percent else '원' }})
                     </option>
                 {% endfor %}
             </select>
@@ -150,23 +154,54 @@ document.addEventListener("DOMContentLoaded", async function() {
         })
     ]);
 
-    // [금액 업데이트 함수]
+    // ============================================
+    // 🌟 URL이나 서버 세션에서 쿠폰 정보를 읽어와서 자동으로 골라주기!
+    // ============================================
+    const urlParams = new URLSearchParams(window.location.search);
+    // 서버에서 넘겨준 쿠폰 ID가 있으면 먼저 쓰고, 없으면 URL에서 찾습니다.
+    const preCouponId = "{{ pre_selected_coupon_id or '' }}" || urlParams.get('coupon_id');
+
+    if (preCouponId && preCouponId !== 'None') {
+        const couponSelect = document.getElementById('coupon-select');
+        if (couponSelect) {
+            for (let i = 0; i < couponSelect.options.length; i++) {
+                // 문자열로 변환하여 안전하게 비교
+                if (String(couponSelect.options[i].value) === String(preCouponId)) {
+                    couponSelect.selectedIndex = i;
+                    break;
+                }
+            }
+            // 쿠폰이 선택되었으니 자동으로 가격 계산 한 번 돌려줍니다!
+            setTimeout(() => {
+                if(typeof updateTotalAmount === 'function') updateTotalAmount();
+            }, 150);
+        }
+    }
+
+    // [금액 업데이트 함수 - 🌟 병합 완료 로직]
     window.updateTotalAmount = async function() {
         const couponSelect = document.getElementById('coupon-select');
         const selectedOption = couponSelect.options[couponSelect.selectedIndex];
 
-        // 1. 기본 정보 추출
-        const val = parseInt(selectedOption.getAttribute('data-discount')) || 0; // data-discount 사용
+        // 1. 기본 정보 및 팀원 분의 쿠폰 타입 정보 추출
+        const type = selectedOption.getAttribute('data-type'); // fixed 또는 percent
+        const val = parseInt(selectedOption.getAttribute('data-value')) || 0; // data-value 사용 (data-discount 통일)
         const originalTotal = {{ total_price|int }};
         const isMembership = {{ 'true' if g.user and g.user.is_membership else 'false' }};
         const shippingFee = isMembership ? 0 : 3000;
         const pureProductPrice = originalTotal - shippingFee;
 
-        // 2. 할인액 계산
-        let discount = val;
+        // 2. 할인액 계산 (팀원 분의 % 계산 로직)
+        let discount = 0;
+        if (type === 'percent') {
+            discount = Math.floor(pureProductPrice * (val / 100));
+        } else {
+            discount = val;
+        }
+
         const updatedFinalAmount = Math.max(0, originalTotal - discount);
 
-        // 3. 🌟 실시간 적립금 계산 (배송비 제외 상품가에서 쿠폰할인 뺀 금액의 3%)
+        // 3. 🌟 실시간 적립금 계산 (팀장님의 배송비 제외 상품가에서 쿠폰할인 뺀 금액의 3% 로직)
         let rewardPoint = 0;
         if (isMembership) {
             const rewardBase = pureProductPrice - discount;
@@ -200,9 +235,8 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     };
 
-    // [결제 요청 함수 - 에러 해결 지점]
+    // [결제 요청 함수]
     window.requestPayment = async function() {
-        // 1. 입력 필드에서 값 가져오기 (이 부분이 누락되어 에러가 났습니다)
         const recipient = document.getElementById('recipient').value.trim();
         const phone = document.getElementById('phone').value.trim();
         const address = document.getElementById('address').value.trim();
@@ -217,7 +251,7 @@ document.addEventListener("DOMContentLoaded", async function() {
 
         if (!recipient || !phone || !address) { alert("배송 정보를 모두 입력해주세요."); return; }
 
-        // 2. 유효성 검사 (입력값이 없으면 토스에서 에러가 납니다)
+        // 유효성 검사
         if (!recipient) { alert("수령인 이름을 입력해주세요."); return; }
         if (!phone) { alert("연락처를 입력해주세요."); return; }
         if (!address) { alert("배송 주소를 입력해주세요."); return; }
@@ -238,13 +272,13 @@ document.addEventListener("DOMContentLoaded", async function() {
 
             if (!response.ok) throw new Error("세션 저장 실패");
 
-            // 3. 토스 결제 실행
+            // 토스 결제 실행
             await widgets.requestPayment({
                 orderId: "order_temp_{{ now_ts }}",
                 orderName: "ConnectShop 상품 결제",
                 successUrl: window.location.origin + "/order/success",
                 failUrl: window.location.origin + "/order/fail",
-                customerName: recipient, // 이제 recipient가 문자열로 확실히 전달됩니다.
+                customerName: recipient,
             });
         } catch (error) {
             console.error("결제 중 오류 발생:", error);
@@ -275,15 +309,15 @@ document.addEventListener("DOMContentLoaded", async function() {
     };
 
     window.toggleDirectMemo = function(select) {
-    const directInput = document.getElementById('direct-memo-input');
-    if (select.value === 'direct') {
-        directInput.classList.remove('d-none');
-        directInput.focus();
-    } else {
-        directInput.classList.add('d-none');
-        directInput.value = ''; // 다른 거 선택하면 초기화
-    }
-};
+        const directInput = document.getElementById('direct-memo-input');
+        if (select.value === 'direct') {
+            directInput.classList.remove('d-none');
+            directInput.focus();
+        } else {
+            directInput.classList.add('d-none');
+            directInput.value = '';
+        }
+    };
 });
 </script>
 {% endblock %}

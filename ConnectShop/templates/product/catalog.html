@@ -9,54 +9,57 @@
                      alt="{{ brand }} 로고"
                      class="me-2"
                      style="height: 1.5em; width: auto; object-fit: contain;">
-                <span>{{ brand }} 제품</span>
             </h3>
 
-            <div id="carousel-{{ loop.index }}" class="carousel slide" data-bs-ride="false">
-                <div class="carousel-inner p-1">
-                    <div class="carousel-item active">
-                        <div class="row g-4">
-                            {% for product in products %}
-                            <div class="col-md-3">
-                                <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
-                                    <div class="bg-light p-4 text-center">
-                                        <img src="{{ url_for('static', filename='images/menu/' + product.image_path) if product.image_path else '' }}"
-                                             class="img-fluid" style="height: 180px; object-fit: contain;" alt="{{ product.name }}">
-                                    </div>
-                                    <div class="card-body">
-                                        <p class="text-muted small mb-1">{{ product.brand }}</p>
-                                        <h6 class="fw-bold text-truncate">{{ product.name }}</h6>
-                                        <p class="text-primary fw-bold mb-3">{{ "{:,}".format(product.price) }}원</p>
-                                        <a href="{{ url_for('product.page', product_id=product.id) }}"
-                                           class="btn btn-dark w-100 rounded-pill btn-sm mb-2">상세보기</a>
-
-                                        <button type="button"
-                                                onclick="addCartCatalog('{{ product.id }}')"
-                                                class="btn btn-outline-primary w-100 rounded-pill btn-sm">
-                                            <i class="bi bi-cart-plus me-1"></i> 담기
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {# 4개마다 슬라이드 페이지 나누기 #}
-                            {% if loop.index % 4 == 0 and not loop.last %}
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <div class="row g-4">
+            <div class="product-slider-wrapper position-relative">
+                <div id="product-track-{{ loop.index }}" class="product-track d-flex" style="transition: transform 0.4s ease-in-out;">
+                    {% for product in products %}
+                    <div class="product-card-item col-12 col-sm-6 col-md-4 col-lg-3 p-2">
+                        <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+                            
+                            {# 🌟 팀장님의 로그인한 유저의 찜 여부 확인 로직 융합 #}
+                            {% set is_wished = false %}
+                            {% if g.user and product.id in g.user.wishlist_items|map(attribute='product_id')|list %}
+                                {% set is_wished = true %}
                             {% endif %}
-                            {% endfor %}
+
+                            <div class="bg-light p-4 text-center">
+                                <img src="{{ url_for('static', filename='images/menu/' + product.image_path) if product.image_path else '' }}"
+                                     class="img-fluid" style="height: 180px; object-fit: contain;" alt="{{ product.name }}">
+                            </div>
+                            
+                            <div class="card-body">
+                                <p class="text-muted small mb-1">{{ product.brand }}</p>
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold text-truncate mb-0" style="max-width: 80%;">{{ product.name }}</h6>
+                                    <button class="border-0 bg-transparent p-0 me-1" onclick="toggleWishlist(event, {{ product.id }}, this)">
+                                        <i class="bi {% if is_wished %}bi-heart-fill text-danger{% else %}bi-heart text-secondary{% endif %}"
+                                           style="font-size: 1.2rem; cursor: pointer;"></i>
+                                    </button>
+                                </div>
+
+                                <p class="text-primary fw-bold mb-3">{{ "{:,}".format(product.price) }}원</p>
+                                <a href="{{ url_for('product.page', product_id=product.id) }}"
+                                   class="btn btn-dark w-100 rounded-pill btn-sm mb-2">상세보기</a>
+
+                                <button type="button"
+                                        onclick="addCartCatalog('{{ product.id }}')"
+                                        class="btn btn-outline-primary w-100 rounded-pill btn-sm">
+                                    <i class="bi bi-cart-plus me-1"></i> 담기
+                                </button>
+                            </div>
                         </div>
                     </div>
+                    {% endfor %}
                 </div>
 
                 {% if products|length > 4 %}
-                <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ loop.index }}" data-bs-slide="prev" style="width: 5%; filter: invert(1);">
-                    <span class="carousel-control-prev-icon"></span>
+                <button class="slider-nav-btn prev" onclick="moveSlide('{{ loop.index }}', -1)">
+                    <i class="bi bi-chevron-left"></i>
                 </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ loop.index }}" data-bs-slide="next" style="width: 5%; filter: invert(1);">
-                    <span class="carousel-control-next-icon"></span>
+                <button class="slider-nav-btn next" onclick="moveSlide('{{ loop.index }}', 1)">
+                    <i class="bi bi-chevron-right"></i>
                 </button>
                 {% endif %}
             </div>
@@ -70,12 +73,81 @@
 </div>
 
 <style>
-    /* 마우스 올리면 살짝 들리는 효과 */
-    .card:hover { transform: translateY(-5px); transition: 0.3s; }
+    .product-track {
+        display: flex;
+        will-change: transform;
+    }
+
+    .product-card-item {
+        flex: 0 0 25%; /* 한 화면에 4개 보일 때 (lg 기준) */
+        display: block;
+    }
+
+    /* 태블릿/모바일 대응을 위해 flex 비율 조정 */
+    @media (max-width: 992px) { .product-card-item { flex: 0 0 33.333%; } }
+    @media (max-width: 768px) { .product-card-item { flex: 0 0 50%; } }
+    @media (max-width: 576px) { .product-card-item { flex: 0 0 100%; } }
+
+    .product-slider-wrapper {
+        overflow: hidden; 
+    }
+
+    .card { transition: 0.3s; }
+    .card:hover { transform: translateY(-5px); }
+
+    .slider-nav-btn {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        border: 1px solid #eee;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        z-index: 5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.2s;
+    }
+    .slider-nav-btn:hover { background: #f8f9fa; transform: translateY(-50%) scale(1.1); }
+    .slider-nav-btn.prev { left: 10px; }
+    .slider-nav-btn.next { right: 10px; }
 </style>
 
 <script>
-    async function addCartCatalog(productId) {
+// 🌟 팀원의 슬라이더 이동 스크립트 
+function moveSlide(index, direction) {
+    const track = document.getElementById(`product-track-${index}`);
+    const items = track.querySelectorAll('.product-card-item');
+    if (items.length <= 1) return;
+
+    const cardWidth = items[0].offsetWidth;
+
+    if (direction === 1) {
+        track.style.transition = "transform 0.4s ease-in-out";
+        track.style.transform = `translateX(-${cardWidth}px)`;
+
+        setTimeout(() => {
+            track.style.transition = "none";
+            track.appendChild(track.firstElementChild);
+            track.style.transform = `translateX(0)`;
+        }, 400);
+    } else {
+        track.style.transition = "none";
+        track.prepend(track.lastElementChild);
+        track.style.transform = `translateX(-${cardWidth}px)`;
+
+        setTimeout(() => {
+            track.style.transition = "transform 0.4s ease-in-out";
+            track.style.transform = `translateX(0)`;
+        }, 10);
+    }
+}
+
+// 🌟 공통 장바구니 담기
+async function addCartCatalog(productId) {
     try {
         const response = await fetch(`/order/add/${productId}`, {
             method: 'POST',
@@ -89,21 +161,76 @@
         if (data.success) {
             // 1. 장바구니로 바로 가겠냐고 물어봄
             if (confirm("장바구니에 상품을 담았습니다. 장바구니로 이동하시겠습니까?")) {
+
                 location.href = "{{ url_for('order._list') }}";
             } else {
-                // 2. '취소'를 눌러도 데이터는 담겼으므로,
-                // 요약 장바구니 수치를 반영하기 위해 현재 페이지를 새로고침만 함
                 location.reload();
             }
         } else {
-            // 서버에서 success: false를 보낸 경우
             alert(data.message || "장바구니 담기에 실패했습니다.");
         }
     } catch (error) {
-        // 네트워크 오류나 서버 다운 등의 진짜 에러인 경우
         console.error('Error:', error);
         alert("통신 오류가 발생했습니다.");
     }
 }
+
+// 🌟 팀장님의 찜하기(하트) 토글 함수
+// 🌟 무적의 찜하기(하트) 토글 로직
+function toggleWishlist(event, productId, btnElement) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const isLoggedIn = {{ 'true' if g.user else 'false' }};
+    if (!isLoggedIn) {
+        if (confirm("로그인 후 찜하기 기능을 이용하실 수 있습니다.\n로그인 페이지로 이동할까요?")) {
+            location.href = "{{ url_for('auth.login') }}";
+        }
+        return;
+    }
+
+    fetch(`/product/wishlist/${productId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (response.status === 401) {
+            alert("로그인이 만료되었습니다.");
+            return null;
+        }
+        return response.json();
+    })
+    .then(data => {
+        // 서버 처리가 무사히 끝났다면! (data.status 글자를 따지지 않음)
+        if (data && data.success) {
+            const icon = btnElement.querySelector('i');
+
+            // 🌟 쫀득한 하트 애니메이션
+            icon.style.transform = "scale(1.2)";
+            setTimeout(() => { icon.style.transform = "scale(1)"; }, 200);
+
+            // 🌟 핵심 해결책: 현재 눈에 보이는 클래스를 확인해서 무조건 반대로 뒤집기!
+            if (icon.classList.contains('bi-heart')) {
+                // 1. 현재 빈 하트였다면 -> 꽉 찬 빨간 하트로 변경!
+                icon.classList.remove('bi-heart', 'text-secondary');
+                icon.classList.add('bi-heart-fill', 'text-danger');
+            } else {
+                // 2. 현재 꽉 찬 하트였다면 -> 빈 회색 하트로 변경!
+                icon.classList.remove('bi-heart-fill', 'text-danger');
+                icon.classList.add('bi-heart', 'text-secondary');
+            }
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+    window.addEventListener('pageshow', function(event) {
+    // event.persisted가 true면 캐시된 과거 화면을 보고 있다는 뜻입니다.
+    if (event.persisted) {
+        location.reload();
+    }
+    });
 </script>
 {% endblock %}

@@ -344,29 +344,54 @@ def delete(cart_id):
 
     return redirect(url_for('order._list'))
 
+
 @bp.route('/checkout', methods=['GET', 'POST'])
 def checkout():
+    # 1. 사용자가 결제창에서 입력한 배송지 정보를 세션에 저장 (POST 요청 시)
     if request.method == 'POST':
-        # 사용자가 입력한 정보를 세션에 임시 저장
         session['temp_order_info'] = {
             'recipient': request.form.get('recipient'),
             'phone': request.form.get('phone'),
             'address': f"{request.form.get('address')} {request.form.get('address_detail')}"
         }
 
-    cart_list = get_cart_items()
+    # 2. 어떤 상품을 결제할지 결정 (바로구매 vs 장바구니)
+    is_direct = request.args.get('direct_buy') == 'true'
 
+    # 🌟 [수정] 상세페이지에서 넘어온 쿠폰 ID 혹은 세션에 저장된 쿠폰 ID를 가져옵니다.
+    coupon_id = request.args.get('coupon_id') or session.get('applied_coupon_id')
+
+    if is_direct:
+        # [바로 구매] 상세 페이지에서 넘어온 단일 상품 정보로 리스트 구성
+        p_id = request.args.get('product_id', type=int)
+        qty = request.args.get('quantity', type=int, default=1)
+
+        product = db.session.get(Product, p_id)
+        if not product:
+            flash("존재하지 않는 상품입니다.")
+            return redirect(url_for('main.index'))
+
+        cart_list = [SimpleNamespace(product=product, quantity=qty, product_id=p_id)]
+
+        # 🌟 [수정] 적용된 쿠폰 ID가 있다면 세션에 확실히 저장합니다.
+        if coupon_id:
+            session['applied_coupon_id'] = coupon_id
+    else:
+        # [장바구니 구매] 기존 방식대로 장바구니 DB에서 가져옴
+        cart_list = get_cart_items()
+
+    # 3. 데이터 유무 및 재고 검증
     if not cart_list:
-        flash("장바구니가 비어 있습니다.")
+        flash("결제할 상품이 없습니다.")
         return redirect(url_for('order._list'))
 
     for item in cart_list:
         if item.product.stock < item.quantity:
             flash(f"상품 '{item.product.name}'의 재고가 부족합니다. (현재 재고: {item.product.stock}개)")
-            return redirect(url_for('cart.view_cart'))
+            return redirect(url_for('order._list'))
 
+    # 4. 금액 계산 및 렌더링 준비
     now_ts = datetime.now().strftime('%Y%m%d%H%M%S')
-
     available_coupons = []
     if g.user:
         available_coupons = Coupon.query.filter_by(user_id=g.user.id, is_used=False).all()
@@ -381,7 +406,9 @@ def checkout():
                            product_total=product_total,
                            shipping_fee=shipping_fee,
                            available_coupons=available_coupons,
-                           now_ts=now_ts)
+                           now_ts=now_ts,
+                           # 🌟 [추가] 템플릿에서 쓸 수 있도록 쿠폰 ID를 넘겨줍니다.
+                           pre_selected_coupon_id=coupon_id)
 
 @bp.route('/save_temp_info', methods=['POST'])
 def save_temp_info():
@@ -560,6 +587,8 @@ def order_complete(order_id):
 
     return render_template('order/order_complete.html', order=order)
 
+
+
 @bp.route('/my_orders')
 @login_required
 def my_orders():
@@ -576,6 +605,9 @@ def my_orders():
                            ready_count=len(ready),
                            ship_count=len(shipping),
                            done_count=len(shipped))
+
+
+
 
 
 @bp.route('/find_guest_order', methods=['GET', 'POST'])
@@ -849,12 +881,10 @@ def refund_request(order_id, item_id, type):
 
     return redirect(url_for('order.order_detail', order_id=order_id))
 
-
 @bp.app_context_processor
 def inject_cart_totals():
     cart_list = get_cart_items()
 
-    # 총액 계산
     product_total = sum(item.price * item.quantity for item in cart_list)
 
     # 템플릿에서 사용할 변수 이름으로 반환
@@ -863,4 +893,10 @@ def inject_cart_totals():
         product_total=product_total
     )
 
-
+# ==========================================================
+# 🌟 마이페이지 - 찜목록 모아보기 라우트
+# ==========================================================
+@bp.route('/wishlist')
+@login_required  # 로그인이 안 되어있으면 자동으로 로그인 창으로 보냄
+def wishlist():
+    return render_template('order/wishlist.html')

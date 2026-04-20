@@ -5,7 +5,7 @@ from ConnectShop.models import FAQ, Product
 from flask_mail import Message
 from ConnectShop import mail
 
-# 'main'이라는 이름의 블루프린트 생성 (기본 접속 주소 '/')
+# 'main'이라는 ㅎ이름의 블루프린트 생성 (기본 접속 주소 '/')
 bp = Blueprint('main', __name__, url_prefix='/')
 
 

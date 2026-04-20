@@ -1,15 +1,18 @@
 import functools
 import requests
+import base64
+import re
 
 from os import abort
 from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.sql.functions import current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from ConnectShop import db
 from ConnectShop.forms import UserCreateForm, UserLoginForm, FindIdForm, ResetPasswordForm
-from ConnectShop.models import User, Coupon, Order, OrderItem, Product, WithdrawnEmail
+from ConnectShop.models import User, Coupon, Order, OrderItem, Product, WithdrawnEmail, Cart, MembershipBenefit, Review
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -36,7 +39,7 @@ def signup():
             email=form.email.data,
             username=form.username.data,
             phone=form.phone.data,
-            password=generate_password_hash(form.password1.data),  # <-- 콤마 추가됨
+            password=generate_password_hash(form.password1.data),
             is_membership=False
         )
 
@@ -120,7 +123,6 @@ def load_logged_in_user():
     if user_id is None:
         g.user = None
     else:
-        # User.query.get(user_id)는 2.0+ 버전에서 지양되므로 필요 시 수정 가능
         g.user = User.query.get(user_id)
 
 
@@ -134,66 +136,76 @@ def login_required(view):
     return wrapped_view
 
 
-
-
 @bp.route('/mypage')
 @login_required
 def mypage():
-    # ✅ 쿠폰 개수
-    coupon_count = len(getattr(g.user, 'coupons', []) or [])
+    from ConnectShop.views.order_views import get_cart_items
+    # 1. 사용자의 모든 주문 조회 (최신순)
+    orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.order_date.desc()).all()
 
-    # ✅ 배송중 주문 개수
-    shipping_count = (
-        Order.query
-        .filter(
-            Order.user_id == g.user.id,
-            Order.status == '배송중'
-        )
-        .count()
-    )
+    # 2. 최근주문 개수 (전체 주문 수)
+    total_order_count = len(orders)
 
-    # ✅ 구매확정된 상품 목록
+    # 3. 배송중 주문 필터링 및 가장 최근 배송중인 주문 ID 추출
+    shipping_orders = [o for o in orders if o.status == '배송중']
+    shipping_count = len(shipping_orders)
+    # 가장 최근에 배송 시작된 주문 1개의 ID (트래킹 페이지 연결용)
+    latest_shipping_id = shipping_orders[0].id if shipping_orders else None
+
+    # 4. 배송완료 개수
+    done_count = len([o for o in orders if o.status == '배송완료'])
+
+    # 5. 장바구니 총 수량 계산
+    cart_items = get_cart_items()
+    cart_count = sum(item.quantity for item in cart_items) if cart_items else 0
+
+    recent_order_id = orders[0].id if orders else None
+
+    # 6. [나의 제품 관리] 배송완료 또는 구매확정된 상품 리스트 (최대 4개)
     confirmed_products = (
         db.session.query(Product)
         .join(OrderItem, Product.id == OrderItem.product_id)
         .join(Order, Order.id == OrderItem.order_id)
         .filter(
             Order.user_id == g.user.id,
-            Order.status == '구매확정'
+            Order.status.in_(['배송완료', '구매확정'])
         )
         .order_by(Order.order_date.desc())
         .distinct()
-        .limit(6)
+        .limit(4)
         .all()
     )
 
-    # ✅ 구매한 상품 ID 목록
-    purchased_product_ids = (
-        db.session.query(OrderItem.product_id)
-        .join(Order, Order.id == OrderItem.order_id)
-        .filter(Order.user_id == g.user.id)
-        .all()
-    )
+    # 7. 쿠폰 개수
+    active_coupons = [c for c in g.user.coupons if not c.is_used]
+    coupon_count = len(active_coupons)
+
+    # 8. [맞춤 추천] 구매한 적 없는 상품 중 랜덤 5개
+    purchased_product_ids = db.session.query(OrderItem.product_id) \
+        .join(Order, Order.id == OrderItem.order_id) \
+        .filter(Order.user_id == g.user.id).all()
     purchased_ids = [p[0] for p in purchased_product_ids]
 
-    # ✅ 맞춤 제품 추천 (구매한 상품 제외 + 랜덤)
-    recommended_products = (
-        Product.query
-        .filter(~Product.id.in_(purchased_ids))
-        .order_by(func.random())
-        .limit(5)
-        .all()
-    )
+    recommended_products = Product.query \
+        .filter(~Product.id.in_(purchased_ids) if purchased_ids else True) \
+        .order_by(func.random()).limit(5).all()
+
+    user = g.user
 
     return render_template(
         'auth/mypage.html',
         user=g.user,
-        coupon_count=coupon_count,
+        current_user=user,
+        total_order_count=total_order_count,
         shipping_count=shipping_count,
+        done_count=done_count,
+        latest_shipping_id=latest_shipping_id,
+        cart_count=cart_count,
+        coupon_count=coupon_count,
         confirmed_products=confirmed_products,
+        recent_order_id=recent_order_id,
         recommended_products=recommended_products
     )
-
 
 
 @bp.route('/orders')
@@ -233,8 +245,6 @@ def withdraw():
     return redirect(url_for('main.index'))
 
 
-
-
 @bp.route('/coupons', endpoint='coupons', methods=['GET'])
 @login_required
 def coupons_page():
@@ -242,9 +252,7 @@ def coupons_page():
     raw_coupons = getattr(g.user, "coupons", []) or []
 
     # 2. 파이썬에서 미리 분류 (템플릿 부하 감소)
-
     issued_map = session.get('coupon_issued_map', {}) or {}
-
     now = datetime.now(timezone.utc)
     expire_delta = timedelta(days=7)
 
@@ -283,26 +291,29 @@ def coupons_page():
     )
 
 
+# 🌟 에러가 발생했던 쿠폰 발급 함수 완벽 수정!
 @bp.route('/get-welcome-coupon', methods=['POST'])
 @login_required
 def get_welcome_coupon():
     # 1. 중복 발급 확인 (계정당 1회 제한)
-    # 기존에 발급받은 쿠폰이 하나라도 있다면 발급하지 않음
     if g.user.coupons:
         flash("이미 쿠폰을 발급받으셨거나 보유 중입니다. (계정당 1회 참여 가능)")
         return redirect(url_for('auth.coupons'))
 
-    # 2. 멤버십 상태에 따른 금액 결정
+    # 2. 멤버십 상태에 따른 금액과 이름 결정
     if g.user.is_membership:
+        coupon_name = '멤버십 전용 10% 할인쿠폰'
         rate = 10  # 10%
         msg = "멤버십 전용 10% 할인 쿠폰이 발급되었습니다!"
     else:
+        coupon_name = '일반 회원 3% 할인쿠폰'
         rate = 3  # 3%
         msg = "신규 가입 축하 3% 할인 쿠폰이 발급되었습니다!"
 
-        # 3. 쿠폰 데이터 생성 및 저장
+    # 3. 🌟 쿠폰 데이터 생성 (name 추가됨!)
     new_coupon = Coupon(
         user_id=g.user.id,
+        name=coupon_name,
         discount_amount=rate,
         is_used=False
     )
@@ -319,32 +330,55 @@ def get_welcome_coupon():
     return redirect(url_for('auth.coupons'))
 
 
-
 @bp.route('/me', methods=['GET', 'POST'])
 @login_required
 def me():
     from ConnectShop.forms import UserUpdateForm
     form = UserUpdateForm(obj=g.user)
 
-    # 쿠폰 개수
     coupon_count = len(g.user.coupons) if hasattr(g.user, 'coupons') else 0
-
-    # 최근 주문 정보
+    # 최근 주문 정보 조회 [cite: 30, 40]
     last_order = Order.query.filter_by(user_id=g.user.id).order_by(Order.order_date.desc()).first()
-    address_info = last_order.address if last_order else "주문 이력이 없습니다."
+
+    # 초기값 설정
+    display_postcode = ""
+    display_address = ""
+    display_detail = ""
+
+    if last_order and last_order.address:
+        # "[12345] 주소 상세" 형태에서 데이터를 추출하는 정규식
+        match = re.match(r"\[(\d+)\]\s*(.*?)\s+(.*)$", last_order.address)
+        if match:
+            display_postcode = match.group(1)
+            display_address = match.group(2)
+            display_detail = match.group(3)
+        else:
+            # 형식이 다를 경우 전체를 기본 주소로 표시
+            display_address = last_order.address
+
     payment_info = last_order.payment_method if last_order else "등록된 수단 없음"
 
-    if request.method == 'POST' and form.validate_on_submit():
-        # 🔥 phone 수정 금지 → phone 업데이트 제거
-        db.session.commit()
-        flash("정보가 수정되었습니다.")
-        return redirect(url_for('auth.me'))
+    if request.method == 'POST':
+        new_postcode = request.form.get('postcode')
+        new_address = request.form.get('address')
+        new_detail = request.form.get('address_detail')
+
+        if last_order and new_address:
+            # ✅ 모델 수정 없이 기존 Order의 address 필드에 합쳐서 저장
+            last_order.address = f"[{new_postcode}] {new_address} {new_detail}".strip()
+            db.session.commit()
+            flash("최근 배송지 정보가 수정되었습니다.", "success")
+            return redirect(url_for('auth.me') + '#recent-address')
+        elif not last_order:
+            flash("수정할 최근 주문 내역이 없습니다.", "danger")
 
     return render_template(
         'auth/me.html',
         user=g.user,
         form=form,
-        address=address_info,
+        postcode=display_postcode,
+        address=display_address,
+        address_detail=display_detail,
         payment_method=payment_info,
         coupon_count=coupon_count
     )
@@ -356,21 +390,30 @@ def membership():
     return render_template('auth/membership.html')
 
 
-@bp.route('/membership/subscribe', methods=['POST'])
+@bp.route('/subscribe/success')  # Blueprint prefix가 /auth라면 실제 주소는 /auth/subscribe/success
 @login_required
-def subscribe():
-    from ConnectShop.models import MembershipBenefit
-    from sqlalchemy.exc import IntegrityError
+def subscribe_success():
+    payment_key = request.args.get('paymentKey')
+    order_id = request.args.get('orderId')
+    amount = request.args.get('amount')
 
-    if not g.user:
-        abort(401)
+    # 1. 토스 승인 API 호출 (보안을 위해 필수)
+    secret_key = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6" + ":"
+    encoded_key = base64.b64encode(secret_key.encode()).decode()
+    url = "https://api.tosspayments.com/v1/payments/confirm"
+    headers = {"Authorization": f"Basic {encoded_key}", "Content-Type": "application/json"}
 
-    try:
+    response = requests.post(url, json={
+        "paymentKey": payment_key, "orderId": order_id, "amount": amount
+    }, headers=headers)
+
+    # 2. 결과 처리
+    if response.status_code == 200:
+        # 혜택 즉시 ON
         g.user.is_membership = True
-        db.session.add(g.user)
 
+        # MembershipBenefit 레코드 생성 (나중에 마이페이지 등에서 확인용)
         benefit = MembershipBenefit.query.filter_by(user_id=g.user.id).first()
-
         if not benefit:
             benefit = MembershipBenefit(
                 user_id=g.user.id,
@@ -378,27 +421,41 @@ def subscribe():
                 free_shipping=True
             )
             db.session.add(benefit)
-        else:
-            benefit.has_apple_care = True
-            benefit.free_shipping = True
 
         db.session.commit()
-        flash("멤버십 가입이 완료되었습니다! 이제 모든 혜택을 이용하실 수 있습니다.")
 
-    except IntegrityError:
-        db.session.rollback()
-        flash("이미 멤버십 가입이 처리되었거나 처리 중입니다.")
-
-    return redirect(url_for('auth.mypage'))
-
-
+        flash("축하합니다! 커넥션 케어+ 멤버십 혜택이 적용되었습니다.")
+        return redirect(url_for('main.index'))  # HTML 파일 없이 바로 메인으로!
+    else:
+        # 승인 실패 시
+        flash(f"결제 실패: {response.json().get('message')}")
+        return redirect(url_for('main.index')) # 멤버십 안내 페이지로
 
 
 
-#카카오 로그인
+@bp.route('/api/my_reviews', methods=['GET'])
+def my_reviews():
+    if not g.user:
+        return jsonify([]), 401
+
+    reviews = Review.query.filter_by(user_id=g.user.id).order_by(Review.id.desc()).all()
+
+    return jsonify([
+        {
+            "id": r.id,
+            "product_name": r.product.name if r.product else "",
+            "rating": r.rating,
+            "content": r.content
+        }
+        for r in reviews
+    ])
+
+
+
+
+# 카카오 로그인
 KAKAO_CLIENT_ID = "edc2045d293aaefae2c494a92245c19a"
 KAKAO_REDIRECT_URI = "http://127.0.0.1:5000/auth/kakao/callback"
-
 
 
 @bp.route('/kakao/login')
@@ -463,8 +520,7 @@ def kakao_callback():
         db.session.commit()
 
     # [D] 세션 로그인 처리
-
     session.clear()
     session['user_id'] = user.id
-    print(f"로그인 성공! 세션에 저장된 ID: {session.get('user_id')}")# DB에 저장된 유저의 고유 ID를 세션에 기록
+    print(f"로그인 성공! 세션에 저장된 ID: {session.get('user_id')}")
     return redirect(url_for('main.index'))

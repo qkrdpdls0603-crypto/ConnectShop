@@ -19,6 +19,12 @@
     justify-content: center;
 }
 
+#section-images,
+#section-details {
+    /* 네비게이션 바 높이가 60px라면 그보다 조금 더 여유 있게(70~80px) 설정하세요 */
+    scroll-margin-top: 100px;
+}
+
 .product-title-small {
     font-size: 0.9rem;
     font-weight: 600;
@@ -119,3 +125,80 @@
     background-color: #f0f7ff;
 }
 
+/* 추천 섹션 스타일 */
+.product-scroll-container {
+    width: 100%;
+    overflow-x: auto; /* 가로 스크롤 활성화 */
+    padding-bottom: 20px;
+    -webkit-overflow-scrolling: touch; /* 모바일 부드러운 스크롤 */
+}
+
+/* 스크롤바 디자인 */
+.product-scroll-container::-webkit-scrollbar {
+    height: 4px;
+}
+.product-scroll-container::-webkit-scrollbar-thumb {
+    background: #e0e0e0;
+    border-radius: 10px;
+}
+
+.product-scroll-wrapper {
+    display: flex;
+    gap: 20px; /* 카드 사이 간격 */
+}
+
+/* 미니 제품 카드 */
+.product-card-mini {
+    flex: 0 0 240px; /* 카드 너비 고정 */
+    background: #fff;
+    border-radius: 18px;
+    border: 1px solid #f2f2f2;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.product-card-mini:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+}
+
+.product-img-box {
+    width: 100%;
+    height: 200px;
+    background: #f9f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-img-box img {
+    max-width: 80%;
+    max-height: 80%;
+    object-fit: contain;
+}
+
+.product-info-box {
+    padding: 15px;
+}
+
+.brand-tag {
+    font-size: 0.7rem;
+    color: #0066cc;
+    font-weight: 600;
+}
+
+.name-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 5px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 글자 길면 ... 처리 */
+}
+
+.price-text {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #333;
+}

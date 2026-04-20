@@ -2,36 +2,84 @@
 
 {% block content %}
 <main>
+    <style>
+    /* [기존 호버 효과는 유지] */
+    .product-card, .icon-box { transition: all 0.3s ease-in-out; cursor: pointer; }
+    .product-card:hover { transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0,0,0,0.1)!important; }
+
+    /* [배너 섹션 최적화 - 삭제 및 수정 완료] */
+    .banner-section {
+        width: 100%;
+        aspect-ratio: 16 / 8;
+        background-color: #f8f9fa;
+        container-type: inline-size; /* 버튼 크기 고정을 위해 추가 */
+    }
+
+    .banner-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .content-overlay button {
+    pointer-events: auto;
+
+    /* 1. 글자 크기를 살짝 줄여서 세련된 느낌을 줍니다 */
+    font-size: clamp(0.75rem, 1.6cqw, 1.1rem);
+
+    /* 2. 패딩을 대폭 줄여서 '뚱뚱함'을 제거합니다 (상하 0.5em, 좌우 1.8em) */
+    padding: 0.5cqw 2cqw !important;
+
+    /* 3. 테두리 두께나 그림자를 가볍게 조정 */
+    border: none;
+    font-weight: 500; /* 너무 두꺼운 Bold보다는 Medium이 깔끔합니다 */
+    white-space: nowrap;
+    line-height: 1;
+    transition: all 0.2s ease-in-out;
+    display: inline-flex; /* 내부 정렬 최적화 */
+    align-items: center;
+    justify-content: center;
+    }
+        /* [1] 아이콘 박스 호버 효과 수정 */
+    /* <a> 태그(link)에 마우스를 올렸을 때 내부 .icon-box가 움직이게 설정 */
+    .col a:hover .icon-box {
+        transform: translateY(-8px) !important;
+        background-color: #f8f9fa !important;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important;
+    }
+
+    /* <a> 태그에 마우스를 올렸을 때 텍스트 색상 변경 */
+    .col a:hover p {
+        color: #0d6efd !important;
+    }
+
+    /* 클릭했을 때 살짝 눌리는 느낌 추가 */
+    .col a:active .icon-box {
+        transform: scale(0.95) translateY(-8px) !important;
+    }
+</style>
+
     {% set banner_files = ['banner1.png', 'banner2.png', 'banner3.jpeg'] %}
 
     {% for i in range(1, 4) %}
-    <section class="banner-section position-relative vh-100 overflow-hidden mb-5">
+    <section class="banner-section position-relative overflow-hidden mb-5">
+        {# 지저분했던 중복 조건문 정리 #}
+        {% if i == 1 %}
+            {% set target_id, top_pos, start_pos = 1, "57%", "69%" %}
+        {% elif i == 2 %}
+            {% set target_id, top_pos, start_pos = 5, "62%", "22%" %}
+        {% else %}
+            {% set target_id, top_pos, start_pos = i, "80%", "13%" %}
+        {% endif %}
 
-
-            {% if i == 1 %}
-                {% set target_id = 1 %}  {# 1번 배너는 1번 상품으로 #}
-                {% set top_pos = "57%" %}
-                {% set start_pos = "69%" %}
-            {% elif i == 2 %}
-                {% set target_id = 5 %}  {# 2번 배너는 요청하신 5번 상품으로 #}
-                {% set top_pos = "62%" %}
-                {% set start_pos = "22%" %}
-            {% else %}
-                {% set target_id = i %}  {# 3번 배너는 그대로 3번 상품으로 #}
-                {% set top_pos = "75%" %}
-                {% set start_pos = "13%" %}
-            {% endif %}<a href="{{ url_for('product.page', product_id=target_id) }}" class="d-block h-100">
-
-            <div class="image-wrapper h-100 bg-secondary-subtle">
+        <a href="{{ url_for('product.page', product_id=target_id) }}" class="d-block w-100 h-100">
+            <div class="image-wrapper h-100">
                 <img src="{{ url_for('static', filename='images/' ~ banner_files[i-1]) }}"
-                     class="w-100 h-100 object-fit-cover"
-                     alt="메인 배너 {{ i }}">
+                     class="banner-img" alt="메인 배너 {{ i }}">
             </div>
-
-            {# 실제 적용: 클래스에서 위치 관련은 다 빼고 style로 제어합니다 #}
             <div class="content-overlay position-absolute translate-middle"
                  style="top: {{ top_pos }}; left: {{ start_pos }};">
-                <button class="btn btn-dark rounded-pill px-4">구매하기</button>
+                <button class="btn btn-dark rounded-pill shadow-lg">구매하기</button>
             </div>
         </a>
     </section>
@@ -87,7 +135,7 @@
     <div class="row row-cols-2 row-cols-sm-4 row-cols-lg-auto g-4 text-center justify-content-center">
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='스마트폰') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/smartphone.png') }}" class="w-75 h-75 object-fit-contain" alt="스마트폰">
             </div>
@@ -95,7 +143,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='무선이어폰') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/earbuds.png') }}" class="w-75 h-75 object-fit-contain" alt="무선이어폰">
             </div>
@@ -103,7 +151,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='스마트워치') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/smartwatch.png') }}" class="w-75 h-75 object-fit-contain" alt="스마트워치">
             </div>
@@ -111,7 +159,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='태블릿') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/tablet.png') }}" class="w-75 h-75 object-fit-contain" alt="태블릿">
             </div>
@@ -119,7 +167,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='노트북') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/laptop.png') }}" class="w-75 h-75 object-fit-contain" alt="노트북">
             </div>
@@ -127,7 +175,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='헤드폰') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/headphones.png') }}" class="w-75 h-75 object-fit-contain" alt="헤드폰">
             </div>
@@ -135,7 +183,7 @@
         </a> </div>
 
         <div class="col" style="flex: 0 0 auto; width: 14.28%; min-width: 120px;">
-            <a href="{{ url_for('main.index') }}" class="text-decoration-none">
+            <a href="{{ url_for('product.product_list', category='스피커') }}" class="text-decoration-none">
             <div class="icon-box mx-auto bg-secondary-subtle rounded-3 mb-3 d-flex align-items-center justify-content-center shadow-sm" style="width: 70px; height: 70px;">
                 <img src="{{ url_for('static', filename='images/speaker.png') }}" class="w-75 h-75 object-fit-contain" alt="스피커">
             </div>

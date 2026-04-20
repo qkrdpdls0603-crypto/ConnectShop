@@ -1,59 +1,132 @@
 {% extends 'base.html' %}
-
 {% block content %}
+<script src="https://js.tosspayments.com/v2/standard"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='order.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='mem.css') }}">
 
 <div class="membership-wrap">
-    <h2 class="membership-title">놓치면 안되는 <span class="highlight">커넥션 케어+</span> 혜택</h2>
+  <h2 class="membership-title">놓치면 안되는 <span class="highlight">커넥션 케어+</span> 혜택</h2>
 
-    <div class="benefit-container">
-        <div class="benefit-box">
-            <div class="benefit-icon"><i class="bi bi-shield-check"></i></div>
-            <div class="benefit-detail">
-                <span>일상 속 예상치 못한 사고까지 안심 보장</span>
-                실수로 제품을 떨어뜨리거나 물·음료 등 액체를 쏟아 발생한 우발적인 손상에 대해서도,
-                멤버십 회원은 각 브랜드의 공식 AS 서비스 안내를 통해 신속한 수리 지원을 받을 수 있습니다.
-                일반적인 보증 범위를 넘어서는 사고 상황에서도,
-                해당 브랜드의 전문 엔지니어가 직접 진단하고 수리를 진행하여
-                제품 특성에 맞는 안전하고 정확한 서비스를 이용하실 수 있습니다.
-                복잡한 경로를 찾지 않아도 멤버십을 통해 브랜드별 AS로 바로 연결되는
-                빠르고 편리한 지원을 경험해 보세요.
-                <span>예상치 못한 순간까지 책임집니다</span>
-            </div>
-        </div>
-
-        <div class="benefit-box">
-            <div class="benefit-icon"><i class="bi bi-truck"></i></div>
-            <div class="benefit-detail">
-                <span>추가 비용 없는 무제한 무료 배송</span>
-                멤버십 회원은 주문 금액이나 횟수에 상관없이 모든 상품을 배송비 부담 없이 받아보실 수 있습니다.
-                소액 주문부터 자주 구매하는 경우까지, 매번 발생하던 배송비 걱정 없이 원하는 상품을 자유롭게 주문해 보세요.
-                멤버십이 유지되는 동안 언제든 무료 배송 혜택이 적용됩니다
-                <span>배송비는 줄이고, 쇼핑은 더 자유롭게</span>
-            </div>
-        </div>
-
-        <div class="benefit-box">
-            <div class="benefit-icon"><i class="bi bi-chat-dots"></i></div>
-            <div class="benefit-detail">
-                <span>브랜드별 AS로 이어지는 전문가 상담 지원</span>
-                멤버십 회원은 제품 이용 중 발생하는 하드웨어·소프트웨어 관련 문의 사항에 대해
-                문자, 전화, 온라인 상담 등 다양한 채널을 통해 전문가의 도움을 받을 수 있습니다.
-                단순한 사용 방법 문의부터 이상 증상·오류 상담까지,
-                전문 상담을 통해 문제를 빠르게 파악하고
-                필요 시 각 브랜드의 공식 AS 서비스로 원활하게 안내해 드립니다.
-                혼자 해결하기 어려운 상황에서도 걱정하지 마세요.
-                숙련된 전문가의 상담을 통해 가장 적합한 브랜드 AS 지원으로
-                신속하고 정확하게 연결해 드립니다.
-                <span>필요한 순간, 바로 이어지는 전문가의 도움</span>
-            </div>
-        </div>
+  <div class="benefit-container">
+    <div class="benefit-box">
+      <div class="benefit-icon"><i class="bi bi-shield-check"></i></div>
+      <div class="benefit-detail">
+        <span>일상 속 예상치 못한 사고까지 안심 보장</span>
+        실수로 제품을 떨어뜨리거나 물·음료 등 액체를 쏟아 발생한 우발적인 손상에 대해서도,
+        멤버십 회원은 각 브랜드의 공식 AS 서비스 안내를 통해 신속한 수리 지원을 받을 수 있습니다.
+        일반적인 보증 범위를 넘어서는 사고 상황에서도,
+        해당 브랜드의 전문 엔지니어가 직접 진단하고 수리를 진행하여
+        제품 특성에 맞는 안전하고 정확한 서비스를 이용하실 수 있습니다.
+        복잡한 경로를 찾지 않아도 멤버십을 통해 브랜드별 AS로 바로 연결되는
+        빠르고 편리한 지원을 경험해 보세요.
+        <span>예상치 못한 순간까지 책임집니다</span>
+      </div>
     </div>
 
-    <div class="subscribe-section">
-        <form action="{{ url_for('auth.subscribe') }}" method="POST">
-            <button type="submit" class="btn-subscribe">멤버십 가입하기</button>
-        </form>
+    <div class="benefit-box">
+      <div class="benefit-icon"><i class="bi bi-truck"></i></div>
+      <div class="benefit-detail">
+        <span>추가 비용 없는 무제한 무료 배송</span>
+        멤버십 회원은 주문 금액이나 횟수에 상관없이 모든 상품을 배송비 부담 없이 받아보실 수 있습니다.
+        소액 주문부터 자주 구매하는 경우까지, 매번 발생하던 배송비 걱정 없이 원하는 상품을 자유롭게 주문해 보세요.
+        멤버십이 유지되는 동안 언제든 무료 배송 혜택이 적용됩니다
+        <span>배송비는 줄이고, 쇼핑은 더 자유롭게</span>
+      </div>
     </div>
+
+    <div class="benefit-box">
+      <div class="benefit-icon"><i class="bi bi-chat-dots"></i></div>
+      <div class="benefit-detail">
+        <span>브랜드별 AS로 이어지는 전문가 상담 지원</span>
+        멤버십 회원은 제품 이용 중 발생하는 하드웨어·소프트웨어 관련 문의 사항에 대해
+        문자, 전화, 온라인 상담 등 다양한 채널을 통해 전문가의 도움을 받을 수 있습니다.
+        단순한 사용 방법 문의부터 이상 증상·오류 상담까지,
+        전문 상담을 통해 문제를 빠르게 파악하고
+        필요 시 각 브랜드의 공식 AS 서비스로 원활하게 안내해 드립니다.
+        혼자 해결하기 어려운 상황에서도 걱정하지 마세요.
+        숙련된 전문가의 상담을 통해 가장 적합한 브랜드 AS 지원으로
+        신속하고 정확하게 연결해 드립니다.
+        <span>필요한 순간, 바로 이어지는 전문가의 도움</span>
+      </div>
+    </div>
+  </div>
+<div class="subscribe-section" style="text-align: center; margin-top: 40px;">
+    {% if g.user and not g.user.is_membership %}
+      <button type="button" class="btn-subscribe" onclick="openPaymentModal()">멤버십 가입하기</button>
+    {% elif g.user and g.user.is_membership %}
+      <div class="status-badge" style="background: #e7f3ff; color: #007bff; padding: 15px; border-radius: 10px; display: inline-block;">
+        ✨ 이미 <strong>커넥션 케어+</strong> 혜택을 누리고 계십니다!
+      </div>
+    {% else %}
+      <p><a href="{{ url_for('auth.login') }}">로그인</a> 후 멤버십 가입이 가능합니다.</p>
+    {% endif %}
+  </div>
+
+  {% if g.user and not g.user.is_membership %}
+  <div id="paymentModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content-wrap">
+      <div class="modal-header">
+        <h3>멤버십 구독 결제</h3>
+        <button type="button" onclick="closePaymentModal()" class="btn-close-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="payment-method"></div>
+        <div id="agreement"></div>
+        <div class="summary-total" style="display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+          <span>월 구독료</span>
+          <span style="color:#007bff; font-weight:bold;">2,900원</span>
+        </div>
+      </div>
+      <div class="modal-footer" style="margin-top: 20px;">
+        <button type="button" id="payment-button" class="btn-submit" onclick="requestMembershipPayment()" style="width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 8px;">
+          2,900원 결제하고 혜택 받기
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 </div>
+
+<script>
+  function openPaymentModal() {
+    document.getElementById("paymentModal").style.display = "flex";
+  }
+
+  function closePaymentModal() {
+    document.getElementById("paymentModal").style.display = "none";
+  }
+
+  let widgets = null;
+
+  {% if g.user and not g.user.is_membership %}
+  document.addEventListener("DOMContentLoaded", async function () {
+    const clientKey = "test_gck_docs_Ovk5rk1EwkEbP0W43n07xlzm";
+    const customerKey = "USER_{{ g.user.id }}";
+
+    const tossPayments = TossPayments(clientKey);
+    widgets = tossPayments.widgets({ customerKey });
+
+    await widgets.setAmount({ currency: "KRW", value: 2900 });
+
+    await Promise.all([
+      widgets.renderPaymentMethods({ selector: "#payment-method", variantKey: "DEFAULT" }),
+      widgets.renderAgreement({ selector: "#agreement", variantKey: "AGREEMENT" })
+    ]);
+  });
+
+  async function requestMembershipPayment() {
+    try {
+      await widgets.requestPayment({
+        orderId: "mem_sub_" + new Date().getTime(),
+        orderName: "커넥션 케어+ 멤버십 구독",
+        successUrl: window.location.origin + "/auth/subscribe/success",
+        failUrl: window.location.origin + "/main/index", // 실패 시 메인으로
+        customerName: "{{ g.user.username }}",
+      });
+    } catch (error) {
+      console.error("결제 오류:", error);
+    }
+  }
+  {% endif %}
+</script>
 {% endblock %}
