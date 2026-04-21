@@ -337,7 +337,7 @@ def me():
     form = UserUpdateForm(obj=g.user)
 
     coupon_count = len(g.user.coupons) if hasattr(g.user, 'coupons') else 0
-    # 최근 주문 정보 조회 [cite: 30, 40]
+    # 최근 주문 정보 조회
     last_order = Order.query.filter_by(user_id=g.user.id).order_by(Order.order_date.desc()).first()
 
     # 초기값 설정
@@ -436,19 +436,29 @@ def subscribe_success():
 @bp.route('/api/my_reviews', methods=['GET'])
 def my_reviews():
     if not g.user:
-        return jsonify([]), 401
+        return jsonify({"reviews": [], "total_pages": 0}), 401
 
-    reviews = Review.query.filter_by(user_id=g.user.id).order_by(Review.id.desc()).all()
+    # 페이징 파라미터 받기 (기본값: 1페이지, 페이지당 10개)
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
 
-    return jsonify([
-        {
-            "id": r.id,
-            "product_name": r.product.name if r.product else "",
-            "rating": r.rating,
-            "content": r.content
-        }
-        for r in reviews
-    ])
+    query = Review.query.filter_by(user_id=g.user.id).order_by(Review.id.desc())
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return jsonify({
+        "reviews": [
+            {
+                "id": r.id,
+                "product_name": r.product.name if r.product else "",
+                "rating": r.rating,
+                "content": r.content,
+                "image_url": url_for('static', filename='uploads/reviews/' + r.image_path) if r.image_path else None # 이미지 경로 추가 [cite: 150]
+            }
+            for r in pagination.items
+        ],
+        "total_pages": pagination.pages,
+        "current_page": pagination.page
+    })
 
 
 

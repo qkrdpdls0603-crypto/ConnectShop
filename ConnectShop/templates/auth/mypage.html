@@ -100,9 +100,8 @@
 
         <div class="status-bar">
 
-            <a href="{{ url_for('order.my_orders') }}"
-               class="status-item"
-               style="text-decoration: none; color: inherit;">
+            <a href="{{ url_for('order.my_orders') }}" class="status-item"
+                style="text-decoration: none; color: inherit;">
                 <div class="icon-box">
                     <img src="{{ url_for('static', filename='images/mp/a1.png') }}" width="24" height="24">
                 </div>
@@ -111,16 +110,14 @@
             </a>
 
             <a href="{{ url_for('order.tracking', order_id=latest_shipping_id) if latest_shipping_id else '#' }}"
-               class="status-item"
-               style="text-decoration: none; color: inherit;"
-               {% if not latest_shipping_id %} onclick="alert('배송 중인 상품이 없습니다.'); return false;" {% endif %}>
+                class="status-item" style="text-decoration: none; color: inherit;" {% if not latest_shipping_id %}
+                onclick="alert('배송 중인 상품이 없습니다.'); return false;" {% endif %}>
                 <div class="icon-box">
                     <img src="{{ url_for('static', filename='images/mp/b1.png') }}" width="24" height="24">
                 </div>
                 <span class="status-label">배송중</span>
                 <span class="status-count">{{ shipping_count or 0 }}</span>
             </a>
-
             <div class="status-item">
                 <div class="icon-box">
                     <img src="{{ url_for('static', filename='images/mp/c1.png') }}" width="24" height="24">
@@ -129,15 +126,18 @@
                 <span class="status-count">{{ done_count or 0 }}</span>
             </div>
 
-            <div class="status-item">
-                <div class="icon-box">
-                    <img src="{{ url_for('static', filename='images/mp/d1.png') }}" width="24" height="24">
-                </div>
-                <span class="status-label">찜한 제품</span>
-                <span class="status-count">0</span>
-            </div>
 
-            <div class="status-item"onclick="showMyReviews()" style="cursor:pointer;">
+            <a href="{{ url_for('order.wishlist') }}" style="text-decoration: none; color: inherit; display: contents;">
+                <div class="status-item">
+                    <div class="icon-box">
+                        <img src="{{ url_for('static', filename='images/mp/d1.png') }}" width="24" height="24">
+                    </div>
+                    <span class="status-label">찜한 제품</span>
+                    <span class="status-count">{{ g.user.wishlist_items|length if g.user else 0 }}</span>
+                </div>
+            </a>
+
+            <div class="status-item" onclick="showMyReviews()" style="cursor:pointer;">
                 <div class="icon-box">
                     <img src="{{ url_for('static', filename='images/mp/e1.png') }}" width="24" height="24">
                 </div>
@@ -147,68 +147,60 @@
         </div>
 
 
-            <section>
-                <div class="section-title">
-                    <h3>나의 제품 관리</h3>
-                    <span class="view-all">
-                        <a href="{{ url_for('order.my_orders') }}">전체보기</a>
-                    </span>
-                </div>
+        <section class="modern-section">
+			<div class="section-header">
+				<h3 class="fw-bold">나의 제품 관리</h3>
+				<a href="{{ url_for('order.my_orders') }}" class="view-all-btn">전체보기 <i class="bi bi-chevron-right"></i></a>
+			</div>
 
-                {% if confirmed_products %}
-                <div class="register-banner product-area">
-                    <div class="my-product-grid">
-                        {% for product in confirmed_products %}
-                        <div class="my-product-item">
-                            <a href="{{ url_for('product.page', product_id=product.id) }}">
-                                <img class="my-product-img"
-                                    src="{{ url_for('static', filename='images/menu/' ~ product.image_path) }}"
-                                    alt="{{ product.name }}">
-                                <p class="my-product-name">{{ product.name }}</p>
-                            </a>
-                        </div>
-                        {% endfor %}
+			<div class="product-grid-modern">
+				{% for product in confirmed_products %}
+				<div class="product-item-card">
+					<a href="{{ url_for('product.page', product_id=product.id) }}" class="card-link">
+						<div class="img-wrapper">
+							<img src="{{ url_for('static', filename='images/menu/' ~ product.image_path) }}" alt="{{ product.name }}">
+						</div>
+						<div class="product-info-box">
+							<span class="brand-tag">
+								<img src="{{ url_for('static', filename='images/logos/' + product.brand + '.svg') }}"
+									alt="{{ product.brand }} 로고"
+									style="height: 1.2em; width: auto; object-fit: contain; vertical-align: middle;">
+							</span>
+							<p class="product-name-label">{{ product.name }}</p>
+						</div>
+					</a>
+				</div>
+				{% endfor %}
+			</div>
+		</section>
+
+        <section class="modern-section">
+            <div class="section-title">
+                <h3>{{ g.user.username if g.user else '고객' }}님을 위한 맞춤 제품</h3>
+            </div>
+
+            <div class="modern-scroll-container">
+                {% for product in recommended_products %}
+                <div class="modern-card" onclick="location.href='{{ url_for('product.page', product_id=product.id) }}'">
+                    <div class="modern-img-box">
+                        <img src="/static/images/menu/{{ product.image_path }}" alt="{{ product.name }}">
+                    </div>
+                    <div class="modern-info">
+                        <span class="brand-tag">
+                            <img src="{{ url_for('static', filename='images/logos/' + product.brand + '.svg') }}"
+                                alt="{{ product.brand }} 로고"
+                                style="height: 1.2em; width: auto; object-fit: contain; vertical-align: middle;">
+                        </span>
+                        <span class="product-title">{{ product.name }}</span>
+                        <span class="product-price">{{ "{:,.0f}".format(product.price) }}원</span>
                     </div>
                 </div>
-                {% else %}
-                <div class="register-banner">
-                    <p>제품을 직접 등록하고 편리한 서비스를 만나보세요</p>
-                    <a href="#" class="btn-reg">등록하기</a>
-                </div>
-                {% endif %}
-            </section>
+                {% endfor %}
+            </div>
+        </section>
 
-
-
-
-            <section>
-                <div class="section-title">
-                    <h3>{{ g.user.username if g.user else '고객' }}님을 위한 맞춤 제품</h3>
-                </div>
-
-                <div class="product-scroll">
-                    {% for product in recommended_products %}
-                    <div class="product-card"
-                        onclick="location.href='{{ url_for('product.page', product_id=product.id) }}'"
-                        style="cursor:pointer;">
-                        <div class="product-img">
-                            <img src="/static/images/menu/{{ product.image_path }}" alt="{{ product.name }}">
-                        </div>
-
-                        <div class="p-info">
-                            <span class="brand">{{ product.brand }}</span>
-                            <span class="name">{{ product.name }}</span>
-                            <span class="price">
-                                {{ "{:,.0f}".format(product.price) }}원
-                            </span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            </section>
-
-        </div>
     </div>
+</div>
 <div class="modal fade" id="myReviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -217,10 +209,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="my-review-list">
-                </div>
+            </div>
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center" id="review-pagination"></ul>
+            </nav>
         </div>
     </div>
 </div>
+
 
 
 <script>
@@ -228,20 +224,18 @@
     const subMenuData = {
         'account': [
             { name: '회원정보 수정', link: "{{ url_for('auth.me') }}" },
-            { name: '수신동의 설정', link: '#' },
             { name: '멤버십', link: "{{ url_for('auth.membership') }}" },
             { name: '배송지관리', link: "{{ url_for('auth.me') }}#recent-address" }
         ],
         'shopping': [
-            { name: '주문/배송조회', link: "{{ url_for('order.my_orders') if url_for('order.my_orders') else '#' }}" },
-            { name: '환불/반품', link: '#' },
+            { name: '주문/결제내역 ', link: "{{ url_for('order.my_orders') }}" },
+            { name: '환불/교환', link: "{{ url_for('order.my_cancel_list') }}" },
             { name: '주문취소조회', link: "{{ url_for('order.my_cancel_list') }}" },
-            { name: '결제내역조회', link: '#' },
-            { name: '결제취소조회', link: '#' }
+            { name: '배송조회', link: "{{ url_for('order.tracking', order_id=latest_shipping_id) if latest_shipping_id else '#' }}" }
         ],
         'wishlist': [
             { name: '나의 찜목록', link: "{{ url_for('order.wishlist') }}" },
-            { name: '재입고알림', link: '#' }
+            { name: '재입고알림', link: "{{ url_for('main.preparing') }}" }
         ],
         'coupon': [
             { name: '쿠폰받기/보유쿠폰', link: "{{ url_for('auth.coupons') }}" }
@@ -253,14 +247,17 @@
         const listArea = document.getElementById('subMenuList');
 
         document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-        element.classList.add('active');
+        if (element) element.classList.add('active');
 
         listArea.innerHTML = '';
 
         if (subMenuData[menuKey]) {
             subMenuData[menuKey].forEach(item => {
                 const li = document.createElement('li');
-                li.innerHTML = `<a href="${item.link}">${item.name}</a>`;
+                const a = document.createElement('a');
+                a.href = item.link;
+                a.textContent = item.name;
+                li.appendChild(a);
                 listArea.appendChild(li);
             });
             displayArea.style.display = 'block';
@@ -289,161 +286,273 @@
         }
     }
 
-function showMyReviews() {
-    const modalEl = document.getElementById('myReviewModal');
-    const listArea = document.getElementById('my-review-list');
+    // =========================
+    // 리뷰 모달 + 페이징 + 수정/삭제
+    // =========================
+    let currentReviewPage = 1;
 
-    // Bootstrap JS가 로드되어 있어야 함 (bootstrap.Modal 사용) [2](https://getbootstrap.kr/docs/5.3/components/modal/)
-    const myModal = new bootstrap.Modal(modalEl);
-    myModal.show();
-
-    listArea.innerHTML = '<p class="text-center">불러오는 중...</p>';
-
-    fetch('/auth/api/my_reviews')
-      .then(res => {
-        // JSON이 아닌 HTML(로그인 리다이렉트/에러페이지) 받으면 여기서 잡기
-        const ct = (res.headers.get('content-type') || '');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        if (!ct.includes('application/json')) throw new Error('JSON이 아닌 응답(HTML)입니다.');
-        return res.json();
-      })
-      .then(data => {
-        listArea.innerHTML = '';
-
-        if (!Array.isArray(data) || data.length === 0) {
-          listArea.innerHTML = '<p class="text-center">작성한 리뷰가 없습니다.</p>';
-          return;
-        }
-
-        data.forEach(review => {
-          // wrapper
-          const wrapper = document.createElement('div');
-          wrapper.className = 'review-item border-bottom pb-3 mb-3';
-          wrapper.id = `review-wrapper-${review.id}`;
-
-          // header row
-          const head = document.createElement('div');
-          head.className = 'd-flex justify-content-between align-items-start';
-
-          const strong = document.createElement('strong');
-          strong.textContent = review.product_name;
-
-          const ratingSpan = document.createElement('span');
-          ratingSpan.className = 'text-warning';
-          ratingSpan.id = `rating-text-${review.id}`;
-          ratingSpan.textContent = `★ ${review.rating}`;
-
-          head.appendChild(strong);
-          head.appendChild(ratingSpan);
-
-          // content display
-          const contentDiv = document.createElement('div');
-          contentDiv.className = 'mt-2 review-content';
-          contentDiv.id = `content-display-${review.id}`;
-          contentDiv.textContent = review.content; // innerHTML 금지(보안/깨짐 방지)
-
-          // buttons
-          const btnRow = document.createElement('div');
-          btnRow.className = 'text-end mt-2';
-
-          const editBtn = document.createElement('button');
-          editBtn.className = 'btn btn-sm btn-outline-primary me-1';
-          editBtn.id = `edit-btn-${review.id}`;
-          editBtn.type = 'button';
-          editBtn.textContent = '수정';
-          editBtn.addEventListener('click', () => {
-            editReviewMode(review.id, review.content, review.rating);
-          });
-
-          const delBtn = document.createElement('button');
-          delBtn.className = 'btn btn-sm btn-outline-danger';
-          delBtn.type = 'button';
-          delBtn.textContent = '삭제';
-          delBtn.addEventListener('click', () => deleteReview(review.id));
-
-          btnRow.appendChild(editBtn);
-          btnRow.appendChild(delBtn);
-
-          wrapper.appendChild(head);
-          wrapper.appendChild(contentDiv);
-          wrapper.appendChild(btnRow);
-
-          listArea.appendChild(wrapper);
-        });
-      })
-      .catch(err => {
-        // “Unexpected token <”류 문제(HTML을 json으로 파싱)도 여기서 정리 가능 [3](https://blog.openreplay.com/fixing-unexpected-token-json/)
-        listArea.innerHTML = `<p class="text-center text-danger">리뷰를 불러오지 못했습니다: ${err.message}</p>`;
-      });
-  }
-
-  // 2) 수정 모드로 변경
-  function editReviewMode(id, content, rating) {
-    const contentDisplay = document.getElementById(`content-display-${id}`);
-    const editBtn = document.getElementById(`edit-btn-${id}`);
-
-    contentDisplay.innerHTML = `
-      <div class="edit-form mt-2">
-        <select id="edit-rating-${id}" class="form-select form-select-sm mb-2" style="width: 100px;">
-          <option value="5" ${rating==5 ? 'selected' : ''}>5점</option>
-          <option value="4" ${rating==4 ? 'selected' : ''}>4점</option>
-          <option value="3" ${rating==3 ? 'selected' : ''}>3점</option>
-          <option value="2" ${rating==2 ? 'selected' : ''}>2점</option>
-          <option value="1" ${rating==1 ? 'selected' : ''}>1점</option>
-        </select>
-        <textarea id="edit-content-${id}" class="form-control" rows="3"></textarea>
-      </div>
-    `;
-
-    // textarea에 안전하게 값 채우기
-    document.getElementById(`edit-content-${id}`).value = content;
-
-    editBtn.textContent = '저장';
-    editBtn.className = 'btn btn-sm btn-success me-1';
-    editBtn.onclick = () => updateReview(id);
-  }
-
-  // 3) 수정 저장
-  function updateReview(id) {
-    const newContent = document.getElementById(`edit-content-${id}`).value;
-    const newRating = parseInt(document.getElementById(`edit-rating-${id}`).value, 10);
-
-    if (!newContent.trim()) {
-      alert('내용을 입력해주세요.');
-      return;
+    function ensureModalOpen() {
+        const modalEl = document.getElementById('myReviewModal');
+        if (!modalEl) return null;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+        return modal;
     }
 
-    fetch(`/auth/api/review/edit/${id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: newContent, rating: newRating })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        alert('리뷰가 수정되었습니다.');
-        showMyReviews();
-      } else {
-        alert('수정 실패: ' + (data.message || ''));
-      }
-    })
-    .catch(err => alert('오류 발생: ' + err));
-  }
+    function safeJson(res) {
+        const ct = (res.headers.get('content-type') || '');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!ct.includes('application/json')) throw new Error('JSON이 아닌 응답(HTML)입니다. 로그인/에러 페이지 가능');
+        return res.json();
+    }
 
-  // 4) 삭제
-  function deleteReview(id) {
-    fetch(`/auth/api/review/delete/${id}`, { method: 'POST' })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          showMyReviews();
-        } else {
-          alert('삭제 실패: ' + (data.message || ''));
+    // 외부에서 호출: showMyReviews()
+    function showMyReviews(page = 1) {
+        currentReviewPage = page;
+
+        ensureModalOpen();
+
+        const listArea = document.getElementById('my-review-list');
+        const paginationArea = document.getElementById('review-pagination');
+        if (!listArea || !paginationArea) return;
+
+        listArea.innerHTML = '<p class="text-center">불러오는 중...</p>';
+        paginationArea.innerHTML = '';
+
+        fetch(`/auth/api/my_reviews?page=${page}`)
+            .then(safeJson)
+            .then(data => {
+                // API가 (1) 배열로 줄 수도 있고 (2) {reviews, total_pages, current_page}로 줄 수도 있으니 둘 다 처리
+                const reviews = Array.isArray(data) ? data : (data.reviews || []);
+                const totalPages = Array.isArray(data) ? 1 : (data.total_pages || 1);
+                const currentPage = Array.isArray(data) ? 1 : (data.current_page || page);
+
+                listArea.innerHTML = '';
+
+                if (!reviews.length) {
+                    listArea.innerHTML = '<p class="text-center">작성한 리뷰가 없습니다.</p>';
+                    return;
+                }
+
+                reviews.forEach(review => {
+                    listArea.appendChild(renderReviewItem(review));
+                });
+
+                renderPagination(totalPages, currentPage);
+            })
+            .catch(err => {
+                listArea.innerHTML = `<p class="text-center text-danger">리뷰를 불러오지 못했습니다: ${err.message}</p>`;
+            });
+    }
+
+    function renderReviewItem(review) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'review-item border-bottom pb-3 mb-3';
+        wrapper.id = `review-wrapper-${review.id}`;
+
+        // header
+        const head = document.createElement('div');
+        head.className = 'd-flex justify-content-between align-items-start';
+
+        const title = document.createElement('strong');
+        title.textContent = review.product_name || '(상품명 없음)';
+
+        const ratingSpan = document.createElement('span');
+        ratingSpan.className = 'text-warning';
+        ratingSpan.id = `rating-text-${review.id}`;
+        ratingSpan.textContent = `★ ${review.rating ?? ''}`;
+
+        head.appendChild(title);
+        head.appendChild(ratingSpan);
+
+        // image (optional)
+        let imgEl = null;
+        if (review.image_url) {
+            imgEl = document.createElement('img');
+            imgEl.src = review.image_url;
+            imgEl.alt = 'review image';
+            imgEl.style.width = '100px';
+            imgEl.style.height = '100px';
+            imgEl.style.objectFit = 'cover';
+            imgEl.className = 'mt-2 mb-2 d-block';
         }
-      })
-      .catch(err => alert('오류 발생: ' + err));
-  }
 
+        // content
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'mt-2 review-content';
+        contentDiv.id = `content-display-${review.id}`;
+        contentDiv.textContent = review.content || '';
+
+        // buttons
+        const btnRow = document.createElement('div');
+        btnRow.className = 'text-end mt-2';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn btn-sm btn-outline-primary me-1';
+        editBtn.type = 'button';
+        editBtn.textContent = '수정';
+        editBtn.addEventListener('click', () => {
+            editReviewMode(review.id, review.content || '', review.rating ?? 5);
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-sm btn-outline-danger';
+        delBtn.type = 'button';
+        delBtn.textContent = '삭제';
+        delBtn.addEventListener('click', () => deleteReview(review.id));
+
+        btnRow.appendChild(editBtn);
+        btnRow.appendChild(delBtn);
+
+        wrapper.appendChild(head);
+        if (imgEl) wrapper.appendChild(imgEl);
+        wrapper.appendChild(contentDiv);
+        wrapper.appendChild(btnRow);
+
+        return wrapper;
+    }
+
+    // 수정 모드
+    function editReviewMode(id, content, rating) {
+        const contentDisplay = document.getElementById(`content-display-${id}`);
+        const wrapper = document.getElementById(`review-wrapper-${id}`);
+        if (!contentDisplay || !wrapper) return;
+
+        // 폼 컨테이너
+        const form = document.createElement('div');
+        form.className = 'edit-form mt-2';
+
+        // rating select
+        const select = document.createElement('select');
+        select.id = `edit-rating-${id}`;
+        select.className = 'form-select form-select-sm mb-2';
+        select.style.width = '100px';
+
+        [5, 4, 3, 2, 1].forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = String(v);
+            opt.textContent = `${v}점`;
+            if (Number(rating) === v) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        // file input (optional)
+        const file = document.createElement('input');
+        file.type = 'file';
+        file.accept = 'image/*';
+        file.id = `edit-image-${id}`;
+        file.className = 'form-control form-control-sm mb-2';
+
+        // textarea
+        const ta = document.createElement('textarea');
+        ta.id = `edit-content-${id}`;
+        ta.className = 'form-control';
+        ta.rows = 3;
+        ta.value = content;
+
+        // buttons row
+        const btnRow = document.createElement('div');
+        btnRow.className = 'text-end mt-2';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'btn btn-sm btn-success me-1';
+        saveBtn.textContent = '저장';
+        saveBtn.addEventListener('click', () => updateReview(id));
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn btn-sm btn-secondary';
+        cancelBtn.textContent = '취소';
+        cancelBtn.addEventListener('click', () => showMyReviews(currentReviewPage));
+
+        btnRow.appendChild(saveBtn);
+        btnRow.appendChild(cancelBtn);
+
+        form.appendChild(select);
+        form.appendChild(file);
+        form.appendChild(ta);
+        form.appendChild(btnRow);
+
+        // 기존 내용 영역 교체
+        contentDisplay.innerHTML = '';
+        contentDisplay.appendChild(form);
+    }
+
+    // 수정 저장 (이미지 포함 가능 → FormData)
+    function updateReview(id) {
+        const contentEl = document.getElementById(`edit-content-${id}`);
+        const ratingEl = document.getElementById(`edit-rating-${id}`);
+        const fileEl = document.getElementById(`edit-image-${id}`);
+
+        if (!contentEl || !ratingEl) {
+            alert('수정 폼 요소를 찾지 못했습니다.');
+            return;
+        }
+
+        const newContent = contentEl.value.trim();
+        const newRating = parseInt(ratingEl.value, 10);
+
+        if (!newContent) {
+            alert('내용을 입력해주세요.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('content', newContent);
+        formData.append('rating', String(newRating));
+        if (fileEl && fileEl.files && fileEl.files[0]) {
+            formData.append('image', fileEl.files[0]);
+        }
+
+        fetch(`/auth/api/review/edit/${id}`, {
+            method: 'POST',
+            body: formData
+        })
+            .then(safeJson)
+            .then(data => {
+                if (data.success) {
+                    alert('리뷰가 수정되었습니다.');
+                    showMyReviews(currentReviewPage);
+                } else {
+                    alert('수정 실패: ' + (data.message || ''));
+                }
+            })
+            .catch(err => alert('오류 발생: ' + err.message));
+    }
+
+    function deleteReview(id) {
+        fetch(`/auth/api/review/delete/${id}`, { method: 'POST' })
+            .then(safeJson)
+            .then(data => {
+                if (data.success) {
+                    showMyReviews(currentReviewPage);
+                } else {
+                    alert('삭제 실패: ' + (data.message || ''));
+                }
+            })
+            .catch(err => alert('오류 발생: ' + err.message));
+    }
+
+    function renderPagination(totalPages, currentPage) {
+        const area = document.getElementById('review-pagination');
+        if (!area) return;
+        area.innerHTML = '';
+
+        for (let i = 1; i <= totalPages; i++) {
+            const li = document.createElement('li');
+            li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+
+            const a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = 'javascript:void(0)';
+            a.textContent = String(i);
+            a.addEventListener('click', () => showMyReviews(i));
+
+            li.appendChild(a);
+            area.appendChild(li);
+        }
+    }
 </script>
 
 {% endblock %}
