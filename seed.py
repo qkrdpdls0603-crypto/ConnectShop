@@ -43,7 +43,9 @@ with app.app_context():
         username='이강토',
         password=generate_password_hash('1234'),
         email='gangto@gmail.com',
-        phone='01085253445'
+        phone='01085253445',
+        point=100000,
+        is_membership=True
     )
 
     db.session.add_all([u1, u2])
@@ -929,7 +931,7 @@ with app.app_context():
     db.session.commit()
 
     # ==========================================
-    # Phase 2. 1차 자식 데이터 생성 (Membership, Coupon, Cart, Order)
+    # Phase 2 & 3. 혜택 및 대량의 주문 데이터 생성
     # ==========================================
     print("🎫 혜택 및 주문(영수증) 데이터를 생성하는 중...")
 
@@ -938,7 +940,7 @@ with app.app_context():
         benefit = MembershipBenefit(user_id=user_objects[username].id, has_apple_care=True, free_shipping=True)
         db.session.add(benefit)
 
-    # [팀원 2] Coupon 생성
+        # [팀원 2] Coupon 생성
         for username, user_obj in user_objects.items():
             if username in membership_targets:
                 # 🌟 멤버십 회원: 10% 쿠폰(amount=10) + 3,000원 쿠폰
@@ -949,39 +951,80 @@ with app.app_context():
                 db.session.add(Coupon(user_id=user_obj.id, name='일반 회원 3% 할인쿠폰', discount_amount=3))
                 db.session.add(Coupon(user_id=user_obj.id, name='가입 축하 1,000원 할인쿠폰', discount_amount=1000))
 
-    # [팀원 1] Order 생성
+    # [팀원 1] 기존 하드코딩 주문 5개 유지
     order1 = Order(user_id=u1.id, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
-                   total_price=1799000, payment_method='무통장입금', status='배송중',courier_company='한진택배',tracking_number='536691845023')
+                   total_price=1799000, payment_method='무통장입금', status='배송중', courier_company='한진택배',
+                   tracking_number='536691845023')
     order2 = Order(user_id=u1.id, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
                    total_price=1600000, payment_method='무통장입금', status='구매확정')
     order3 = Order(user_id=None, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
-                   total_price=1600000, payment_method='무통장입금', status='배송중',courier_company='CJ대한통운',tracking_number='511704834795')
+                   total_price=1600000, payment_method='무통장입금', status='배송중', courier_company='CJ대한통운',
+                   tracking_number='511704834795')
     order4 = Order(user_id=u1.id, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
                    total_price=1600000, payment_method='무통장입금', status='주문취소')
     order5 = Order(user_id=None, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
                    total_price=1600000, payment_method='무통장입금', status='결제완료')
+
     db.session.add_all([order1, order2, order3, order4, order5])
+    db.session.flush()  # order.id 생성을 위해 임시 커밋
 
-    # 🔥 2차 커밋 (멤버십, 쿠폰, 그리고 영수증 번호가 발급됩니다)
-    db.session.commit()
-
-    # ==========================================
-    # Phase 3. 2차 자식 데이터 생성 (OrderItem, Review)
-    # ==========================================
-    print("🛒 주문 상세 내역을 엮는 중...")
-
-    # [팀원 1] OrderItem 생성
     oi1 = OrderItem(order_id=order1.id, product_id=p1.id, quantity=1, price=1600000)
     oi2 = OrderItem(order_id=order1.id, product_id=p2.id, quantity=1, price=199000)
     oi3 = OrderItem(order_id=order2.id, product_id=p1.id, quantity=1, price=1600000)
     oi4 = OrderItem(order_id=order3.id, product_id=p1.id, quantity=1, price=1600000)
     oi5 = OrderItem(order_id=order4.id, product_id=p1.id, quantity=1, price=1600000)
     oi6 = OrderItem(order_id=order5.id, product_id=p1.id, quantity=1, price=1600000)
-
     db.session.add_all([oi1, oi2, oi3, oi4, oi5, oi6])
 
-    # 🔥 최종 3차 커밋 (상세 내역 확정)
+    # ====================================================================
+    # 🔥 [추가 로직] 모든 유저에게 '배송완료' 주문 1~3개씩 무작위 생성!
+    # ====================================================================
+    print("📦 구매확정 테스트를 위해 모든 유저에게 '배송완료' 주문을 무작위로 생성합니다...")
+
+    all_users_for_orders = User.query.all()
+    all_products_for_orders = Product.query.all()
+
+    for user in all_users_for_orders:
+        num_orders = random.randint(1, 3)  # 유저당 1~3개의 주문 생성
+        for _ in range(num_orders):
+            rand_prod = random.choice(all_products_for_orders)
+
+            # 🌟 리얼리티를 위해 2~10일 전 구매한 것으로 과거 날짜 셋팅
+            past_date = datetime.utcnow() - timedelta(days=random.randint(2, 10))
+
+            # 🌟 멤버십 회원이면 3% 적립 예정금액 세팅, 일반 회원은 0원
+            reward_pt = int(rand_prod.price * 0.03) if user.is_membership else 0
+
+            # 1. 영수증(Order) 생성
+            new_order = Order(
+                user_id=user.id,
+                recipient=user.username,
+                phone=user.phone,
+                address='서울시 강남구 테헤란로 123 (랜덤아파트)',
+                total_price=rand_prod.price,
+                payment_method=random.choice(['신용카드', '계좌이체', '네이버페이', '토스페이']),
+                status='배송완료',  # 🌟 핵심: 무조건 배송완료 상태로 세팅!
+                courier_company='CJ대한통운',
+                tracking_number=f'600{random.randint(10000000, 99999999)}',
+                reward_point=reward_pt,
+                is_point_paid=False,  # 아직 구매확정을 안 눌렀으니 지급 대기 상태
+                order_date=past_date
+            )
+            db.session.add(new_order)
+            db.session.flush()  # 바로 밑에 OrderItem을 달아주기 위해 임시 ID 발급
+
+            # 2. 주문 상세(OrderItem) 생성
+            new_item = OrderItem(
+                order_id=new_order.id,
+                product_id=rand_prod.id,
+                quantity=1,
+                price=rand_prod.price
+            )
+            db.session.add(new_item)
+
+    # 모든 주문 및 상세 내역 DB에 반영!
     db.session.commit()
+    print("✅ 대량의 주문 및 상세 내역 데이터 세팅 완료!")
 
     # ==========================================
     # Phase 4. 자동 리뷰 생성 (Review)

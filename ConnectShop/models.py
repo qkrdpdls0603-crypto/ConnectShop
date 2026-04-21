@@ -23,6 +23,8 @@ class User(db.Model):
     is_membership = db.Column(db.Boolean, default=False)
     # join_date: 회원가입을 한 날짜와 시간입니다. (현재 시간이 자동으로 들어갑니다)
     join_date = db.Column(db.DateTime, default=datetime.utcnow)
+    # point: 유저가 보유한 총 포인트입니다.
+    point = db.Column(db.Integer, default=0)
 
     # join_date 컬럼 바로 아래에 이 함수를 하나만 남기면 됩니다.
     def __repr__(self):
@@ -133,8 +135,9 @@ class Order(db.Model):
     coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=True)
     coupon = db.relationship('Coupon', backref='orders')
     memo = db.Column(db.String(200), nullable=True)
-    reward_point = db.Column(db.Integer, default=0)
-    is_point_paid = db.Column(db.Boolean, default=False)
+    reward_point = db.Column(db.Integer, default=0) # 적립 예정 포인트
+    is_point_paid = db.Column(db.Boolean, default=False) # 적립금 지급 완료 여부
+    used_point = db.Column(db.Integer, default=0) # 이 주문에서 사용한 포인트
 
 # 7. 주문 상세(OrderItem) 테이블: 영수증 안에 적힌 구체적인 상품 내역입니다. (한 번 주문에 여러 개를 살 수 있으니까요)
 class OrderItem(db.Model):

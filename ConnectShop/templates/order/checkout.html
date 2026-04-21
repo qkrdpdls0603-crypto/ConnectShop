@@ -55,7 +55,6 @@
             <select id="coupon-select" class="form-control" onchange="updateTotalAmount()">
                 <option value="0" data-type="fixed" data-value="0">사용 가능한 쿠폰 선택</option>
                 {% for coupon in available_coupons %}
-                    {# 🌟 이름에 '%'가 있는지 확인하여 타입(percent/fixed) 결정 #}
                     {% set is_percent = '%' in coupon.name %}
                     <option value="{{ coupon.id }}"
                             data-type="{{ 'percent' if is_percent else 'fixed' }}"
@@ -66,10 +65,23 @@
             </select>
         </div>
 
+        {% if g.user %}
+        <div class="form-section" style="border: none; padding: 0; margin-bottom: 20px;">
+            <div class="field-label d-flex justify-content-between">
+                <span>포인트 사용</span>
+                <span class="text-muted small">보유: {{ "{:,}".format(g.user.point) }}원</span>
+            </div>
+            <div class="d-flex gap-2">
+                <input type="number" id="point-input" class="form-control text-end" value="0" min="0" max="{{ g.user.point }}" oninput="updateTotalAmount()">
+                <button type="button" class="btn btn-outline-secondary text-nowrap" onclick="useAllPoints()">전액 사용</button>
+            </div>
+            <p id="point-warning" class="text-danger small mt-1 mb-0" style="display: none;">보유/결제 금액을 초과할 수 없습니다.</p>
+        </div>
+        {% endif %}
+
         <div class="summary-row">
             <span>상품 금액</span>
             <span>
-                {# 서버의 total_price가 배송비 포함이라면, 멤버십이 아닐 때 3,000원을 빼서 표시 #}
                 {% if g.user and g.user.is_membership %}
                     {{ "{:,}".format(total_price|int) }}원
                 {% else %}
@@ -81,6 +93,11 @@
         <div class="summary-row" style="color: #ff3b30;">
             <span>쿠폰 할인</span>
             <span id="display-discount">0원</span>
+        </div>
+
+        <div class="summary-row" style="color: #ff9500;">
+            <span>포인트 사용</span>
+            <span id="display-point-use">0원</span>
         </div>
 
         <div class="summary-row" style="color: #007bff;">
@@ -109,7 +126,6 @@
         <div class="summary-total">
             <span>총 결제 금액</span>
             <span>
-                {# 총 결제 금액은 이미 배송비가 포함된 서버의 total_price를 그대로 사용 #}
                 {{ "{:,}".format(total_price|int) }}원
             </span>
         </div>
@@ -125,7 +141,6 @@
 </div>
 
 <script>
-// 전역 변수로 선언하여 모든 함수에서 접근 가능하게 합니다.
 let widgets = null;
 
 document.addEventListener("DOMContentLoaded", async function() {
@@ -154,44 +169,47 @@ document.addEventListener("DOMContentLoaded", async function() {
         })
     ]);
 
-    // ============================================
-    // 🌟 URL이나 서버 세션에서 쿠폰 정보를 읽어와서 자동으로 골라주기!
-    // ============================================
     const urlParams = new URLSearchParams(window.location.search);
-    // 서버에서 넘겨준 쿠폰 ID가 있으면 먼저 쓰고, 없으면 URL에서 찾습니다.
     const preCouponId = "{{ pre_selected_coupon_id or '' }}" || urlParams.get('coupon_id');
 
     if (preCouponId && preCouponId !== 'None') {
         const couponSelect = document.getElementById('coupon-select');
         if (couponSelect) {
             for (let i = 0; i < couponSelect.options.length; i++) {
-                // 문자열로 변환하여 안전하게 비교
                 if (String(couponSelect.options[i].value) === String(preCouponId)) {
                     couponSelect.selectedIndex = i;
                     break;
                 }
             }
-            // 쿠폰이 선택되었으니 자동으로 가격 계산 한 번 돌려줍니다!
             setTimeout(() => {
                 if(typeof updateTotalAmount === 'function') updateTotalAmount();
             }, 150);
         }
     }
 
-    // [금액 업데이트 함수 - 🌟 병합 완료 로직]
+    // 🌟 포인트 전액 사용 로직
+    window.useAllPoints = function() {
+        const pointInput = document.getElementById('point-input');
+        if (pointInput) {
+            const maxPoint = parseInt(pointInput.getAttribute('max')) || 0;
+            pointInput.value = maxPoint;
+            updateTotalAmount(); // 입력 후 즉시 재계산
+        }
+    };
+
+    // 🌟 금액 업데이트 함수 (포인트 방어 로직 포함)
     window.updateTotalAmount = async function() {
         const couponSelect = document.getElementById('coupon-select');
         const selectedOption = couponSelect.options[couponSelect.selectedIndex];
 
-        // 1. 기본 정보 및 팀원 분의 쿠폰 타입 정보 추출
-        const type = selectedOption.getAttribute('data-type'); // fixed 또는 percent
-        const val = parseInt(selectedOption.getAttribute('data-value')) || 0; // data-value 사용 (data-discount 통일)
+        const type = selectedOption.getAttribute('data-type');
+        const val = parseInt(selectedOption.getAttribute('data-value')) || 0;
         const originalTotal = {{ total_price|int }};
         const isMembership = {{ 'true' if g.user and g.user.is_membership else 'false' }};
         const shippingFee = isMembership ? 0 : 3000;
         const pureProductPrice = originalTotal - shippingFee;
 
-        // 2. 할인액 계산 (팀원 분의 % 계산 로직)
+        // 쿠폰 계산
         let discount = 0;
         if (type === 'percent') {
             discount = Math.floor(pureProductPrice * (val / 100));
@@ -199,34 +217,62 @@ document.addEventListener("DOMContentLoaded", async function() {
             discount = val;
         }
 
-        const updatedFinalAmount = Math.max(0, originalTotal - discount);
+        // 🌟 포인트 계산
+        const pointInput = document.getElementById('point-input');
+        let usedPoint = 0;
 
-        // 3. 🌟 실시간 적립금 계산 (팀장님의 배송비 제외 상품가에서 쿠폰할인 뺀 금액의 3% 로직)
+        if (pointInput) {
+            usedPoint = parseInt(pointInput.value) || 0;
+            const maxPoint = parseInt(pointInput.getAttribute('max')) || 0;
+            const warning = document.getElementById('point-warning');
+
+            // 방어 1: 보유 포인트 초과 입력 방지
+            if (usedPoint > maxPoint) {
+                usedPoint = maxPoint;
+                pointInput.value = maxPoint;
+                warning.style.display = 'block';
+            } else {
+                warning.style.display = 'none';
+            }
+
+            // 방어 2: 결제 금액(쿠폰할인 후) 초과 방지
+            const amountAfterCoupon = originalTotal - discount;
+            if (usedPoint > amountAfterCoupon) {
+                usedPoint = amountAfterCoupon;
+                pointInput.value = usedPoint;
+            }
+
+            // 포인트 내역 화면 업데이트
+            const displayPointUse = document.getElementById('display-point-use');
+            if (displayPointUse) {
+                displayPointUse.innerText = (usedPoint > 0 ? "-" : "") + usedPoint.toLocaleString() + "원";
+            }
+        }
+
+        // 최종 결제 금액 산출
+        const updatedFinalAmount = Math.max(0, originalTotal - discount - usedPoint);
+
+        // 실시간 적립금 재계산 (포인트 사용분은 제외하고 3% 적립!)
         let rewardPoint = 0;
         if (isMembership) {
-            const rewardBase = pureProductPrice - discount;
+            const rewardBase = pureProductPrice - discount - usedPoint;
             rewardPoint = Math.floor(Math.max(0, rewardBase) * 0.03);
         }
 
-        // 4. UI 업데이트
-        // 쿠폰 할인 표시
+        // UI 업데이트
         document.getElementById('display-discount').innerText = (discount > 0 ? "-" : "") + discount.toLocaleString() + "원";
 
-        // 🌟 적립 예정 금액 표시 업데이트
         const rewardDisplay = document.getElementById('display-reward');
         if (rewardDisplay) {
             rewardDisplay.innerText = (rewardPoint > 0 ? "+" : "") + rewardPoint.toLocaleString() + "원";
         }
 
-        // 총 결제 금액 표시
         const finalTotalDisplay = document.querySelector('.summary-total span:last-child');
         if (finalTotalDisplay) finalTotalDisplay.innerText = updatedFinalAmount.toLocaleString() + "원";
 
-        // 결제 버튼 텍스트
         const payButton = document.getElementById('payment-button');
         if (payButton) payButton.innerText = updatedFinalAmount.toLocaleString() + "원 결제하기";
 
-        // 토스 위젯 업데이트
         if (widgets) {
             await widgets.setAmount({
                 currency: "KRW",
@@ -235,13 +281,16 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     };
 
-    // [결제 요청 함수]
     window.requestPayment = async function() {
         const recipient = document.getElementById('recipient').value.trim();
         const phone = document.getElementById('phone').value.trim();
         const address = document.getElementById('address').value.trim();
         const address_detail = document.getElementById('address_detail').value.trim();
         const couponId = document.getElementById('coupon-select').value;
+
+        // 🌟 서버로 넘길 포인트 값 추출
+        const pointInput = document.getElementById('point-input');
+        const usedPoint = pointInput ? (parseInt(pointInput.value) || 0) : 0;
 
         const memoSelect = document.getElementById('shipping-memo-select');
         let finalMemo = memoSelect.value;
@@ -250,14 +299,11 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
 
         if (!recipient || !phone || !address) { alert("배송 정보를 모두 입력해주세요."); return; }
-
-        // 유효성 검사
         if (!recipient) { alert("수령인 이름을 입력해주세요."); return; }
         if (!phone) { alert("연락처를 입력해주세요."); return; }
         if (!address) { alert("배송 주소를 입력해주세요."); return; }
 
         try {
-            // 서버에 임시 정보 저장
             const response = await fetch('/order/save_temp_info', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -266,13 +312,13 @@ document.addEventListener("DOMContentLoaded", async function() {
                     phone: phone,
                     address: address + " " + address_detail,
                     coupon_id: couponId !== "0" ? couponId : null,
+                    used_point: usedPoint, // 🌟 서버로 포인트 전송!
                     memo: finalMemo
                 })
             });
 
             if (!response.ok) throw new Error("세션 저장 실패");
 
-            // 토스 결제 실행
             await widgets.requestPayment({
                 orderId: "order_temp_{{ now_ts }}",
                 orderName: "ConnectShop 상품 결제",
@@ -286,7 +332,6 @@ document.addEventListener("DOMContentLoaded", async function() {
         }
     };
 
-    // [우편번호 및 전화번호 포맷 함수]
     window.execDaumPostcode = function() {
         new daum.Postcode({
             oncomplete: function(data) {

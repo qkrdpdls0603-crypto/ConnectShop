@@ -209,8 +209,6 @@
                         </div>
                     </div>
 
-                    <input type="hidden" id="is-logged-in" value="{{ 'true' if g.user else 'false' }}">
-
                     <div class="text-center">
                         <span class="text-muted delivery-date" style="font-size: 0.85rem;">
                             <i class="bi bi-truck me-1"></i> 로딩 중...
@@ -252,7 +250,7 @@
 <section id="section-reviews" class="py-5">
     <div class="container">
         <div class="product-reviews mt-5 pt-4 border-top">
-            <h4 class="fw-bold mb-4" id="section-reviews">상품 리뷰</h4>
+            <h4 class="fw-bold mb-4">상품 리뷰</h4>
 
             {% if g.user %}
                 {% if has_reviewed %}
@@ -668,11 +666,13 @@ function buyNow(productId) {
     .then(data => {
         if (data.success) {
             let checkoutUrl = "{{ url_for('order.checkout') }}";
-            // 🌟 결제창으로 이동할 때 적용된 쿠폰 ID를 URL에 달아줌으로써 쿠폰 정보가 이어지게 합니다.
+
+            // 🌟 [핵심 수정] 서버가 기다리는 암구호인 'coupon_id'로 찰떡같이 맞춰서 보냅니다!
             if (appliedCoupon) {
-                checkoutUrl += "?pre_coupon=" + appliedCoupon.id;
+                checkoutUrl += "?coupon_id=" + appliedCoupon.id;
             }
             location.href = checkoutUrl;
+
         } else {
             alert("주문 처리 중 오류가 발생했습니다.");
         }
