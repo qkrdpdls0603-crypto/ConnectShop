@@ -273,15 +273,16 @@
                                 <i class="bi bi-person"></i>
                             </a>
 
-                            <ul class="dropdown-menu dropdown-menu-end py-2" aria-labelledby="myPageDropdown">
+                            <ul class="dropdown-menu dropdown-menu-end py-2 shadow-sm border-0" aria-labelledby="myPageDropdown">
 
                                 {% if g.user %}
-                                <li class="px-3 py-1">
-                                    <strong>{{ g.user.username }}</strong> 님
+                                <li class="px-3 py-2 text-center border-bottom mb-2" style="background-color: #f8f9fa;">
+                                    <strong class="text-dark">{{ g.user.username }} 님</strong>
+                                    <div class="mt-1" style="font-size: 0.85rem; color: #ff9500; font-weight: 700;">
+                                        <i class="bi bi-p-circle-fill me-1"></i>{{ "{:,}".format(g.user.point) }} P
+                                    </div>
                                 </li>
-                                <li>
-                                    <hr class="dropdown-divider">
-                                </li>
+
                                 <li>
                                     <a class="dropdown-item" href="{{ url_for('auth.mypage') }}">마이페이지</a>
                                 </li>
@@ -292,7 +293,10 @@
                                     <a class="dropdown-item" href="{{ url_for('order.my_orders') }}">주문/배송조회</a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item text-danger fw-bold" href="{{ url_for('auth.logout') }}">
                                         로그아웃
                                     </a>
                                 </li>
