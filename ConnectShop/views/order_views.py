@@ -103,10 +103,11 @@ def cleanup_old_carts():
 # --- Routes ---
 @bp.route('/list')
 def _list():
-    # 1. 여기서 우리가 고친 '가공된' 리스트를 가져옵니다.
+    if g.user:
+        cleanup_old_carts()
+
     cart_list = get_cart_items()
 
-    # [디버깅] 서버 터미널에 진짜로 데이터가 담겼는지 마지막으로 찍어봅니다.
     if cart_list:
         print(f"--- [최종체크] 첫번째 아이템 옵션: {getattr(cart_list[0], 'selected_options', '없음')}")
 
@@ -184,10 +185,19 @@ def add(product_id):
         # 옵션가가 포함된 단가(item.price)를 사용하여 합계 계산
         product_total_val = sum(item.price * item.quantity for item in current_cart_list)
 
+        shipping_fee = 3000
+        if product_total_val == 0 or (g.user and getattr(g.user, 'is_membership', False)):
+            shipping_fee = 0
+        final_total = product_total_val + shipping_fee
+
         return jsonify({
             'success': True,
             'cart_count': total_count,
-            'total_price': "{:,}".format(product_total_val)
+            'pure_total': "{:,}".format(product_total_val),       # 상품 총액
+            'total_price': "{:,}".format(final_total),            # 최종 결제 예정 금액
+            'shipping_fee': "{:,}".format(shipping_fee),          # 배송비
+            'raw_pure_total': product_total_val,                  # JS 판별용 숫자
+            'raw_total_price': final_total                        # JS 판별용 숫자
         })
 
     return redirect(url_for('order._list'))
@@ -329,7 +339,7 @@ def modify(cart_id, action):
 @bp.route('/delete/<int:cart_id>')
 def delete(cart_id):
     if g.user:
-        cart_item = db.session.get(Cart, cart_id) # 최신 버전은 get(Model, id) 권장
+        cart_item = db.session.get(Cart, cart_id)
         if cart_item and cart_item.user_id == g.user.id:
             db.session.delete(cart_item)
             db.session.commit()
@@ -340,7 +350,24 @@ def delete(cart_id):
             save_guest_cart(guest_cart)
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({"success": True})
+        # 🌟 삭제 후 남은 아이템들로 합계를 다시 계산합니다.
+        cart_list = get_cart_items()
+        pure_total = sum(item.price * item.quantity for item in cart_list)
+        total_count = sum(item.quantity for item in cart_list)
+
+        # 배송비 로직 (3,000원 혹은 멤버십 0원)
+        shipping_fee = 3000
+        if pure_total == 0 or (g.user and getattr(g.user, 'is_membership', False)):
+            shipping_fee = 0
+
+        return jsonify({
+            "success": True,
+            "pure_total": format(pure_total, ','),       # 천단위 콤마 문자열
+            "total_price": format(pure_total + shipping_fee, ','),
+            "cart_count": total_count,
+            "raw_pure_total": pure_total,                # 배송비 판별용 숫자
+            "raw_total_price": pure_total + shipping_fee  # 배송비 판별용 숫자
+        })
 
     return redirect(url_for('order._list'))
 
@@ -410,184 +437,164 @@ def checkout():
                            # 🌟 [추가] 템플릿에서 쓸 수 있도록 쿠폰 ID를 넘겨줍니다.
                            pre_selected_coupon_id=coupon_id)
 
+
 @bp.route('/save_temp_info', methods=['POST'])
 def save_temp_info():
     data = request.get_json()
+
+    print("=" * 50)
+    print(f"브라우저에서 넘어온 데이터: {data}")
+
+    # JS에서 보낸 적립금이 있다면 그걸 쓰고, 없으면 0으로 저장
+    reward_point = data.get('reward_point', 0)
+    session['calculated_reward_point'] = reward_point
+
+    print(f"세션에 저장될 적립금: {session['calculated_reward_point']}")
+    print("=" * 50)
+
+    # 1. 기존 배송 정보 저장
     session['temp_recipient'] = data.get('recipient')
     session['temp_phone'] = data.get('phone')
     session['temp_address'] = data.get('address')
-    session['applied_coupon_id'] = data.get('coupon_id')
     session['temp_memo'] = data.get('memo')
-    return jsonify({"success": True})
+    session['cash_receipt_apply'] = data.get('cash_receipt_apply', False)
+    session['cash_receipt_type'] = data.get('cash_receipt_type')
+    session['cash_receipt_number'] = data.get('cash_receipt_number')
+
+    # 2. 쿠폰 및 적립금 사전 계산 (박제 로직)
+    coupon_id = data.get('coupon_id')
+    session['applied_coupon_id'] = coupon_id  # 세션에 쿠폰 ID 고정
+
+    # [중요] 장바구니 상품 총액 (get_cart_items 활용)
+    cart_items = get_cart_items()
+    pure_product_total = sum(item.price * item.quantity for item in cart_items)
+
+    # 쿠폰 할인액 계산
+    discount_val = 0
+    if coupon_id and g.user:
+        coupon = db.session.get(Coupon, coupon_id)
+        if coupon and not coupon.is_used:
+            discount_val = coupon.discount_amount
+
+    return jsonify({
+        "success": True,
+        "debug_reward": reward_point  # 확인용 (생략 가능)
+    })
 
 
 @bp.route('/success')
 def success():
+    # --- [데이터 수집] ---
+    payment_type = request.args.get('paymentType')
     payment_key = request.args.get('paymentKey')
     order_id = request.args.get('orderId')
     amount = request.args.get('amount')
 
-    # 세션에서 쿠폰 ID 가져오기
+    # --- [변수 초기화] --- 🌟 무조건 맨 위에서 선언하세요!
+    cart_items = get_cart_items() # 함수 시작하자마자 장바구니부터 챙깁니다.
+    applied_coupon = None
     coupon_id = session.get('applied_coupon_id')
+    reward_point = session.get('calculated_reward_point', 0)
+    is_success = False
+    res_data = {}
 
-    # 토스페이먼츠 승인 API 호출 설정
-    secret_key = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6" + ":"
-    encoded_key = base64.b64encode(secret_key.encode()).decode()
-    url = "https://api.tosspayments.com/v1/payments/confirm"
-    headers = {"Authorization": f"Basic {encoded_key}", "Content-Type": "application/json"}
+    # --- [결제 승인 로직] ---
+    if payment_type == 'VBANK':
+        is_success = True
+        res_data = {'method': '무통장입금'}
+    else:
+        secret_key = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6" + ":"
+        encoded_key = base64.b64encode(secret_key.encode()).decode()
+        url = "https://api.tosspayments.com/v1/payments/confirm"
+        headers = {"Authorization": f"Basic {encoded_key}", "Content-Type": "application/json"}
 
-    response = requests.post(url, json={
-        "paymentKey": payment_key, "orderId": order_id, "amount": amount
-    }, headers=headers)
+        try:
+            response = requests.post(url, json={
+                "paymentKey": payment_key, "orderId": order_id, "amount": amount
+            }, headers=headers)
+            res_data = response.json()
+            if response.status_code == 200:
+                is_success = True
+            else:
+                flash(f"결제 승인 실패: {res_data.get('message')}")
+                return redirect(url_for('order.checkout'))
+        except Exception as e:
+            flash(f"통신 오류: {str(e)}")
+            return redirect(url_for('order.checkout'))
 
-    res_data = response.json()
+    # --- [결제 성공 후 DB 작업] ---
+    if is_success:
+        # 1. 쿠폰 정보 확보
+        if coupon_id:
+            applied_coupon = db.session.get(Coupon, coupon_id)
 
-    if response.status_code == 200:
-        # 1. 쿠폰 할인액 재검증 및 사용 처리
-        discount_amount = 0
-        if coupon_id and g.user:
-            coupon = Coupon.query.filter_by(id=coupon_id, user_id=g.user.id, is_used=False).first()
-            if coupon:
-                discount_amount = coupon.discount_amount
-                coupon.is_used = True
-                coupon.used_date = datetime.now()
+        # 2. 적립금 재확인 (세션 유실 대비 & 14,999P 방멸 로직)
+        if reward_point == 0 and g.user and g.user.is_membership:
+            pure_total = sum(item.price * item.quantity for item in cart_items)
+            discount_val = applied_coupon.discount_amount if applied_coupon else 0
+            # 🌟 여기서 14,999P가 안 나오게 정확히 0.03(3%)을 곱합니다.
+            reward_point = int((pure_total - discount_val) * 0.03)
 
-        memo = session.get('temp_memo')
-
-        cart_items = get_cart_items()
-        pure_product_total = sum(item.price * item.quantity for item in cart_items)
-
-        # 2. 멤버십일 때만 순수 상품 금액의 3% 계산
-        reward_point = 0
-        if g.user and g.user.is_membership:
-            # 결제 총액(amount)이 아니라 pure_product_total을 사용합니다.
-            discount = coupon.discount_amount if coupon else 0
-            reward_base = pure_product_total - discount
-            reward_point = int(reward_base * 0.03)
-            print(f"--- [계산체크] 상품총액: {pure_product_total}원 -> 적립금: {reward_point}원")
-
-        # 2. 주문 객체 생성 (UnboundLocalError 해결을 위해 바로 생성)
+        # 3. 주문(Order) 데이터 생성
         order = Order(
             user_id=g.user.id if g.user else None,
             recipient=session.get('temp_recipient'),
             phone=session.get('temp_phone'),
             address=session.get('temp_address'),
-            memo=memo,
+            memo=session.get('temp_memo'),
             total_price=int(amount),
             reward_point=reward_point,
             is_point_paid=False,
             payment_method=res_data.get('method', '카드/간편결제'),
-            status='결제완료',
-            coupon_id=coupon_id  # 모델에 컬럼이 있는 경우
+            status='결제완료' if payment_type != 'VBANK' else '입금대기',
+            coupon_id=coupon_id,
+            cash_receipt_apply=session.get('cash_receipt_apply', False),
+            cash_receipt_type=session.get('cash_receipt_type'),
+            cash_receipt_number=session.get('cash_receipt_number')
         )
 
-        db.session.add(order)
-        db.session.commit()  # ID 생성을 위해 먼저 커밋
+        # 4. 쿠폰 사용 처리
+        if applied_coupon:
+            applied_coupon.is_used = True
+            applied_coupon.used_date = datetime.now()
 
-        # 3. 주문 아이템 생성 및 재고 차감
-        # 주의: get_cart_items() 함수를 호출하여 리스트를 가져와야 합니다.
-        cart_items = get_cart_items()
-        for cart in cart_items:
+        db.session.add(order)
+        db.session.flush() # order.id 생성을 위해 flush
+
+        # 5. 주문 상세 내역 및 재고 차감 (이제 cart_items 에러 절대 안 남)
+        for item in cart_items:
             order_item = OrderItem(
                 order_id=order.id,
-                # cart.product 객체 안에 있는 id를 가져옵니다.
-                product_id=cart.product.id,
-                quantity=cart.quantity,
-                price=cart.price,
-                selected_options=cart.selected_options
+                product_id=item.product.id,
+                quantity=item.quantity,
+                price=item.price,
+                selected_options=getattr(item, 'selected_options', '')
             )
-
             db.session.add(order_item)
 
-            # 재고 차감
-            product = db.session.get(Product, cart.product.id)  # cart.product.id 사용
+            product = db.session.get(Product, item.product.id)
             if product:
-                product.stock -= cart.quantity
+                product.stock -= item.quantity
 
-        # 4. 장바구니 비우기 및 세션 정리
+        # 6. 장바구니 비우기 및 세션 정리
         if g.user:
             Cart.query.filter_by(user_id=g.user.id).delete()
         else:
             session.pop('guest_cart', None)
 
-        session.pop('applied_coupon_id', None)
-        session.pop('temp_recipient', None)
-        session.pop('temp_phone', None)
-        session.pop('temp_address', None)
-        session.pop('temp_memo', None)
-
+        # 사용한 세션 키 정리
+        keys_to_pop = ['applied_coupon_id', 'calculated_reward_point', 'temp_recipient',
+                       'temp_phone', 'temp_address', 'temp_memo', 'cash_receipt_apply',
+                       'cash_receipt_type', 'cash_receipt_number']
+        for key in keys_to_pop:
+            session.pop(key, None)
 
         db.session.commit()
-
         return render_template('order/order_complete.html', order=order, order_id=order.id)
+
     else:
-        # 결제 실패 시 에러 메시지와 함께 리다이렉트
-        flash(f"결제 승인 실패: {res_data.get('message')}")
+        flash("결제에 실패하였습니다.")
         return redirect(url_for('order.checkout'))
-
-
-@bp.route('/place_order', methods=['POST'])
-def place_order():
-    recipient = request.form.get('recipient')
-    phone = request.form.get('phone')[:13]
-    address = f"{request.form.get('address')} {request.form.get('address_detail')}"
-    payment_method = request.form.get('payment_method')
-
-    cart_list = get_cart_items()
-    if not cart_list:
-        flash("장바구니가 비어 있습니다.")
-        return redirect(url_for('main.index'))
-
-    for item in cart_list:
-        if item.product.stock < item.quantity:
-            flash(f"죄송합니다. '{item.product.name}' 상품의 재고가 부족합니다. (남은 수량: {item.product.stock}개)")
-            return redirect(url_for('cart.view_cart'))
-
-    total_price = sum(item.product.price * item.quantity for item in cart_list)
-
-    new_order = Order(
-        user_id=g.user.id if g.user else None,
-        recipient=recipient,
-        phone=phone,
-        address=address,
-        total_price=total_price,
-        payment_method=payment_method,
-        status='결제완료'
-    )
-    db.session.add(new_order)
-
-    for item in cart_list:
-        order_item = OrderItem(
-            order=new_order,
-            product_id=item.product.id,
-            quantity=item.quantity,
-            price=item.product.price
-        )
-        db.session.add(order_item)
-
-        product = Product.query.get(item.product.id)
-        if product:
-            product.stock -= item.quantity
-
-    if g.user:
-        Cart.query.filter_by(user_id=g.user.id).delete()
-    else:
-        session.pop('guest_cart', None)
-
-    db.session.commit()
-
-    flash("주문이 성공적으로 완료되었습니다!")
-    return redirect(url_for('order.order_complete', order_id=new_order.id))
-@bp.route('/complete/<int:order_id>')
-def order_complete(order_id):
-    order = db.session.get(Order, order_id)
-
-    if not order:
-        return redirect(url_for('main.index'))
-
-    return render_template('order/order_complete.html', order=order)
-
-
 
 @bp.route('/my_orders')
 @login_required
@@ -680,7 +687,7 @@ def cancel_order(order_id):
         flash("취소 권한이 없습니다. 정보가 일치하는지 확인하세요.")
         return redirect(request.referrer or url_for('main.index'))
 
-    if order.status == '결제완료':
+    if order.status in ['결제완료', '입금대기']:
         for item in order.items:
             product = Product.query.get(item.product_id)
             if product:
@@ -696,7 +703,7 @@ def cancel_order(order_id):
         db.session.commit()
         flash(f"주문 #{order_id}번 건이 정상적으로 취소되었습니다.")
     else:
-        flash("이미 배송 중이거나 취소된 주문은 처리할 수 없습니다.")
+        flash(f"현재 상태('{order.status}')에서는 취소할 수 없습니다. 이미 배송 중이거나 취소된 주문인지 확인해주세요.")
 
     return redirect(url_for('order.order_detail', order_id=order_id))
 

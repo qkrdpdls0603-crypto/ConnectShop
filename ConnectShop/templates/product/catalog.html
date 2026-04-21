@@ -43,11 +43,6 @@
                                 <a href="{{ url_for('product.page', product_id=product.id) }}"
                                    class="btn btn-dark w-100 rounded-pill btn-sm mb-2">상세보기</a>
 
-                                <button type="button"
-                                        onclick="addCartCatalog('{{ product.id }}')"
-                                        class="btn btn-outline-primary w-100 rounded-pill btn-sm">
-                                    <i class="bi bi-cart-plus me-1"></i> 담기
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -146,34 +141,7 @@ function moveSlide(index, direction) {
     }
 }
 
-// 🌟 공통 장바구니 담기
-async function addCartCatalog(productId) {
-    try {
-        const response = await fetch(`/order/add/${productId}`, {
-            method: 'POST',
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
 
-        const data = await response.json();
-
-        if (data.success) {
-            // 1. 장바구니로 바로 가겠냐고 물어봄
-            if (confirm("장바구니에 상품을 담았습니다. 장바구니로 이동하시겠습니까?")) {
-
-                location.href = "{{ url_for('order._list') }}";
-            } else {
-                location.reload();
-            }
-        } else {
-            alert(data.message || "장바구니 담기에 실패했습니다.");
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        alert("통신 오류가 발생했습니다.");
-    }
-}
 
 // 🌟 팀장님의 찜하기(하트) 토글 함수
 // 🌟 무적의 찜하기(하트) 토글 로직

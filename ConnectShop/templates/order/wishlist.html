@@ -33,10 +33,8 @@
                     <p class="text-primary fw-bold mb-3">{{ "{:,}".format(product.price) }}원</p>
 
                     <div class="mt-auto">
-                        <button type="button" onclick="addCartCatalog('{{ product.id }}')"
-                                class="btn btn-outline-dark w-100 rounded-pill btn-sm py-2 fw-medium">
-                            <i class="bi bi-cart-plus me-1"></i> 장바구니 담기
-                        </button>
+                        <a href="{{ url_for('product.page', product_id=product.id) }}"
+                                   class="btn btn-dark w-100 rounded-pill btn-sm mb-2">상세보기</a>
                     </div>
                 </div>
             </div>
@@ -67,12 +65,27 @@ async function addCartCatalog(productId) {
     try {
         const response = await fetch(`/order/add/${productId}`, {
             method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ quantity: 1, options: "" })
         });
+
         const data = await response.json();
+
         if (data.success) {
-            if (confirm("장바구니에 상품을 담았습니다.\n지금 확인하시겠습니까?")) {
+            const cartBadge = document.getElementById('cart-count-badge');
+            if (cartBadge) cartBadge.innerText = data.cart_count;
+
+            if (typeof updateAllTotalDisplays === 'function') {
+                updateAllTotalDisplays(data);
+            }
+
+            if (confirm("장바구니에 상품을 담았습니다. 장바구니에서 확인하시겠습니까?")) {
                 location.href = "{{ url_for('order._list') }}";
+            } else {
+                location.reload();
             }
         } else {
             alert(data.message || "장바구니 담기에 실패했습니다.");

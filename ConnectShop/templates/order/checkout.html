@@ -41,8 +41,42 @@
             </div>
 
             <div class="form-section">
-                <div id="payment-method"></div>
-                <div id="agreement"></div>
+                <h2 class="section-title">결제 수단 선택</h2>
+                <div class="payment-selector-group" style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <label class="method-card" style="flex: 1; border: 2px solid #007bff; padding: 15px; border-radius: 12px; cursor: pointer;">
+                        <input type="radio" name="payment_main_method" value="TOSS" checked style="margin-right: 8px;">
+                        <strong>카드 / 간편결제</strong>
+                    </label>
+                    <label class="method-card" style="flex: 1; border: 1px solid #ddd; padding: 15px; border-radius: 12px; cursor: pointer;">
+                        <input type="radio" name="payment_main_method" value="VBANK" style="margin-right: 8px;">
+                        <strong>무통장 입금</strong>
+                    </label>
+                </div>
+
+                <div id="toss-widget-container">
+                    <div id="payment-method"></div>
+                    <div id="agreement"></div>
+                </div>
+
+                <div id="vbank-info-container" class="d-none" style="padding: 20px; background: #f8f9fa; border-radius: 12px;">
+                    <h5 class="fw-bold mb-3">무통장 입금 정보</h5>
+                    <p class="text-muted small mb-3">계좌번호: [우리은행 1002-xxx-xxxxxx 커넥트샵]</p>
+
+                    <hr>
+
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="cash_receipt_check">
+                        <label class="form-check-label" for="cash_receipt_check">현금영수증 신청</label>
+                    </div>
+
+                    <div id="cash_receipt_fields" class="d-none mt-3">
+                        <div class="d-flex gap-3 mb-2">
+                            <label><input type="radio" name="cr_type" value="개인" checked> 개인(소득공제)</label>
+                            <label><input type="radio" name="cr_type" value="사업자"> 사업자(지출증빙)</label>
+                        </div>
+                        <input type="text" id="cr_number" class="form-control" placeholder="전화번호 또는 사업자번호 ('-' 제외)">
+                    </div>
+                </div>
             </div>
         </form>
     </div>
@@ -87,7 +121,7 @@
             <span>멤버십 적립 (3%)</span>
             <span id="display-reward">
                 {% if g.user and g.user.is_membership %}
-                    {% set initial_reward = ((total_price|int - (0 if g.user.is_membership else 3000)) * 0.03)|int %}
+                    {% set initial_reward = (product_total * 0.03)|int %}
                     +{{ "{:,}".format(initial_reward) }}원
                 {% else %}
                     0원
@@ -215,7 +249,7 @@ document.addEventListener("DOMContentLoaded", async function() {
         // 🌟 적립 예정 금액 표시 업데이트
         const rewardDisplay = document.getElementById('display-reward');
         if (rewardDisplay) {
-            rewardDisplay.innerText = (rewardPoint > 0 ? "+" : "") + rewardPoint.toLocaleString() + "원";
+            rewardDisplay.innerText = (rewardPoint > 0 ? "+" : "") + rewardPoint.toLocaleString() + "P";
         }
 
         // 총 결제 금액 표시
@@ -243,10 +277,26 @@ document.addEventListener("DOMContentLoaded", async function() {
         const address_detail = document.getElementById('address_detail').value.trim();
         const couponId = document.getElementById('coupon-select').value;
 
+        const mainMethod = document.querySelector('input[name="payment_main_method"]:checked').value;
+
+        const rewardText = document.getElementById('display-reward').innerText;
+        const calculatedReward = parseInt(rewardText.replace(/[^0-9]/g, "")) || 0;
+
+        const isCashReceipt = document.getElementById('cash_receipt_check')?.checked || false;
+        const crType = document.querySelector('input[name="cr_type"]:checked')?.value || null;
+        const crNumber = document.getElementById('cr_number')?.value.trim() || null;
+
+        console.log("서버로 보내는 적립금:", calculatedReward);
+
         const memoSelect = document.getElementById('shipping-memo-select');
         let finalMemo = memoSelect.value;
         if (finalMemo === 'direct') {
             finalMemo = document.getElementById('direct-memo-input').value.trim();
+        }
+
+        if (isCashReceipt && !crNumber) {
+            alert("현금영수증 발급 번호를 입력해주세요.");
+            return;
         }
 
         if (!recipient || !phone || !address) { alert("배송 정보를 모두 입력해주세요."); return; }
@@ -266,20 +316,28 @@ document.addEventListener("DOMContentLoaded", async function() {
                     phone: phone,
                     address: address + " " + address_detail,
                     coupon_id: couponId !== "0" ? couponId : null,
-                    memo: finalMemo
+                    memo: finalMemo,
+                    cash_receipt_apply: isCashReceipt,
+                    cash_receipt_type: crType,
+                    cash_receipt_number: crNumber,
+                    reward_point: calculatedReward
                 })
             });
 
             if (!response.ok) throw new Error("세션 저장 실패");
 
-            // 토스 결제 실행
-            await widgets.requestPayment({
-                orderId: "order_temp_{{ now_ts }}",
-                orderName: "ConnectShop 상품 결제",
-                successUrl: window.location.origin + "/order/success",
-                failUrl: window.location.origin + "/order/fail",
-                customerName: recipient,
-            });
+            if (mainMethod === 'TOSS') {
+                await widgets.requestPayment({
+                    orderId: "order_temp_{{ now_ts }}",
+                    orderName: "ConnectShop 상품 결제",
+                    successUrl: window.location.origin + "/order/success",
+                    failUrl: window.location.origin + "/order/fail",
+                    customerName: recipient,
+                });
+            } else {
+                const amount = document.getElementById('payment-button').innerText.replace(/[^0-9]/g, "");
+                window.location.href = `/order/success?paymentType=VBANK&orderId=vbank_{{ now_ts }}&amount=${amount}`;
+            }
         } catch (error) {
             console.error("결제 중 오류 발생:", error);
             alert("결제 처리 중 오류가 발생했습니다.");
@@ -318,6 +376,34 @@ document.addEventListener("DOMContentLoaded", async function() {
             directInput.value = '';
         }
     };
+});
+
+
+// 1. 결제 수단 라디오 버튼 감지
+document.querySelectorAll('input[name="payment_main_method"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const tossContainer = document.getElementById('toss-widget-container');
+        const vbankContainer = document.getElementById('vbank-info-container');
+
+        // 시각적 피드백 (테두리 강조)
+        document.querySelectorAll('.method-card').forEach(card => card.style.borderColor = '#ddd');
+        this.parentElement.style.borderColor = '#007bff';
+
+        if (this.value === 'VBANK') {
+            tossContainer.classList.add('d-none');
+            vbankContainer.classList.remove('d-none');
+        } else {
+            tossContainer.classList.remove('d-none');
+            vbankContainer.classList.add('d-none');
+        }
+    });
+});
+
+// 2. 현금영수증 체크박스 토글
+document.getElementById('cash_receipt_check').addEventListener('change', function() {
+    const fields = document.getElementById('cash_receipt_fields');
+    if (this.checked) fields.classList.remove('d-none');
+    else fields.classList.add('d-none');
 });
 </script>
 {% endblock %}

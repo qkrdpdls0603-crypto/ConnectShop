@@ -563,6 +563,14 @@
             const qtySpan = document.querySelector(`.qty-item-${cartId}`);
             if (!qtySpan) return;
 
+            const currentQty = parseInt(qtySpan.innerText);
+            if (action === 'dec' && currentQty === 1) {
+                // 사용자에게 확인을 받고, '취소'를 누르면 함수 종료
+                if (!confirm("상품을 장바구니에서 삭제하시겠습니까?")) {
+                    return;
+                }
+            }
+
             try {
                 const response = await fetch(`/order/modify/${cartId}/${action}`, {
                     method: 'POST',
