@@ -233,7 +233,7 @@
                     {% for p in recommended_products %}
                     <div class="product-card-mini" onclick="location.href='{{ url_for('product.page', product_id=p.id) }}'">
                         <div class="product-img-box">
-                            <img src="/static/images/menu/{{ p.image_path }}" alt="{{ p.name }}">
+                            <img src="/static/images/menu/{{ p.image_path }}" alt="{{ p.name }}" draggable="false">
                         </div>
                         <div class="product-info-box">
                             <span class="brand-tag">{{ p.brand }}</span>
@@ -727,9 +727,47 @@ function toggleWishlist(event, productId, btnElement) {
     .catch(error => console.error('Error:', error));
 }
 
+/* 1. 뒤로가기 시 페이지 새로고침 (기존 로직 유지) */
 window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
         location.reload();
+    }
+});
+
+/* 2. 드래그 스크롤 변수 선언 */
+const slider = document.querySelector('.product-scroll-container');
+let isDown = false;
+let startX;
+let scrollLeft;
+
+/* 3. 드래그 시작 (클릭은 슬라이더 위에서만!) */
+slider.addEventListener('mousedown', (e) => {
+    isDown = true;
+    slider.classList.add('active');
+
+    // 클릭 위치와 현재 스크롤 위치 저장
+    startX = e.pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+
+    // 이미지 고스트 방지 (이미지 클릭 시 브라우저가 잡고 끌려는 동작 차단)
+    if (e.target.tagName === 'IMG') e.preventDefault();
+});
+
+/* 4. 드래그 중 (마우스가 슬라이더 밖을 나가도 계속 추적!) */
+window.addEventListener('mousemove', (e) => {
+    if (!isDown) return; // 마우스 버튼을 누른 상태가 아니면 무시
+
+    e.preventDefault();
+    const x = e.pageX - slider.offsetLeft;
+    const walk = (x - startX) * 1;
+    slider.scrollLeft = scrollLeft - walk;
+});
+
+/* 5. 드래그 종료 (어디서 떼든 확실하게 상태 해제) */
+window.addEventListener('mouseup', () => {
+    if (isDown) {
+        isDown = false;
+        slider.classList.remove('active');
     }
 });
 </script>
