@@ -112,13 +112,21 @@
 </style>
 
 <script>
-// 🌟 팀원의 슬라이더 이동 스크립트 
+// 애니메이션 중인지 확인하는 변수 (여러 슬라이더가 있다면 객체 형태로 관리)
+let isMoving = {};
+
 function moveSlide(index, direction) {
+    // 해당 인덱스의 슬라이더가 이미 움직이고 있다면 함수 종료
+    if (isMoving[index]) return;
+
     const track = document.getElementById(`product-track-${index}`);
     const items = track.querySelectorAll('.product-card-item');
     if (items.length <= 1) return;
 
     const cardWidth = items[0].offsetWidth;
+
+    // 움직임 시작!
+    isMoving[index] = true;
 
     if (direction === 1) {
         track.style.transition = "transform 0.4s ease-in-out";
@@ -128,6 +136,9 @@ function moveSlide(index, direction) {
             track.style.transition = "none";
             track.appendChild(track.firstElementChild);
             track.style.transform = `translateX(0)`;
+
+            // 애니메이션이 완전히 끝난 후(0.4초 뒤) 다시 클릭 가능하게 변경
+            isMoving[index] = false;
         }, 400);
     } else {
         track.style.transition = "none";
@@ -137,6 +148,11 @@ function moveSlide(index, direction) {
         setTimeout(() => {
             track.style.transition = "transform 0.4s ease-in-out";
             track.style.transform = `translateX(0)`;
+
+            // 애니메이션이 완전히 끝난 후 다시 클릭 가능하게 변경
+            setTimeout(() => {
+                isMoving[index] = false;
+            }, 400);
         }, 10);
     }
 }

@@ -207,7 +207,6 @@
                             </button>
                         </div>
                     </div>
-
                     <div class="text-center">
                         <span class="text-muted delivery-date" style="font-size: 0.85rem;">
                             <i class="bi bi-truck me-1"></i> 로딩 중...
@@ -249,8 +248,7 @@
 <section id="section-reviews" class="py-5">
     <div class="container">
         <div class="product-reviews mt-5 pt-4 border-top">
-            <h4 class="fw-bold mb-4">상품 리뷰</h4>
-
+            <h4 class="fw-bold mb-4" id="reviews">상품 리뷰</h4>
             {% if g.user %}
                 {% if has_reviewed %}
                     <div class="alert alert-info text-center rounded-4 py-4 mb-5 shadow-sm border-0 bg-light">
