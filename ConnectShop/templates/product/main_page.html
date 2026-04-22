@@ -79,7 +79,7 @@
             </div>
             <div class="content-overlay position-absolute translate-middle"
                  style="top: {{ top_pos }}; left: {{ start_pos }};">
-                <button class="btn btn-dark rounded-pill shadow-lg">구매하기</button>
+                <div class="btn btn-dark rounded-pill shadow-lg">구매하기</div>
             </div>
         </a>
     </section>
@@ -105,9 +105,10 @@
                 <a href="{{ url_for('product.page', product_id=product.id) }}" class="text-decoration-none text-dark">
                     <div class="product-card bg-secondary-subtle rounded-3 overflow-hidden shadow-sm" style="height: 500px; display: flex; flex-direction: column;">
 
-                        <div class="image-area" style="height: 75%; overflow: hidden;">
+                        <div class="image-area d-flex align-items-center justify-content-center bg-light" style="height: 75%; overflow: hidden; padding: 20px;">
                             <img src="{{ url_for('static', filename='images/menu/' + product.image_path) }}"
-                                 class="w-100 h-100 object-fit-cover"
+                                 class="img-fluid"
+                                 style="max-width: 100%; max-height: 100%; object-fit: contain;"
                                  alt="{{ product.name }}">
                         </div>
 

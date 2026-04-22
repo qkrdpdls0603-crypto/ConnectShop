@@ -69,19 +69,23 @@
     justify-content: center;   /* 가로 중앙 정렬 */
 }
 
+/* 수정 전: .temp-slider-box */
 .temp-slider-box {
+    width: 85%;
+    max-width: 500px;
+    aspect-ratio: 1 / 1;
+    border-radius: 20px;
+    overflow: hidden;
+    background-color: #fff;
+}
+
+/* 수정 전: .temp-slider-box img */
+.temp-slider-box img {
     width: 100%;
     height: 100%;
     /* 핵심 수정: cover(자르기) 대신 contain(다 보여주기) 사용 */
     object-fit: contain;
     padding: 20px;           /* 이미지와 박스 테두리 사이에 여백 주기 */
-    transition: transform 0.3s ease;
-}
-
-.temp-slider-box img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* 이미지가 꽉 차게 (여백을 원하면 contain으로 변경) */
     transition: transform 0.3s ease;
 }
 
@@ -125,12 +129,24 @@
     background-color: #f0f7ff;
 }
 
-/* 추천 섹션 스타일 */
+/* 추천 상품 컨테이너: 가로 스크롤의 핵심 */
 .product-scroll-container {
     width: 100%;
-    overflow-x: auto; /* 가로 스크롤 활성화 */
+    overflow-x: auto;         /* 가로로 넘치면 스크롤 생성 */
+    overflow-y: hidden;       /* 세로 스크롤은 방지 */
+    white-space: nowrap;      /* 내부 요소들이 줄바꿈되지 않게 함 */
     padding-bottom: 20px;
     -webkit-overflow-scrolling: touch; /* 모바일 부드러운 스크롤 */
+
+    /* 아까 추가한 드래그 관련 설정 */
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: grab;
+}
+
+/* 스크롤 버튼을 누르고 있을 때 */
+.product-scroll-container:active {
+    cursor: grabbing;
 }
 
 /* 스크롤바 디자인 */
@@ -143,8 +159,9 @@
 }
 
 .product-scroll-wrapper {
-    display: flex;
-    gap: 20px; /* 카드 사이 간격 */
+    display: inline-flex;     /* flex 대신 inline-flex를 써서 가로 폭을 내용만큼 확장 */
+    gap: 20px;                /* 카드 사이 간격 */
+    padding: 10px 5px;        /* 카드 그림자가 잘리지 않게 여유 공간 */
 }
 
 /* 미니 제품 카드 */

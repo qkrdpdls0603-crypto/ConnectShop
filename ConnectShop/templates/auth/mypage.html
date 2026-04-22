@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='mstyle.css') }}">
 
 <div class="mypage-header-wrap">
@@ -118,7 +119,7 @@
                 <span class="status-label">배송중</span>
                 <span class="status-count">{{ shipping_count or 0 }}</span>
             </a>
-            <div class="status-item">
+            <div class="status-item" onclick="openConfirmModal()" style="cursor:pointer;">
                 <div class="icon-box">
                     <img src="{{ url_for('static', filename='images/mp/c1.png') }}" width="24" height="24">
                 </div>
@@ -148,31 +149,33 @@
 
 
         <section class="modern-section">
-			<div class="section-header">
-				<h3 class="fw-bold">나의 제품 관리</h3>
-				<a href="{{ url_for('order.my_orders') }}" class="view-all-btn">전체보기 <i class="bi bi-chevron-right"></i></a>
-			</div>
+            <div class="section-header">
+                <h3 class="fw-bold">나의 제품 관리</h3>
+                <a href="{{ url_for('order.my_orders') }}" class="view-all-btn">전체보기 <i
+                        class="bi bi-chevron-right"></i></a>
+            </div>
 
-			<div class="product-grid-modern">
-				{% for product in confirmed_products %}
-				<div class="product-item-card">
-					<a href="{{ url_for('product.page', product_id=product.id) }}" class="card-link">
-						<div class="img-wrapper">
-							<img src="{{ url_for('static', filename='images/menu/' ~ product.image_path) }}" alt="{{ product.name }}">
-						</div>
-						<div class="product-info-box">
-							<span class="brand-tag">
-								<img src="{{ url_for('static', filename='images/logos/' + product.brand + '.svg') }}"
-									alt="{{ product.brand }} 로고"
-									style="height: 1.2em; width: auto; object-fit: contain; vertical-align: middle;">
-							</span>
-							<p class="product-name-label">{{ product.name }}</p>
-						</div>
-					</a>
-				</div>
-				{% endfor %}
-			</div>
-		</section>
+            <div class="product-grid-modern">
+                {% for product in confirmed_products %}
+                <div class="product-item-card">
+                    <a href="{{ url_for('product.page', product_id=product.id) }}" class="card-link">
+                        <div class="img-wrapper">
+                            <img src="{{ url_for('static', filename='images/menu/' ~ product.image_path) }}"
+                                alt="{{ product.name }}">
+                        </div>
+                        <div class="product-info-box">
+                            <span class="brand-tag">
+                                <img src="{{ url_for('static', filename='images/logos/' + product.brand + '.svg') }}"
+                                    alt="{{ product.brand }} 로고"
+                                    style="height: 1.2em; width: auto; object-fit: contain; vertical-align: middle;">
+                            </span>
+                            <p class="product-name-label">{{ product.name }}</p>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
 
         <section class="modern-section">
             <div class="section-title">
@@ -201,6 +204,7 @@
 
     </div>
 </div>
+
 <div class="modal fade" id="myReviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -217,10 +221,39 @@
     </div>
 </div>
 
+<div class="modal fade" id="confirmOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">구매확정 대기 상품</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="confirm-list-container" class="list-group list-group-flush">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="claimOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">환불/교환 신청</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="claim-list-container" class="list-group list-group-flush">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 <script>
-    /* 서브메뉴 데이터 */
+
     const subMenuData = {
         'account': [
             { name: '회원정보 수정', link: "{{ url_for('auth.me') }}" },
@@ -229,14 +262,15 @@
         ],
         'shopping': [
             { name: '주문/결제내역 ', link: "{{ url_for('order.my_orders') }}" },
-            { name: '환불/교환', link: "{{ url_for('order.my_cancel_list') }}" },
+            { name: '환불/교환', onClick: () => openClaimModal() },
             { name: '주문취소조회', link: "{{ url_for('order.my_cancel_list') }}" },
-            { name: '배송조회', link: "{{ url_for('order.tracking', order_id=latest_shipping_id) if latest_shipping_id else '#' }}" }
-        ],
-        'wishlist': [
-            { name: '나의 찜목록', link: "{{ url_for('order.wishlist') }}" },
-            { name: '재입고알림', link: "{{ url_for('main.preparing') }}" }
-        ],
+            { name: '배송조회', link: {{ (url_for('order.tracking', order_id = latest_shipping_id) if latest_shipping_id else none) | tojson }}
+}
+],
+    'wishlist': [
+        { name: '나의 찜목록', link: "{{ url_for('order.wishlist') }}" },
+        { name: '재입고알림', link: "{{ url_for('main.preparing') }}" }
+    ],
         'coupon': [
             { name: '쿠폰받기/보유쿠폰', link: "{{ url_for('auth.coupons') }}" }
         ]
@@ -251,21 +285,51 @@
 
         listArea.innerHTML = '';
 
-        if (subMenuData[menuKey]) {
-            subMenuData[menuKey].forEach(item => {
-                const li = document.createElement('li');
-                const a = document.createElement('a');
-                a.href = item.link;
-                a.textContent = item.name;
-                li.appendChild(a);
-                listArea.appendChild(li);
-            });
-            displayArea.style.display = 'block';
-        } else {
+        const items = subMenuData[menuKey];
+        if (!items) {
             displayArea.style.display = 'none';
+            return;
         }
-    }
 
+        items.forEach(item => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+
+            a.textContent = item.name;
+
+            if (typeof item.onClick === 'function') {
+                a.href = '#';
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    item.onClick();
+                });
+            }
+
+            else if (item.name === '배송조회' && !item.link) {
+                a.href = '#';
+                a.classList.add('is-disabled');
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    Swal.fire({
+                        icon: "error",
+                        title: "알림",
+                        text: "배송 중인 상품이 없습니다.",
+                        confirmButtonColor: "#3085d6"
+                    });
+                });
+            }
+            // 3) 일반 링크 (link가 없으면 '#'로 처리해서 undefined 이동 방지)
+            else {
+                const link = item.link;
+                a.href = (!link || link === 'undefined' || link === 'null') ? '#' : link;
+            }
+
+            li.appendChild(a);
+            listArea.appendChild(li);
+        });
+
+        displayArea.style.display = 'block';
+    }
     window.onload = function () {
         const firstTab = document.querySelector('.nav-main .nav-item');
         if (firstTab) showSubMenu('account', firstTab);
@@ -286,9 +350,6 @@
         }
     }
 
-    // =========================
-    // 리뷰 모달 + 페이징 + 수정/삭제
-    // =========================
     let currentReviewPage = 1;
 
     function ensureModalOpen() {
@@ -306,7 +367,6 @@
         return res.json();
     }
 
-    // 외부에서 호출: showMyReviews()
     function showMyReviews(page = 1) {
         currentReviewPage = page;
 
@@ -350,7 +410,6 @@
         wrapper.className = 'review-item border-bottom pb-3 mb-3';
         wrapper.id = `review-wrapper-${review.id}`;
 
-        // header
         const head = document.createElement('div');
         head.className = 'd-flex justify-content-between align-items-start';
 
@@ -365,7 +424,6 @@
         head.appendChild(title);
         head.appendChild(ratingSpan);
 
-        // image (optional)
         let imgEl = null;
         if (review.image_url) {
             imgEl = document.createElement('img');
@@ -377,13 +435,11 @@
             imgEl.className = 'mt-2 mb-2 d-block';
         }
 
-        // content
         const contentDiv = document.createElement('div');
         contentDiv.className = 'mt-2 review-content';
         contentDiv.id = `content-display-${review.id}`;
         contentDiv.textContent = review.content || '';
 
-        // buttons
         const btnRow = document.createElement('div');
         btnRow.className = 'text-end mt-2';
 
@@ -412,17 +468,14 @@
         return wrapper;
     }
 
-    // 수정 모드
     function editReviewMode(id, content, rating) {
         const contentDisplay = document.getElementById(`content-display-${id}`);
         const wrapper = document.getElementById(`review-wrapper-${id}`);
         if (!contentDisplay || !wrapper) return;
 
-        // 폼 컨테이너
         const form = document.createElement('div');
         form.className = 'edit-form mt-2';
 
-        // rating select
         const select = document.createElement('select');
         select.id = `edit-rating-${id}`;
         select.className = 'form-select form-select-sm mb-2';
@@ -436,21 +489,18 @@
             select.appendChild(opt);
         });
 
-        // file input (optional)
         const file = document.createElement('input');
         file.type = 'file';
         file.accept = 'image/*';
         file.id = `edit-image-${id}`;
         file.className = 'form-control form-control-sm mb-2';
 
-        // textarea
         const ta = document.createElement('textarea');
         ta.id = `edit-content-${id}`;
         ta.className = 'form-control';
         ta.rows = 3;
         ta.value = content;
 
-        // buttons row
         const btnRow = document.createElement('div');
         btnRow.className = 'text-end mt-2';
 
@@ -474,12 +524,10 @@
         form.appendChild(ta);
         form.appendChild(btnRow);
 
-        // 기존 내용 영역 교체
         contentDisplay.innerHTML = '';
         contentDisplay.appendChild(form);
     }
 
-    // 수정 저장 (이미지 포함 가능 → FormData)
     function updateReview(id) {
         const contentEl = document.getElementById(`edit-content-${id}`);
         const ratingEl = document.getElementById(`edit-rating-${id}`);
@@ -553,6 +601,57 @@
             area.appendChild(li);
         }
     }
-</script>
 
+    function openConfirmModal() {
+        fetch('/order/api/get_delivery_done_items')
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('confirm-list-container');
+                if (data.confirm_list.length > 0) {
+                    container.innerHTML = data.confirm_list.map(item => `
+                    <div class="list-group-item d-flex align-items-center py-3">
+                        <img src="${item.img}" width="60" class="rounded me-3">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">${item.name}</div>
+                            <div class="small text-muted">${item.price.toLocaleString()}원</div>
+                        </div>
+                        <button onclick="processOrder(${item.order_id}, 'confirm')" class="btn btn-sm btn-dark">구매확정</button>
+                    </div>
+                `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-center py-4">구매확정 가능한 상품이 없습니다.</p>';
+                }
+                new bootstrap.Modal(document.getElementById('confirmOrderModal')).show();
+            });
+    }
+
+    function openClaimModal() {
+        fetch('/order/api/get_delivery_done_items')
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('claim-list-container');
+                if (data.claim_list.length > 0) {
+                    container.innerHTML = data.claim_list.map(item => `
+                    <div class="list-group-item d-flex align-items-center py-3">
+                        <img src="${item.img}" width="60" class="rounded me-3">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">${item.name}</div>
+                            <div class="small text-muted">${item.price.toLocaleString()}원</div>
+                        </div>
+                        <div class="btn-group">
+                            <button onclick="location.href='/order/detail/${item.order_id}?action=refund&item_id=${item.id}'"
+                                    class="btn btn-sm btn-outline-danger">환불</button>
+                            <button onclick="location.href='/order/detail/${item.order_id}?action=exchange&item_id=${item.id}'"
+                                    class="btn btn-sm btn-outline-secondary">교환</button>
+                        </div>
+                    </div>
+                `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-center py-4">환불/교환 가능한 상품이 없습니다.</p>';
+                }
+                new bootstrap.Modal(document.getElementById('claimOrderModal')).show();
+            });
+    }
+
+</script>
 {% endblock %}

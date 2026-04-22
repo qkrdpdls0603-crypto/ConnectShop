@@ -2,17 +2,17 @@ import functools
 import requests
 import base64
 import re
-
-from os import abort
-from sqlalchemy import func
 from datetime import datetime, timedelta, timezone
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g, jsonify
+
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.sql.functions import current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+
 from ConnectShop import db
 from ConnectShop.forms import UserCreateForm, UserLoginForm, FindIdForm, ResetPasswordForm
-from ConnectShop.models import User, Coupon, Order, OrderItem, Product, WithdrawnEmail, Cart, MembershipBenefit, Review
+from ConnectShop.models import User, Coupon, Order, OrderItem, Product, WithdrawnEmail, MembershipBenefit, Review
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -74,13 +74,11 @@ def login():
 
     return render_template('auth/login.html', form=form)
 
-
 # 3. 로그아웃
 @bp.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('main.index'))
-
 
 # 4. 아이디(이메일) 찾기
 @bp.route('/find_id', methods=['GET', 'POST'])
@@ -97,7 +95,6 @@ def find_id():
         else:
             flash("가입된 정보가 없습니다.")
     return render_template('auth/find_info.html', find_id_form=find_id_form, reset_pw_form=reset_pw_form)
-
 
 # 5. 비밀번호 재설정
 @bp.route('/find_password', methods=['GET', 'POST'])
@@ -116,7 +113,6 @@ def find_password():
             flash("입력하신 정보와 일치하는 사용자가 없습니다.")
     return render_template('auth/find_info.html', find_id_form=find_id_form, reset_pw_form=reset_pw_form)
 
-
 @bp.before_app_request
 def load_logged_in_user():
     user_id = session.get('user_id')
@@ -124,7 +120,6 @@ def load_logged_in_user():
         g.user = None
     else:
         g.user = User.query.get(user_id)
-
 
 def login_required(view):
     @functools.wraps(view)
@@ -134,7 +129,6 @@ def login_required(view):
         return view(*args, **kwargs)
 
     return wrapped_view
-
 
 @bp.route('/mypage')
 @login_required
@@ -153,7 +147,7 @@ def mypage():
     latest_shipping_id = shipping_orders[0].id if shipping_orders else None
 
     # 4. 배송완료 개수
-    done_count = len([o for o in orders if o.status == '배송완료'])
+    done_count = len([o for o in orders if o.status in ['배송완료', '구매확정']])
 
     # 5. 장바구니 총 수량 계산
     cart_items = get_cart_items()
@@ -207,12 +201,10 @@ def mypage():
         recommended_products=recommended_products
     )
 
-
 @bp.route('/orders')
 @login_required
 def cart_list():
     return render_template('order/cart_list.html')
-
 
 @bp.route('/withdraw', methods=['POST'])
 @login_required
@@ -243,7 +235,6 @@ def withdraw():
         session.clear()
         flash("회원 탈퇴가 완료되었습니다.")
     return redirect(url_for('main.index'))
-
 
 @bp.route('/coupons', endpoint='coupons', methods=['GET'])
 @login_required
@@ -290,7 +281,6 @@ def coupons_page():
         used_coupons=used_coupons
     )
 
-
 # 🌟 에러가 발생했던 쿠폰 발급 함수 완벽 수정!
 @bp.route('/get-welcome-coupon', methods=['POST'])
 @login_required
@@ -328,7 +318,6 @@ def get_welcome_coupon():
 
     flash(msg)
     return redirect(url_for('auth.coupons'))
-
 
 @bp.route('/me', methods=['GET', 'POST'])
 @login_required
@@ -383,21 +372,18 @@ def me():
         coupon_count=coupon_count
     )
 
-
 @bp.route('/membership')
 @login_required
 def membership():
     return render_template('auth/membership.html')
 
-
-@bp.route('/subscribe/success')  # Blueprint prefix가 /auth라면 실제 주소는 /auth/subscribe/success
+@bp.route('/subscribe/success')
 @login_required
 def subscribe_success():
     payment_key = request.args.get('paymentKey')
     order_id = request.args.get('orderId')
     amount = request.args.get('amount')
 
-    # 1. 토스 승인 API 호출 (보안을 위해 필수)
     secret_key = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6" + ":"
     encoded_key = base64.b64encode(secret_key.encode()).decode()
     url = "https://api.tosspayments.com/v1/payments/confirm"
@@ -431,8 +417,6 @@ def subscribe_success():
         flash(f"결제 실패: {response.json().get('message')}")
         return redirect(url_for('main.index')) # 멤버십 안내 페이지로
 
-
-
 @bp.route('/api/my_reviews', methods=['GET'])
 def my_reviews():
     if not g.user:
@@ -452,16 +436,13 @@ def my_reviews():
                 "product_name": r.product.name if r.product else "",
                 "rating": r.rating,
                 "content": r.content,
-                "image_url": url_for('static', filename='uploads/reviews/' + r.image_path) if r.image_path else None # 이미지 경로 추가 [cite: 150]
+                "image_url": url_for('static', filename='uploads/reviews/' + r.image_path) if r.image_path else None
             }
             for r in pagination.items
         ],
         "total_pages": pagination.pages,
         "current_page": pagination.page
     })
-
-
-
 
 # 카카오 로그인
 KAKAO_CLIENT_ID = "edc2045d293aaefae2c494a92245c19a"
@@ -477,7 +458,6 @@ def kakao_login():
         "&response_type=code"
     )
     return redirect(target_url)
-
 
 @bp.route('/kakao/callback')
 def kakao_callback():

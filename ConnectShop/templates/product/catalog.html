@@ -1,14 +1,64 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    /* 로고를 감싸는 부모 박스 */
+.brand-logo-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start; /* 로고를 박스 중앙에 배치 */
+    width: 200px;  /* 적절한 가로 너비 */
+    height: 80px;  /* 적절한 세로 높이 */
+    background-color: transparent; /* 배경은 투명하게 */
+}
+
+/* 박스 안의 SVG 이미지 */
+.brand-logo-box img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* 비율 유지하며 박스 안에 가두기 */
+
+    /* 🌟 SVG 특성상 JBL 같은 로고가 너무 흐릿하거나 작아 보이면
+       약간의 두께감을 주는 트릭 (선택 사항) */
+    filter: drop-shadow(0 0 0.1px rgba(0,0,0,0.1));
+}
+
+    .brand-logo-box img[alt*="lg"] {
+    transform: scale(0.80);
+    transform-origin: left center;
+}
+    .brand-logo-box img[alt*="JBL"] {
+    transform: scale(1.2);
+    transform-origin: left center;
+}
+    .brand-logo-box img[alt*="보스 "] {
+    transform: scale(1.3);
+    transform-origin: left center;
+}
+    .brand-logo-box img[alt*="아이뮤즈"] {
+    transform: scale(0.8);
+    transform-origin: left center;
+}
+    .brand-logo-box img[alt*="삼성"] {
+    transform: scale(1.1);
+    transform-origin: left center;
+}
+    .brand-logo-box img[alt*="젠하이저"] {
+    transform: scale(1.2);
+    transform-origin: left center;
+}
+</style>
+
 
     {% if products_by_brand %}
         {% for brand, products in products_by_brand.items() %}
         <div class="brand-section mb-5 py-3">
             <h3 class="fw-bold mb-4 d-flex align-items-center">
-                <img src="{{ url_for('static', filename='images/logos/' + brand + '.svg') }}"
-                     alt="{{ brand }} 로고"
-                     class="me-2"
-                     style="height: 1.5em; width: auto; object-fit: contain;">
+                <div class="brand-logo-box me-2">
+                    <img src="{{ url_for('static', filename='images/logos/' + brand + '.svg') }}"
+                         alt="{{ brand }} ">
+                </div>
             </h3>
 
             <div class="product-slider-wrapper position-relative">
@@ -112,13 +162,21 @@
 </style>
 
 <script>
-// 🌟 팀원의 슬라이더 이동 스크립트 
+// 애니메이션 중인지 확인하는 변수 (여러 슬라이더가 있다면 객체 형태로 관리)
+let isMoving = {};
+
 function moveSlide(index, direction) {
+    // 해당 인덱스의 슬라이더가 이미 움직이고 있다면 함수 종료
+    if (isMoving[index]) return;
+
     const track = document.getElementById(`product-track-${index}`);
     const items = track.querySelectorAll('.product-card-item');
     if (items.length <= 1) return;
 
     const cardWidth = items[0].offsetWidth;
+
+    // 움직임 시작!
+    isMoving[index] = true;
 
     if (direction === 1) {
         track.style.transition = "transform 0.4s ease-in-out";
@@ -128,6 +186,9 @@ function moveSlide(index, direction) {
             track.style.transition = "none";
             track.appendChild(track.firstElementChild);
             track.style.transform = `translateX(0)`;
+
+            // 애니메이션이 완전히 끝난 후(0.4초 뒤) 다시 클릭 가능하게 변경
+            isMoving[index] = false;
         }, 400);
     } else {
         track.style.transition = "none";
@@ -137,6 +198,11 @@ function moveSlide(index, direction) {
         setTimeout(() => {
             track.style.transition = "transform 0.4s ease-in-out";
             track.style.transform = `translateX(0)`;
+
+            // 애니메이션이 완전히 끝난 후 다시 클릭 가능하게 변경
+            setTimeout(() => {
+                isMoving[index] = false;
+            }, 400);
         }, 10);
     }
 }

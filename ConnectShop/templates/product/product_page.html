@@ -169,7 +169,7 @@
 
                         <div id="coupon-discount-row" class="d-flex justify-content-between mb-3 text-danger" style="display: none !important;">
                             <span>쿠폰 할인</span>
-                            <span>-<span id="breakdown-coupon-discount">-</span>원</span>
+                            <span><span id="breakdown-coupon-discount"></span>원</span>
                         </div>
 
                         <hr class="my-4">
@@ -207,7 +207,6 @@
                             </button>
                         </div>
                     </div>
-
                     <div class="text-center">
                         <span class="text-muted delivery-date" style="font-size: 0.85rem;">
                             <i class="bi bi-truck me-1"></i> 로딩 중...
@@ -231,7 +230,7 @@
                     {% for p in recommended_products %}
                     <div class="product-card-mini" onclick="location.href='{{ url_for('product.page', product_id=p.id) }}'">
                         <div class="product-img-box">
-                            <img src="/static/images/menu/{{ p.image_path }}" alt="{{ p.name }}">
+                            <img src="/static/images/menu/{{ p.image_path }}" alt="{{ p.name }}" draggable="false">
                         </div>
                         <div class="product-info-box">
                             <span class="brand-tag">{{ p.brand }}</span>
@@ -249,8 +248,7 @@
 <section id="section-reviews" class="py-5">
     <div class="container">
         <div class="product-reviews mt-5 pt-4 border-top">
-            <h4 class="fw-bold mb-4">상품 리뷰</h4>
-
+            <h4 class="fw-bold mb-4" id="reviews">상품 리뷰</h4>
             {% if g.user %}
                 {% if has_reviewed %}
                     <div class="alert alert-info text-center rounded-4 py-4 mb-5 shadow-sm border-0 bg-light">
@@ -650,7 +648,7 @@ function buyNow(productId) {
         }
     }
 
-    fetch(`/order/add/${productId}`, {
+    fetch(`/order/direct_buy/${productId}`, {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -664,19 +662,19 @@ function buyNow(productId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            let checkoutUrl = "{{ url_for('order.checkout') }}";
+            let checkoutUrl = data.checkout_url;
 
             const separator = checkoutUrl.includes('?') ? '&' : '?';
 
             // 1. 바로구매 신호(direct_buy)와 상품 정보(product_id, quantity)를 보냅니다.
             checkoutUrl += `${separator}direct_buy=true&product_id=${productId}&quantity=${quantity}`;
 
-            // 2. 선택한 옵션 문자열도 함께 보냅니다. (서버에서 'selected_options'로 받을 수 있게)
+            // 2. 선택한 옵션 문자열도 함께 보냅니다.
             if (optionsString) {
                 checkoutUrl += `&selected_options=${encodeURIComponent(optionsString)}`;
             }
 
-            // 3. 이미 적용된 쿠폰이 있다면 추가합니다.
+            // 3. 🌟 [핵심 수정] 적용된 쿠폰이 있다면 암구호(coupon_id)를 찰떡같이 추가합니다.
             if (typeof appliedCoupon !== 'undefined' && appliedCoupon) {
                 checkoutUrl += `&coupon_id=${appliedCoupon.id}`;
             }
@@ -739,9 +737,47 @@ function toggleWishlist(event, productId, btnElement) {
     .catch(error => console.error('Error:', error));
 }
 
+/* 1. 뒤로가기 시 페이지 새로고침 (기존 로직 유지) */
 window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
         location.reload();
+    }
+});
+
+/* 2. 드래그 스크롤 변수 선언 */
+const slider = document.querySelector('.product-scroll-container');
+let isDown = false;
+let startX;
+let scrollLeft;
+
+/* 3. 드래그 시작 (클릭은 슬라이더 위에서만!) */
+slider.addEventListener('mousedown', (e) => {
+    isDown = true;
+    slider.classList.add('active');
+
+    // 클릭 위치와 현재 스크롤 위치 저장
+    startX = e.pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+
+    // 이미지 고스트 방지 (이미지 클릭 시 브라우저가 잡고 끌려는 동작 차단)
+    if (e.target.tagName === 'IMG') e.preventDefault();
+});
+
+/* 4. 드래그 중 (마우스가 슬라이더 밖을 나가도 계속 추적!) */
+window.addEventListener('mousemove', (e) => {
+    if (!isDown) return; // 마우스 버튼을 누른 상태가 아니면 무시
+
+    e.preventDefault();
+    const x = e.pageX - slider.offsetLeft;
+    const walk = (x - startX) * 1;
+    slider.scrollLeft = scrollLeft - walk;
+});
+
+/* 5. 드래그 종료 (어디서 떼든 확실하게 상태 해제) */
+window.addEventListener('mouseup', () => {
+    if (isDown) {
+        isDown = false;
+        slider.classList.remove('active');
     }
 });
 </script>

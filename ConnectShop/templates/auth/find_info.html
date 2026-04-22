@@ -4,77 +4,71 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='auth_style.css') }}">
 
 <div class="find-container">
-    <h2 class="page-title">아이디/비밀번호 재설정</h2>
+    <h5 class="page-title">아이디/비밀번호 재설정</h5>
 
     <div class="tab-menu">
         <button type="button" class="tab-btn active" onclick="openTab('find-email', this)">이메일 찾기</button>
-	<button type="button" class="tab-btn" onclick="openTab('reset-pw', this)">비밀번호 재설정</button>
+        <button type="button" class="tab-btn" onclick="openTab('reset-pw', this)">비밀번호 재설정</button>
     </div>
 
     <div id="find-email" class="tab-content active">
-        <form method="post" action="{{ url_for('auth.find_id') }}">
+        <form method="post" action="{{ url_for('auth.find_id') }}" class="find-form">
             {{ find_id_form.csrf_token }}
             <div class="info-box">
-                가입하신 이름을 입력하시면 가입된 이메일 정보를 확인하실 수 있습니다.
+                가입하신 이름과 전화 번호를 입력하시면 <br>가입된 이메일 정보를 확인하실 수 있습니다.
             </div>
 
-
-            <div class="input-row">
-                <div class="label-box">이름</div>
-                {{ find_id_form.username(class="form-control giant-input", placeholder="이름을 입력하세요") }}
+            <div class="input-group">
+                <label>이름</label>
+                {{ find_id_form.username(class="form-control auth-input", placeholder="이름을 입력하세요") }}
             </div>
 
-            <div class="input-row">
-                <div class="label-box">휴대폰</div>
-                {{ find_id_form.phone(class="form-control giant-input", placeholder="숫자만 입력하세요 (예: 01012345678)") }}
+            <div class="input-group">
+                <label>휴대폰</label>
+                {{ find_id_form.phone(class="form-control auth-input", placeholder="숫자만 입력하세요 (예: 01012345678)") }}
             </div>
-
 
             <button type="submit" class="action-btn">이메일 찾기</button>
         </form>
     </div>
 
     <div id="reset-pw" class="tab-content">
-        <form method="post" action="{{ url_for('auth.find_password') }}">
+        <form method="post" action="{{ url_for('auth.find_password') }}" class="find-form">
             {{ reset_pw_form.csrf_token }}
             <div class="info-box warning">
-                비밀번호의 경우 암호화 저장되어 분실 시 찾아 드릴 수 없는 정보입니다.<br>
-                본인 확인을 통해 비밀번호를 재설정하실 수 있습니다.
+                비밀번호는 암호화되어 분실 시 찾아드릴 수 없습니다.<br>
+                본인 확인을 통해 재설정해 주세요.
             </div>
-            <div class="input-row">
-                <div class="label-box">이름</div>
-                {{ reset_pw_form.username(class="form-control giant-input", placeholder="이름을 입력하세요") }}
-            </div>
-            <div class="input-row">
-                <div class="label-box">이메일</div>
-                {{ reset_pw_form.email(class="form-control giant-input", placeholder="가입된 이메일을 입력하세요") }}
-            </div>
-            <p class="sub-text">가입된 계정 이메일을 정확히 기입해 주시길 바랍니다.</p>
 
-            <div class="input-row">
-                <div class="label-box">새 비밀번호</div>
-                {{ reset_pw_form.password1(class="form-control giant-input", placeholder="새 비밀번호 입력") }}
+            <div class="input-group">
+                <label>이름</label>
+                {{ reset_pw_form.username(class="form-control auth-input", placeholder="이름을 입력하세요") }}
             </div>
-            <div class="input-row">
-                <div class="label-box">비밀번호 확인</div>
+
+            <div class="input-group">
+                <label>이메일</label>
+                {{ reset_pw_form.email(class="form-control auth-input", placeholder="가입된 이메일을 입력하세요") }}
+            </div>
+
+            <div class="input-group">
+                <label>새 비밀번호</label>
+                {{ reset_pw_form.password1(class="form-control auth-input", placeholder="새 비밀번호 입력") }}
+            </div>
+
+            <div class="input-group">
+                <label>비밀번호 확인</label>
                 {{ reset_pw_form.password2(class="form-control auth-input", placeholder="한 번 더 입력") }}
             </div>
 
-            <button type="submit" class="auth-btn pw-btn">비밀번호 변경</button>
+            <button type="submit" class="action-btn">비밀번호 변경</button>
         </form>
     </div>
 </div>
 
 <script>
 function openTab(tabId, btn) {
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-
-    document.querySelectorAll('.tab-btn').forEach(b => {
-        b.classList.remove('active');
-    });
-
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     btn.classList.add('active');
 }

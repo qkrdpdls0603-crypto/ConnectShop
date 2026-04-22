@@ -335,5 +335,24 @@
         else res = val.substr(0, 3) + "-" + val.substr(3, 4) + "-" + val.substr(7, 4);
         target.value = res;
     }
+    document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const action = urlParams.get('action');
+    const itemId = urlParams.get('item_id');
+
+    if (action && (action === 'refund' || action === 'exchange')) {
+        // 상세 페이지에 있는 '사유 입력 모달'의 ID를 입력하세요 (예: #claimModal)
+        const claimModalEl = document.getElementById('claimModal');
+        if (claimModalEl) {
+            const modal = new bootstrap.Modal(claimModalEl);
+
+            // 모달 안의 input(hidden) 등에 item_id 세팅이 필요할 경우
+            const inputItemId = claimModalEl.querySelector('#modal-item-id');
+            if (inputItemId) inputItemId.value = itemId;
+
+            modal.show();
+        }
+    }
+});
 </script>
 {% endblock %}
