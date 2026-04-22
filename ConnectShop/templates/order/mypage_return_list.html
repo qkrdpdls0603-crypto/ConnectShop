@@ -5,8 +5,8 @@
 <div class="container my-5" style="max-width: 900px;">
     <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-3">
         <div class="d-flex align-items-end gap-3">
-            <h3 class="fw-bold mb-0">반품/환불 내역</h3>
-            <span class="text-muted small">반품 신청 및 환불 처리 현황입니다.</span>
+            <h3 class="fw-bold mb-0">교환/환불 내역</h3>
+            <span class="text-muted small">교환 신청 및 환불 처리 현황입니다.</span>
         </div>
         <div class="back-nav-wrapper">
             <a href="{{ url_for('auth.mypage') }}" class="btn-back-box text-decoration-none text-dark">
@@ -53,9 +53,15 @@
                             <div class="text-end">
                                 {% set display_status = item.status %}
                                 <span class="badge rounded-pill px-3 py-2
-                                    {% if '완료' in display_status %} bg-success
-                                    {% elif '거절' in display_status %} bg-danger
-                                    {% else %} bg-warning text-dark {% endif %}"
+                                    {% if '완료' in display_status %}
+                                        bg-success
+                                    {% elif '거절' in display_status or '반려' in display_status %}
+                                        bg-danger
+                                    {% elif '교환' in display_status %}
+                                        bg-info text-white  {# 🌟 교환은 하늘색(info)으로 차별화 #}
+                                    {% else %}
+                                        bg-warning text-dark
+                                    {% endif %}"
                                     style="font-size: 0.85rem;">
                                     {{ display_status }}
                                 </span>

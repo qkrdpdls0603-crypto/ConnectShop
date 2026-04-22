@@ -9,8 +9,7 @@
         <div class="nav-left-section">
             <div class="product-title-small">{{ product.name }}</div>
             <div class="nav-hyperlinks">
-                <a href="#section-images" class="me-2">이미지</a>
-                <a href="#section-details">상세정보</a>
+                <a href="#section-reviews" class="me-2">사용 후기</a>
             </div>
         </div>
 
@@ -69,7 +68,7 @@
             </div>
 
             <div class="option-sections">
-                {# otype별로 그룹화하여 출력 #}
+                {# 🌟 팀원분의 로직(groupby) + 팀장님의 UI/기능(active, price) 완벽 병합 #}
                 {% for group in product.options|groupby('otype') %}
                 <div class="option-group mb-5">
                     <label class="fw-bold mb-3">{{ group.grouper }}</label>
@@ -77,7 +76,7 @@
                         {% for item in group.list %}
                         <div class="col-12 mb-2">
                             <button type="button"
-                                    class="btn btn-outline-dark w-100 p-3 text-start d-flex justify-content-between align-items-center option-btn"
+                                    class="btn btn-outline-dark w-100 p-3 text-start d-flex justify-content-between align-items-center option-btn {% if loop.first %}active btn-dark{% endif %}"
                                     data-add-price="{{ item.add_price }}"
                                     data-option-id="{{ item.id }}"
                                     data-image-variant="{{ item.image_variant }}">
@@ -189,13 +188,13 @@
                                     onclick="handleCouponClick()" style="border-style: dashed;">
                                 <i class="bi bi-ticket-perforated me-2"></i> 적용 가능한 쿠폰 확인하기
                             </button>
-                            <div id="selected-coupon-info" class="mt-2 text-center small text-danger fw-bold" style="display: none;">
+                            <div id="selected-coupon-info" class="mt-2 text-center small text-danger fw-bold fs-5" style="display: none;">
                                 <i class="bi bi-check-circle-fill"></i> <span id="applied-coupon-name"></span> (-<span id="applied-discount-amount">0</span>원)
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <button type="button" class="btn btn-outline-dark w-100 py-3 rounded-pill fw-bold"
+                            <button type="button" class="btn btn-outline-dark w-100 py-3 rounded-pill fw-bold fs-5"
                                     onclick="addToCartWithOptions({{ product.id }})">
                                 <i class="bi bi-bag me-2"></i> 장바구니 담기
                             </button>
@@ -208,8 +207,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <input type="hidden" id="is-logged-in" value="{{ 'true' if g.user else 'false' }}">
 
                     <div class="text-center">
                         <span class="text-muted delivery-date" style="font-size: 0.85rem;">
@@ -252,7 +249,7 @@
 <section id="section-reviews" class="py-5">
     <div class="container">
         <div class="product-reviews mt-5 pt-4 border-top">
-            <h4 class="fw-bold mb-4" id="section-reviews">상품 리뷰</h4>
+            <h4 class="fw-bold mb-4">상품 리뷰</h4>
 
             {% if g.user %}
                 {% if has_reviewed %}
@@ -411,7 +408,7 @@
 
 <script>
 // [1] 전역 상태 관리
-let appliedCoupon = null; 
+let appliedCoupon = null;
 const DEFAULT_SHIPPING_FEE = 3000;
 
 /**
@@ -459,7 +456,7 @@ function refreshTotalDisplay() {
     let finalTotal = (productTotal + shippingFee) - discountValue;
     if (finalTotal < 0) finalTotal = 0;
 
-    // 화면 UI 업데이트 
+    // 화면 UI 업데이트
     const formattedTotal = finalTotal.toLocaleString('ko-KR');
 
     if(document.getElementById('breakdown-order-total')) document.getElementById('breakdown-order-total').innerText = productTotal.toLocaleString();
@@ -668,11 +665,13 @@ function buyNow(productId) {
     .then(data => {
         if (data.success) {
             let checkoutUrl = "{{ url_for('order.checkout') }}";
-            // 🌟 결제창으로 이동할 때 적용된 쿠폰 ID를 URL에 달아줌으로써 쿠폰 정보가 이어지게 합니다.
+
+            // 🌟 [핵심 수정] 서버가 기다리는 암구호인 'coupon_id'로 찰떡같이 맞춰서 보냅니다!
             if (appliedCoupon) {
-                checkoutUrl += "?pre_coupon=" + appliedCoupon.id;
+                checkoutUrl += "?coupon_id=" + appliedCoupon.id;
             }
             location.href = checkoutUrl;
+
         } else {
             alert("주문 처리 중 오류가 발생했습니다.");
         }

@@ -15,7 +15,6 @@
 
 .mypage-body-wrap {
   width: 100%;
-  background: #fff;
   padding: 30px 0;
 }
 
@@ -24,7 +23,6 @@
   margin: 0 auto;
   padding: 0 20px;
 }
-
 
 body {
 font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
@@ -35,16 +33,14 @@ color: var(--text-main);
 line-height: 1.6;
 }
 
-
 /* --- 추가된 상단 네비게이션 스타일 --- */
 .my-info-title {
 font-size: 1.5rem;
 font-weight: bold;
-margin-bottom: 20px;
+margin-bottom: 10px;
 padding-bottom: 10px;
 border-bottom: 2px solid #333;
 }
-
 
 .nav-container1 {
 margin-bottom: 0;
@@ -52,36 +48,39 @@ border-bottom: 1px solid var(--border-color);
 }
 
 .nav-main {
-display: flex;
-list-style: none;
-padding: 0;
-margin: 0;
-overflow-x: auto;
-white-space: nowrap;
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    white-space: nowrap;
+}
+
+.nav-main .nav-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    color: #666;
+    font-weight: 500;
+    border-bottom: 3px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
 }
 
 .nav-main .nav-item a {
     display: block;
-    color: inherit;          /* li의 색상 그대로 사용 */
-    text-decoration: none;   /* 밑줄 제거 */
     width: 100%;
     height: 100%;
+
+    color: inherit;
+    text-decoration: none;
 }
 
-
-.nav-main .nav-item {
-padding: 12px 20px;
-cursor: pointer;
-font-weight: 500;
-color: #666;
-transition: all 0.2s;
-border-bottom: 3px solid transparent;
+.nav-main .nav-item:hover {
+    color: #000;
 }
 
-.nav-main .nav-item:hover,
 .nav-main .nav-item.active {
-    color: var(--point-color);
-    border-bottom: 3px solid var(--point-color);
+    color: #000;
+    border-bottom-color: #000;
 }
 
 .sub-menu-display {
@@ -89,7 +88,7 @@ background-color: #f9f9f9;
 padding: 15px 20px;
 margin-top: -1px;
 border-bottom: 1px solid var(--border-color);
-display: none; /* 기본적으로 숨김 */
+display: none;
 }
 
 .sub-menu-list {
@@ -111,29 +110,7 @@ font-size: 0.9rem;
 color: var(--point-color);
 text-decoration: underline;
 }
-/* ---------------------------------- */
 
-
-.card {
-background-color: var(--bg-gray);
-padding: 20px;
-border-radius: 8px;
-display: flex;
-flex-direction: column;
-justify-content: center;
-}
-
-.user-info h2 { margin: 0 0 5px 0; font-size: 1.2rem; }
-.user-info p { margin: 0; color: #666; font-size: 0.9rem; }
-.edit-link { margin-top: 10px; font-size: 0.85rem; color: #333; text-decoration: underline; cursor: pointer; }
-
-.membership { text-align: center; }
-.grade { font-weight: bold; font-size: 1.5rem; color: var(--point-color); }
-
-.benefit-label { font-size: 0.9rem; font-weight: bold; }
-.benefit-value { font-weight: bold; }
-.sub-link { font-size: 0.75rem; color: #777; text-decoration: none; border: 1px solid #ccc; padding: 2px 6px;
-border-radius: 4px; }
 
 .status-bar {
 display: flex;
@@ -162,108 +139,69 @@ margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;
 .section-title h3 { margin: 0; font-size: 1.1rem; }
 .view-all { font-size: 0.8rem; text-decoration: underline; color: #666; cursor: pointer; }
 
-.register-banner {
-background-color: var(--bg-gray); text-align: center; padding: 30px; border-radius: 8px; margin-bottom: 40px;
-}
-.btn-reg {
-display: inline-block; margin-top: 15px; padding: 10px 25px; background-color: #333; color: #fff;
-text-decoration: none; border-radius: 4px; font-size: 0.9rem;
-}
-
-.product-scroll { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; }
-.product-card { min-width: 180px; flex: 0 0 auto; }
-.product-img { width: 100%; height: 200px; aspect-ratio: 345/720; border-radius: 6px; margin-bottom:
-40px; }
-
-/* 구매확정 상품 영역 - 배경 제거 */
-.product-area {
-  background-color: transparent;
-  padding: 0;
-}
-
-/* 상품 그리드 */
-.my-product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 14px;
-}
-
-/* 개별 상품 */
-.my-product-item {
-  text-align: center;
-}
-
-.my-product-item a {
-  text-decoration: none;
-  color: inherit;
-}
-
-/* 상품 이미지 */
-.my-product-img {
-  width: 100%;
-  height: 120px;
-  object-fit: contain;
-  border-radius: 12px;
-  display: block;
-  margin: 0 auto;
-}
-
-/* 상품명 */
-.my-product-name {
-  margin-top: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  line-height: 1.2;
-  text-align: center;
-}
 
 .p-info .brand { font-size: 0.75rem; color: #888; }
 .p-info .name { font-size: 0.9rem; font-weight: 500; display: block; margin-bottom: 5px; }
 .p-info .price { font-weight: bold; font-size: 1rem; }
-/* 마이페이지 전용 그리드 시스템 */
+
+/* ==================================================
+   MyPage Header Grid
+================================================== */
 .m-header-grid {
     display: flex;
     gap: 15px;
-    margin-bottom: 35px;
     width: 100%;
+    margin-bottom: 35px;
 }
 
-/* 개별 칸 공통 스타일 */
+/* ==================================================
+   Grid Item (공통)
+================================================== */
 .m-grid-item {
     flex: 1;
-    background-color: #f8f9fa; /* 기존 var(--bg-gray) 대신 직접 지정하여 충돌 방지 */
-    border: 1px solid #eee;
-    border-radius: 12px;
-    padding: 20px;
     min-height: 120px;
+    padding: 20px;
+
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    transition: all 0.2s ease;
+
+    background-color: #f8f9fa;
+    border: 1px solid #eee;
+    border-radius: 12px;
+
+    transition:
+        background-color 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .m-grid-item:hover {
     background-color: #f1f3f5;
     transform: translateY(-3px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
     cursor: pointer;
 }
 
-/* 프로필 칸 특화 스타일 */
+/* ==================================================
+   Profile Section (특화)
+================================================== */
 .m-profile-section {
-    flex: 1.6; /* 프로필은 조금 더 넓게 */
+    flex: 1.6;
     flex-direction: row;
     justify-content: flex-start;
     gap: 15px;
     text-align: left;
 }
 
+/* 프로필 아이콘 */
 .m-profile-icon i {
     font-size: 3rem;
     color: #495057;
 }
 
+/* 사용자 정보 */
 .m-user-name {
     font-size: 1.15rem;
     font-weight: 700;
@@ -276,47 +214,56 @@ text-decoration: none; border-radius: 4px; font-size: 0.9rem;
     color: #868e96;
 }
 
+/* ==================================================
+   Action Links
+================================================== */
 .m-edit-link {
     display: inline-block;
     margin-top: 6px;
+    padding: 2px 8px;
+
     font-size: 0.8rem;
     color: #495057;
     text-decoration: none;
+
     border: 1px solid #dee2e6;
-    padding: 2px 8px;
     border-radius: 20px;
-    background: #fff;
+    background-color: #fff;
 }
+
 .m-withdraw-link {
-    color: #999; /* 탈퇴는 보통 강조하지 않으므로 흐리게 설정 */
+    color: #999;
     text-decoration: none;
 }
 
 .m-withdraw-link:hover {
-    color: #ff4d4d; /* 마우스 올렸을 때만 경고 의미로 빨간색 */
+    color: #ff4d4d;
 }
-/* 데이터 숫자 칸 스타일 */
+
+/* ==================================================
+   Data Box
+================================================== */
 .m-data-label {
-    font-size: 0.9rem;
-    color: #495057;
     margin-bottom: 8px;
+    font-size: 0.9rem;
     font-weight: 500;
+    color: #495057;
 }
 
 .m-data-value {
     font-size: 1.4rem;
     font-weight: 800;
-    color: #007bff; /* 포인트 컬러 직접 지정 */
+    color: #007bff;
     text-align: center;
 }
 
+/* 보조 텍스트 (미가입, 설명 등) */
 .m-data-value span {
-    font-size: 0.9rem;
-    color: #212529;
     margin-left: 2px;
+    font-size: 0.9rem;
     font-weight: 400;
+    color: #212529;
 }
-
 
 /* 반응형: 화면이 작아지면 2줄로 배치 */
 @media (max-width: 768px) {
@@ -329,4 +276,166 @@ text-decoration: none; border-radius: 4px; font-size: 0.9rem;
     .m-data-box {
         flex: 1 0 30%; /* 나머지 칸은 나눠 가짐 */
     }
+}
+
+
+.modern-section {
+    margin-bottom: 60px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-title h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.view-all-btn {
+    font-size: 0.85rem;
+    color: #666;
+    text-decoration: none;
+    padding: 5px 12px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+}
+
+.product-grid-modern {
+    display: flex;         /* grid 대신 flex 사용 */
+    flex-direction: column; /* 카드를 아래로 하나씩 쌓음 */
+    gap: 15px;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.product-item-card {
+    background: #fff;
+    border-radius: 15px;
+    border: 1px solid #eee;
+    width: 100%;           /* 부모 너비에 맞춤 */
+    max-width: 500px;      /* 이미지처럼 적절한 가로 길이 제한 */
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    padding: 15px;         /* 내부에 여백 추가 */
+}
+
+.product-item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+.card-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+
+.img-wrapper {
+    width: 100px;
+    height: 100px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 20px; /* 이미지와 텍스트 사이 간격 */
+    flex-shrink: 0; /* 이미지 크기 고정 */
+}
+
+.img-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.product-item-card:hover img {
+    scale: 1.1;
+}
+
+.product-info-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.product-name-label {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.status-badge {
+    font-size: 0.75rem;
+    color: #666;
+    background-color: #f1f3f5;
+    padding: 3px 10px;
+    border-radius: 20px;
+    width: fit-content;
+}
+.modern-scroll-container {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    padding: 10px 5px 25px;
+}
+
+.modern-card {
+    min-width: 220px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid #f0f0f0;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.modern-img-box {
+    width: 100%;
+    height: 220px;
+    background-color: #f9f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modern-img-box img {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+}
+
+.modern-info {
+    padding: 15px;
+}
+
+.brand-tag {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.75rem;
+    color: #aaa;
+}
+
+.product-title {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    height: 2.4em;
+    overflow: hidden;
+}
+
+.product-price {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
 }

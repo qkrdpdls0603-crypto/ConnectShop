@@ -23,6 +23,7 @@ class User(db.Model):
     is_membership = db.Column(db.Boolean, default=False)
     # join_date: 회원가입을 한 날짜와 시간입니다. (현재 시간이 자동으로 들어갑니다)
     join_date = db.Column(db.DateTime, default=datetime.utcnow)
+    # point: 유저가 보유한 총 포인트입니다. (🌟 팀장님 주석 유지)
     point = db.Column(db.Integer, default=0)
 
     # join_date 컬럼 바로 아래에 이 함수를 하나만 남기면 됩니다.
@@ -96,6 +97,7 @@ class ProductOption(db.Model):
     add_price = db.Column(db.Integer, default=0)  # 기준가에 더할 금액
     image_variant = db.Column(db.String(200))  # 옵션 클릭 시 바뀔 이미지 파일명
     color_code = db.Column(db.String(20))  # 색상 버튼용 HEX 코드 (예: #000000)
+
 # =========================================================
 # [팀원 3: 박예인님 담당] 장바구니 및 주문/결제 그룹
 # =========================================================
@@ -135,8 +137,13 @@ class Order(db.Model):
     coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=True)
     coupon = db.relationship('Coupon', backref='orders')
     memo = db.Column(db.String(200), nullable=True)
-    reward_point = db.Column(db.Integer, default=0)
-    is_point_paid = db.Column(db.Boolean, default=False)
+    
+    # 🌟 팀장님의 포인트 시스템 유지
+    reward_point = db.Column(db.Integer, default=0) # 적립 예정 포인트
+    is_point_paid = db.Column(db.Boolean, default=False) # 적립금 지급 완료 여부
+    used_point = db.Column(db.Integer, default=0) # 이 주문에서 사용한 포인트
+    
+    # 🌟 팀원분의 현금영수증 시스템 병합 완료
     cash_receipt_apply = db.Column(db.Boolean, default=False)  # 발급 여부
     cash_receipt_type = db.Column(db.String(20), nullable=True)  # 개인(소득공제) / 사업자(지출증빙)
     cash_receipt_number = db.Column(db.String(30), nullable=True)  # 휴대폰/사업자 번호

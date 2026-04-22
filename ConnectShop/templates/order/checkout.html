@@ -9,6 +9,21 @@
         <form id="order-form">
             <div class="form-section">
                 <h2 class="section-title">배송 정보</h2>
+
+                <div class="delivery-option-group mb-3" style="display: flex; gap: 15px;">
+                    <label>
+                        <input type="radio" name="delivery_select" value="new" checked onclick="setDeliveryInfo('new')">
+                        새로 입력
+                    </label>
+
+                    <label style="{% if not last_order %}opacity: 0.5; cursor: not-allowed;{% endif %}">
+                        <input type="radio" name="delivery_select" value="recent"
+                               onclick="setDeliveryInfo('recent')"
+                               {% if not last_order %}disabled{% endif %}>
+                        최근 배송지
+                    </label>
+                </div>
+
                 <div class="input-row">
                     <div>
                         <div class="field-label">수령인</div>
@@ -89,7 +104,6 @@
             <select id="coupon-select" class="form-control" onchange="updateTotalAmount()">
                 <option value="0" data-type="fixed" data-value="0">사용 가능한 쿠폰 선택</option>
                 {% for coupon in available_coupons %}
-                    {# 🌟 이름에 '%'가 있는지 확인하여 타입(percent/fixed) 결정 #}
                     {% set is_percent = '%' in coupon.name %}
                     <option value="{{ coupon.id }}"
                             data-type="{{ 'percent' if is_percent else 'fixed' }}"
@@ -100,10 +114,23 @@
             </select>
         </div>
 
+        {% if g.user %}
+        <div class="form-section" style="border: none; padding: 0; margin-bottom: 20px;">
+            <div class="field-label d-flex justify-content-between">
+                <span>포인트 사용</span>
+                <span class="text-muted small">보유: {{ "{:,}".format(g.user.point) }}원</span>
+            </div>
+            <div class="d-flex gap-2">
+                <input type="number" id="point-input" class="form-control text-end" value="0" min="0" max="{{ g.user.point }}" oninput="updateTotalAmount()">
+                <button type="button" class="btn btn-outline-secondary text-nowrap" onclick="useAllPoints()">전액 사용</button>
+            </div>
+            <p id="point-warning" class="text-danger small mt-1 mb-0" style="display: none;">보유/결제 금액을 초과할 수 없습니다.</p>
+        </div>
+        {% endif %}
+
         <div class="summary-row">
             <span>상품 금액</span>
             <span>
-                {# 서버의 total_price가 배송비 포함이라면, 멤버십이 아닐 때 3,000원을 빼서 표시 #}
                 {% if g.user and g.user.is_membership %}
                     {{ "{:,}".format(total_price|int) }}원
                 {% else %}
@@ -115,6 +142,11 @@
         <div class="summary-row" style="color: #ff3b30;">
             <span>쿠폰 할인</span>
             <span id="display-discount">0원</span>
+        </div>
+
+        <div class="summary-row" style="color: #ff9500;">
+            <span>포인트 사용</span>
+            <span id="display-point-use">0원</span>
         </div>
 
         <div class="summary-row" style="color: #007bff;">
@@ -143,7 +175,6 @@
         <div class="summary-total">
             <span>총 결제 금액</span>
             <span>
-                {# 총 결제 금액은 이미 배송비가 포함된 서버의 total_price를 그대로 사용 #}
                 {{ "{:,}".format(total_price|int) }}원
             </span>
         </div>
@@ -159,7 +190,6 @@
 </div>
 
 <script>
-// 전역 변수로 선언하여 모든 함수에서 접근 가능하게 합니다.
 let widgets = null;
 
 document.addEventListener("DOMContentLoaded", async function() {
@@ -188,163 +218,204 @@ document.addEventListener("DOMContentLoaded", async function() {
         })
     ]);
 
-    // ============================================
-    // 🌟 URL이나 서버 세션에서 쿠폰 정보를 읽어와서 자동으로 골라주기!
-    // ============================================
     const urlParams = new URLSearchParams(window.location.search);
-    // 서버에서 넘겨준 쿠폰 ID가 있으면 먼저 쓰고, 없으면 URL에서 찾습니다.
     const preCouponId = "{{ pre_selected_coupon_id or '' }}" || urlParams.get('coupon_id');
 
     if (preCouponId && preCouponId !== 'None') {
         const couponSelect = document.getElementById('coupon-select');
         if (couponSelect) {
             for (let i = 0; i < couponSelect.options.length; i++) {
-                // 문자열로 변환하여 안전하게 비교
                 if (String(couponSelect.options[i].value) === String(preCouponId)) {
                     couponSelect.selectedIndex = i;
                     break;
                 }
             }
-            // 쿠폰이 선택되었으니 자동으로 가격 계산 한 번 돌려줍니다!
             setTimeout(() => {
                 if(typeof updateTotalAmount === 'function') updateTotalAmount();
             }, 150);
         }
     }
 
-    // [금액 업데이트 함수 - 🌟 병합 완료 로직]
-    window.updateTotalAmount = async function() {
-        const couponSelect = document.getElementById('coupon-select');
-        const selectedOption = couponSelect.options[couponSelect.selectedIndex];
-
-        // 1. 기본 정보 및 팀원 분의 쿠폰 타입 정보 추출
-        const type = selectedOption.getAttribute('data-type'); // fixed 또는 percent
-        const val = parseInt(selectedOption.getAttribute('data-value')) || 0; // data-value 사용 (data-discount 통일)
-        const originalTotal = {{ total_price|int }};
-        const isMembership = {{ 'true' if g.user and g.user.is_membership else 'false' }};
-        const shippingFee = isMembership ? 0 : 3000;
-        const pureProductPrice = originalTotal - shippingFee;
-
-        // 2. 할인액 계산 (팀원 분의 % 계산 로직)
-        let discount = 0;
-        if (type === 'percent') {
-            discount = Math.floor(pureProductPrice * (val / 100));
-        } else {
-            discount = val;
-        }
-
-        const updatedFinalAmount = Math.max(0, originalTotal - discount);
-
-        // 3. 🌟 실시간 적립금 계산 (팀장님의 배송비 제외 상품가에서 쿠폰할인 뺀 금액의 3% 로직)
-        let rewardPoint = 0;
-        if (isMembership) {
-            const rewardBase = pureProductPrice - discount;
-            rewardPoint = Math.floor(Math.max(0, rewardBase) * 0.03);
-        }
-
-        // 4. UI 업데이트
-        // 쿠폰 할인 표시
-        document.getElementById('display-discount').innerText = (discount > 0 ? "-" : "") + discount.toLocaleString() + "원";
-
-        // 🌟 적립 예정 금액 표시 업데이트
-        const rewardDisplay = document.getElementById('display-reward');
-        if (rewardDisplay) {
-            rewardDisplay.innerText = (rewardPoint > 0 ? "+" : "") + rewardPoint.toLocaleString() + "P";
-        }
-
-        // 총 결제 금액 표시
-        const finalTotalDisplay = document.querySelector('.summary-total span:last-child');
-        if (finalTotalDisplay) finalTotalDisplay.innerText = updatedFinalAmount.toLocaleString() + "원";
-
-        // 결제 버튼 텍스트
-        const payButton = document.getElementById('payment-button');
-        if (payButton) payButton.innerText = updatedFinalAmount.toLocaleString() + "원 결제하기";
-
-        // 토스 위젯 업데이트
-        if (widgets) {
-            await widgets.setAmount({
-                currency: "KRW",
-                value: updatedFinalAmount
-            });
+    // 🌟 포인트 전액 사용 로직
+    window.useAllPoints = function() {
+        const pointInput = document.getElementById('point-input');
+        if (pointInput) {
+            const maxPoint = parseInt(pointInput.getAttribute('max')) || 0;
+            pointInput.value = maxPoint;
+            updateTotalAmount();
         }
     };
 
-    // [결제 요청 함수]
+    // 🌟 금액 및 적립금 업데이트 함수 (중복 제거 및 6% 로직 적용)
+    window.updateTotalAmount = async function() {
+        try {
+            const couponSelect = document.getElementById('coupon-select');
+            if (!couponSelect) return;
+            const selectedOption = couponSelect.options[couponSelect.selectedIndex];
+
+            const type = selectedOption.getAttribute('data-type');
+            const val = parseInt(selectedOption.getAttribute('data-value')) || 0;
+            const originalTotal = {{ total_price|int }};
+
+            const isMembershipUser = {{ 'true' if g.user and g.user.is_membership else 'false' }};
+            const shippingFee = isMembershipUser ? 0 : 3000;
+            const pureProductPrice = originalTotal - shippingFee;
+
+            let discount = 0;
+            if (type === 'percent') {
+                discount = Math.floor(pureProductPrice * (val / 100));
+            } else {
+                discount = val;
+            }
+
+            const pointInput = document.getElementById('point-input');
+            let usedPoint = 0;
+            if (pointInput) {
+                usedPoint = parseInt(pointInput.value) || 0;
+                const maxPoint = parseInt(pointInput.getAttribute('max')) || 0;
+                const warning = document.getElementById('point-warning');
+
+                if (usedPoint > maxPoint) {
+                    usedPoint = maxPoint;
+                    pointInput.value = maxPoint;
+                    if(warning) warning.style.display = 'block';
+                } else if(warning) {
+                    warning.style.display = 'none';
+                }
+
+                const amountAfterCoupon = originalTotal - discount;
+                if (usedPoint > amountAfterCoupon) {
+                    usedPoint = amountAfterCoupon;
+                    pointInput.value = usedPoint;
+                }
+
+                const displayPointUse = document.getElementById('display-point-use');
+                if (displayPointUse) {
+                    displayPointUse.innerText = (usedPoint > 0 ? "-" : "") + usedPoint.toLocaleString() + "원";
+                }
+            }
+
+            const updatedFinalAmount = Math.max(0, originalTotal - discount - usedPoint);
+
+            // 🌟 적립금 계산 (6% 누적 방지 로직)
+            let rewardPoint = 0;
+            if (isMembershipUser) {
+                const rewardBase = pureProductPrice - discount - usedPoint;
+                const mainMethodElem = document.querySelector('input[name="payment_main_method"]:checked');
+
+                if (mainMethodElem && mainMethodElem.value === 'VBANK') {
+                    rewardPoint = Math.floor(Math.max(0, rewardBase) * 0.06);
+                } else {
+                    rewardPoint = Math.floor(Math.max(0, rewardBase) * 0.03);
+                }
+            }
+
+            // UI 업데이트
+            document.getElementById('display-discount').innerText = (discount > 0 ? "-" : "") + discount.toLocaleString() + "원";
+
+            const rewardDisplay = document.getElementById('display-reward');
+            if (rewardDisplay) {
+                rewardDisplay.innerText = (rewardPoint > 0 ? "+" : "") + rewardPoint.toLocaleString() + "원";
+            }
+
+            const finalTotalDisplay = document.querySelector('.summary-total span:last-child');
+            if (finalTotalDisplay) finalTotalDisplay.innerText = updatedFinalAmount.toLocaleString() + "원";
+
+            const payButton = document.getElementById('payment-button');
+            if (payButton) payButton.innerText = updatedFinalAmount.toLocaleString() + "원 결제하기";
+
+            if (widgets) {
+                await widgets.setAmount({
+                    currency: "KRW",
+                    value: updatedFinalAmount
+                });
+            }
+        } catch (e) {
+            console.error("업데이트 중 에러:", e);
+        }
+    };
+
     window.requestPayment = async function() {
-        const recipient = document.getElementById('recipient').value.trim();
-        const phone = document.getElementById('phone').value.trim();
-        const address = document.getElementById('address').value.trim();
-        const address_detail = document.getElementById('address_detail').value.trim();
+        // 1. 기본 유효성 검사 및 배송 정보 추출
+        const userRecipient = document.getElementById('recipient').value.trim();
+        const userPhone = document.getElementById('phone').value.trim();
+        const userPostcode = document.getElementById('postcode').value.trim();
+        const userAddress = document.getElementById('address').value.trim();
+        const userDetail = document.getElementById('address_detail').value.trim();
+
+        if (!userRecipient || !userPhone || !userAddress) {
+            alert("배송 정보를 모두 입력해주세요.");
+            return;
+        }
+
+        // 2. 쿠폰 및 포인트 정보 추출
         const couponId = document.getElementById('coupon-select').value;
+        const pointInput = document.getElementById('point-input');
+        const usedPoint = pointInput ? (parseInt(pointInput.value) || 0) : 0;
 
+        // 3. 결제 수단 및 신호(direct_buy) 감지
         const mainMethod = document.querySelector('input[name="payment_main_method"]:checked').value;
+        const urlParams = new URLSearchParams(window.location.search);
+        const isDirect = urlParams.get('direct_buy') === 'true';
 
-        const rewardText = document.getElementById('display-reward').innerText;
-        const calculatedReward = parseInt(rewardText.replace(/[^0-9]/g, "")) || 0;
-
-        const isCashReceipt = document.getElementById('cash_receipt_check')?.checked || false;
-        const crType = document.querySelector('input[name="cr_type"]:checked')?.value || null;
-        const crNumber = document.getElementById('cr_number')?.value.trim() || null;
-
-        console.log("서버로 보내는 적립금:", calculatedReward);
-
+        // 4. 배송 메모 및 기타 정보 가공
         const memoSelect = document.getElementById('shipping-memo-select');
         let finalMemo = memoSelect.value;
         if (finalMemo === 'direct') {
             finalMemo = document.getElementById('direct-memo-input').value.trim();
         }
 
-        if (isCashReceipt && !crNumber) {
-            alert("현금영수증 발급 번호를 입력해주세요.");
-            return;
+        const rewardText = document.getElementById('display-reward').innerText;
+        const calculatedReward = parseInt(rewardText.replace(/[^0-9]/g, "")) || 0;
+
+        // 5. 성공 시 이동할 URL 생성 (direct_buy 꼬리표 추가)
+        let successUrl = `${window.location.origin}/order/success?order_id={{ order.id }}`;
+        if (isDirect) {
+            successUrl += '&direct_buy=true';
         }
 
-        if (!recipient || !phone || !address) { alert("배송 정보를 모두 입력해주세요."); return; }
-
-        // 유효성 검사
-        if (!recipient) { alert("수령인 이름을 입력해주세요."); return; }
-        if (!phone) { alert("연락처를 입력해주세요."); return; }
-        if (!address) { alert("배송 주소를 입력해주세요."); return; }
-
         try {
-            // 서버에 임시 정보 저장
-            const response = await fetch('/order/save_temp_info', {
+            // 6. 서버에 배송/쿠폰 정보 임시 저장 (AJAX)
+            const saveResponse = await fetch('/order/save_temp_info', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    recipient: recipient,
-                    phone: phone,
-                    address: address + " " + address_detail,
+                    recipient: userRecipient,
+                    phone: userPhone,
+                    address: `[${userPostcode}] ${userAddress} ${userDetail}`,
                     coupon_id: couponId !== "0" ? couponId : null,
+                    used_point: usedPoint,
                     memo: finalMemo,
-                    cash_receipt_apply: isCashReceipt,
-                    cash_receipt_type: crType,
-                    cash_receipt_number: crNumber,
                     reward_point: calculatedReward
                 })
             });
 
-            if (!response.ok) throw new Error("세션 저장 실패");
+            if (!saveResponse.ok) throw new Error("배송 정보 저장에 실패했습니다.");
 
+            // 7. 결제 수단별 실제 요청 실행
             if (mainMethod === 'TOSS') {
+                // 토스 위젯 결제 호출
                 await widgets.requestPayment({
-                    orderId: "order_temp_{{ now_ts }}",
+                    orderId: "order_{{ now_ts }}_{{ order.id }}",
                     orderName: "ConnectShop 상품 결제",
-                    successUrl: window.location.origin + "/order/success",
+                    successUrl: successUrl, // 🌟 여기서 꼬리표가 붙은 URL이 전달됩니다.
                     failUrl: window.location.origin + "/order/fail",
-                    customerName: recipient,
+                    customerName: userRecipient,
                 });
             } else {
+                // 무통장 입금 처리 (VBANK)
                 const amount = document.getElementById('payment-button').innerText.replace(/[^0-9]/g, "");
-                window.location.href = `/order/success?paymentType=VBANK&orderId=vbank_{{ now_ts }}&amount=${amount}`;
+                // 무통장 입금 완료 페이지로 이동 시에도 꼬리표 추가
+                window.location.href = `${successUrl}&paymentType=VBANK&amount=${amount}`;
             }
+
         } catch (error) {
             console.error("결제 중 오류 발생:", error);
             alert("결제 처리 중 오류가 발생했습니다.");
         }
     };
 
-    // [우편번호 및 전화번호 포맷 함수]
+    // 🌟 우편번호 함수 (이제 위치 문제 없음)
     window.execDaumPostcode = function() {
         new daum.Postcode({
             oncomplete: function(data) {
@@ -358,12 +429,9 @@ document.addEventListener("DOMContentLoaded", async function() {
 
     window.formatPhoneNumber = function(target) {
         let val = target.value.replace(/\D/g, "");
-        let len = val.length;
-        let res = "";
-        if (len <= 3) res = val;
-        else if (len <= 7) res = val.substr(0, 3) + "-" + val.substr(3);
-        else res = val.substr(0, 3) + "-" + val.substr(3, 4) + "-" + val.substr(7, 4);
-        target.value = res;
+        if (val.length <= 3) target.value = val;
+        else if (val.length <= 7) target.value = val.substr(0, 3) + "-" + val.substr(3);
+        else target.value = val.substr(0, 3) + "-" + val.substr(3, 4) + "-" + val.substr(7, 4);
     };
 
     window.toggleDirectMemo = function(select) {
@@ -378,14 +446,11 @@ document.addEventListener("DOMContentLoaded", async function() {
     };
 });
 
-
-// 1. 결제 수단 라디오 버튼 감지
+// 결제 수단 라디오 버튼 감지
 document.querySelectorAll('input[name="payment_main_method"]').forEach(radio => {
     radio.addEventListener('change', function() {
         const tossContainer = document.getElementById('toss-widget-container');
         const vbankContainer = document.getElementById('vbank-info-container');
-
-        // 시각적 피드백 (테두리 강조)
         document.querySelectorAll('.method-card').forEach(card => card.style.borderColor = '#ddd');
         this.parentElement.style.borderColor = '#007bff';
 
@@ -396,14 +461,56 @@ document.querySelectorAll('input[name="payment_main_method"]').forEach(radio => 
             tossContainer.classList.remove('d-none');
             vbankContainer.classList.add('d-none');
         }
+        if (typeof updateTotalAmount === 'function') updateTotalAmount();
     });
 });
 
-// 2. 현금영수증 체크박스 토글
-document.getElementById('cash_receipt_check').addEventListener('change', function() {
+document.getElementById('cash_receipt_check')?.addEventListener('change', function() {
     const fields = document.getElementById('cash_receipt_fields');
-    if (this.checked) fields.classList.remove('d-none');
-    else fields.classList.add('d-none');
+    if (fields) fields.classList.toggle('d-none', !this.checked);
 });
+
+
+    // 🌟 최근 배송지 데이터 정의 (서버에서 넘겨받은 값)
+    const recentDelivery = {
+        recipient: "{{ last_order.recipient if last_order else '' }}",
+        phone: "{{ last_order.phone if last_order else '' }}",
+        address: "{{ last_order.address if last_order else '' }}"
+    };
+    console.log("최근 주문 데이터:", recentDelivery);
+
+    window.setDeliveryInfo = function(type) {
+        const recipientInput = document.getElementById('recipient');
+        const phoneInput = document.getElementById('phone');
+        const addressInput = document.getElementById('address');
+        const postcodeInput = document.getElementById('postcode');
+        const detailInput = document.getElementById('address_detail');
+
+        if (type === 'recent') {
+            recipientInput.value = recentDelivery.recipient;
+            phoneInput.value = recentDelivery.phone;
+
+            // 🌟 주소 파싱 로직 ( [12345] 주소... 형태일 경우 )
+            const fullAddr = recentDelivery.address;
+            const match = fullAddr.match(/^\[(\d+)\]\s*(.+)$/);
+
+            if (match) {
+                postcodeInput.value = match[1]; // 우편번호
+                addressInput.value = match[2];  // 주소
+                detailInput.value = "";         // 상세주소는 수동 입력 권장
+            } else {
+                addressInput.value = fullAddr;
+                postcodeInput.value = "";
+                detailInput.value = "";
+            }
+        } else {
+            // 새로 입력 선택 시 초기화
+            recipientInput.value = "";
+            phoneInput.value = "";
+            addressInput.value = "";
+            postcodeInput.value = "";
+            detailInput.value = "";
+        }
+    };
 </script>
 {% endblock %}
