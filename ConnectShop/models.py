@@ -137,6 +137,7 @@ class Order(db.Model):
     coupon_id = db.Column(db.Integer, db.ForeignKey('coupon.id'), nullable=True)
     coupon = db.relationship('Coupon', backref='orders')
     memo = db.Column(db.String(200), nullable=True)
+    order_number = db.Column(db.String(100), nullable=False)
     
     # 🌟 팀장님의 포인트 시스템 유지
     reward_point = db.Column(db.Integer, default=0) # 적립 예정 포인트

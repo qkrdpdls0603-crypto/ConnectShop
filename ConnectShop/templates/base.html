@@ -416,9 +416,16 @@
 
                                         {# 수량 조절 #}
                                         <div class="d-flex align-items-center qty-control mt-2">
-                                            <a href="javascript:void(0);" class="btn-circle-qty" onclick="updateQuantity('{{ item.id }}', 'dec', this);">-</a>
-                                            <span class="qty-text px-3 qty-item-{{ item.id }}">{{ item.quantity }}</span>
-                                            <a href="javascript:void(0);" class="btn-circle-qty" onclick="updateQuantity('{{ item.id }}', 'inc', this);">+</a>
+                                            {% set target_id = item.id if g.user else loop.index0 %}
+
+                                            <button type="button" class="qty-btn" onclick="updateQuantity('{{ target_id }}', 'dec', this)">−</button>
+
+                                            {# 🌟 ID를 'qty-대상ID' 형식으로 통일합니다 #}
+                                            <span class="qty-num" id="qty-{{ target_id }}">
+                                                {{ item.quantity }}
+                                            </span>
+
+                                            <button type="button" class="qty-btn" onclick="updateQuantity('{{ target_id }}', 'inc', this)">+</button>
 
                                             <span class="ms-3 text-muted small">
                                                / <strong class="text-dark unit-price-{{ item.id }}">{{ "{:,}".format(item.price) }}</strong>원
@@ -564,19 +571,20 @@
         });
 
         async function updateQuantity(cartId, action, btnElement) {
-            const qtySpan = document.querySelector(`.qty-item-${cartId}`);
-            if (!qtySpan) return;
+            // 1. cartId를 명확히 문자열로 변환 (0원 버그 방어)
+            const idStr = String(cartId);
 
-            const currentQty = parseInt(qtySpan.innerText);
+            // 2. 해당 ID를 가진 모든 요소(수량칸) 찾기
+            const qtySpans = document.querySelectorAll(`[id="qty-${idStr}"]`);
+            if (qtySpans.length === 0) return;
+
+            const currentQty = parseInt(qtySpans[0].innerText.trim());
             if (action === 'dec' && currentQty === 1) {
-                // 사용자에게 확인을 받고, '취소'를 누르면 함수 종료
-                if (!confirm("상품을 장바구니에서 삭제하시겠습니까?")) {
-                    return;
-                }
+                if (!confirm("상품을 삭제하시겠습니까?")) return;
             }
 
             try {
-                const response = await fetch(`/order/modify/${cartId}/${action}`, {
+                const response = await fetch(`/order/modify/${idStr}/${action}`, {
                     method: 'POST',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
@@ -585,60 +593,69 @@
                 if (data.success) {
                     if (data.is_deleted) {
                         location.reload();
-                    } else {
-                        qtySpan.innerText = data.new_quantity;
-
-                        // 1. 개당 단가 업데이트
-                        const unitPriceSpan = document.querySelector(`.unit-price-${cartId}`);
-                        if (unitPriceSpan && data.item_unit_price) {
-                            let price = data.item_unit_price.toString().replace(/[^0-9]/g, '');
-                            unitPriceSpan.innerText = parseInt(price).toLocaleString();
-                        }
-
-                        // 🌟 2. 해당 상품의 총액(단가 * 수량) 업데이트 추가
-                        const itemTotalEl = document.getElementById(`item-total-${cartId}`);
-                        if (itemTotalEl && data.item_total) {
-                            itemTotalEl.innerText = data.item_total + '원';
-                        }
-
-                        // 3. 하단 요약 디스플레이 업데이트
-                        updateAllTotalDisplays(data);
+                        return;
                     }
+
+                    // ✅ A. 모든 수량 칸 숫자 업데이트
+                    qtySpans.forEach(span => span.innerText = data.new_quantity);
+
+                    // ✅ B. 개별 상품 총액 업데이트 (이미지의 0원 버그 해결 핵심)
+                    // ID가 'item-total-0' 처럼 숫자로 시작해도 찾아내는 가장 강력한 방식
+                    const itemTotalEls = document.querySelectorAll(`[id="item-total-${idStr}"]`);
+                    itemTotalEls.forEach(el => {
+                        // 서버에서 온 숫자를 콤마 찍어서 '원'과 함께 삽입
+                        const formattedPrice = new Intl.NumberFormat().format(data.item_total);
+                        el.innerText = formattedPrice + '원';
+                    });
+
+                    const priceElements = document.querySelectorAll(`.cart-item-total-price[data-cart-id="${cartId}"]`);
+
+                    if (priceElements.length > 0) {
+                        priceElements.forEach(el => {
+                            el.innerText = data.item_total.toLocaleString() + '원';
+                        });
+                    }
+
+                    // ✅ C. 나머지 합계 금액들 업데이트
+                    const ids = ['panel-total-price', 'summary-subtotal', 'summary-total'];
+                    ids.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) {
+                            const val = (id === 'panel-total-price') ? data.pure_total : data.pure_total;
+                            const finalVal = (id === 'summary-total') ? data.total_price : data.pure_total;
+                            el.innerText = new Intl.NumberFormat().format(finalVal) + (id === 'panel-total-price' ? '' : '원');
+                        }
+                    });
+
+                    // ✅ D. 배지 업데이트
+                    const badge = document.getElementById('cart-count-badge');
+                    if (badge) badge.innerText = data.cart_count;
                 }
-            } catch (error) { console.error('Error:', error); }
+            } catch (e) {
+                console.error("Update Error:", e);
+            }
         }
 
         function updateAllTotalDisplays(data) {
-            const subtotalEl = document.getElementById('summary-subtotal');
-            const totalEl = document.getElementById('summary-total');
-            const panelTotalEl = document.getElementById('panel-total-price');
-            const shippingEl = document.getElementById('shipping-fee-display');
-            const cartBadge = document.getElementById('cart-count-badge');
-
-            const formatPrice = (val) => {
-                if (!val) return '0원';
-                return val.toString().includes('원') ? val : val.toLocaleString() + '원';
+            const toWon = (num) => {
+                const val = Number(num);
+                return (isNaN(val) ? 0 : val).toLocaleString() + '원';
             };
 
-            if (panelTotalEl) panelTotalEl.innerText = data.pure_total;
-            if (subtotalEl) subtotalEl.innerText = data.pure_total;
-            if (totalEl) totalEl.innerText = data.total_price;
+            const subtotalEl = document.getElementById('summary-subtotal');
+            const totalEl = document.getElementById('summary-total');
+            const shippingEl = document.getElementById('shipping-fee-display');
+            const panelTotalEl = document.getElementById('panel-total-price');
+            const cartBadge = document.getElementById('cart-count-badge');
 
-            ['summary-subtotal', 'summary-total'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.innerText = cleanAndFormat(data.total_price || data.pure_total) + '원';
-            });
+            if (subtotalEl) subtotalEl.innerText = toWon(data.pure_total);
+            if (panelTotalEl) panelTotalEl.innerText = toWon(data.pure_total);
+            if (totalEl) totalEl.innerText = toWon(data.total_price);
 
-            // 4. 배송비 표시 업데이트 (숫자형 데이터로 비교)
             if (shippingEl) {
-                // 서버에서 보내준 숫자값(raw_...)을 직접 비교합니다.
-                const isFree = data.raw_pure_total === data.raw_total_price;
-                shippingEl.innerText = isFree ? '0원 (멤버십 무료)' : '3,000원';
+                shippingEl.innerText = (data.shipping_fee === 0) ? '0원 (멤버십 혜택 적용)' : toWon(data.shipping_fee);
             }
-
-            if (cartBadge && data.cart_count !== undefined) {
-                cartBadge.innerText = data.cart_count;
-            }
+            if (cartBadge) cartBadge.innerText = data.cart_count;
         }
 
         async function deleteCartItem(cartId) {

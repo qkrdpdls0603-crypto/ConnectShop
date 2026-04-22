@@ -76,24 +76,26 @@
                     </p>
                 </div>
 
+                {% set target_id = item.id if g.user else loop.index0 %}
+
                 <div class="item-quantity">
-                    {# 수량 조절 버튼 (item.id 사용) #}
-                    <button type="button" class="qty-btn mx-2" onclick="updateQuantity({{ item.id }}, 'dec', this)">−</button>
-                    <span class="qty-num" id="qty-{{ item.id }}">{{ item.quantity }}</span>
-                    <button type="button" class="qty-btn mx-2" onclick="updateQuantity({{ item.id }}, 'inc', this)">+</button>
+                    {# 🌟 인자 전달 시 '{{ target_id }}' 처럼 따옴표로 감싸서 문자열로 만듭니다 #}
+                    <button type="button" class="qty-btn" onclick="updateQuantity('{{ target_id }}', 'dec', this)">−</button>
+                    <span class="qty-num" id="qty-{{ target_id }}">{{ item.quantity }}</span>
+                    <button type="button" class="qty-btn" onclick="updateQuantity('{{ target_id }}', 'inc', this)">+</button>
                 </div>
 
                 <div class="item-price-group">
-                    {# 옵션가 포함된 총액 #}
-                    <div class="item-price" id="item-total-{{ item.id }}">
+                    {# 🌟 0원 버그가 나는 바로 그 위치 #}
+                    <div class="item-price js-item-total"
+                         id="item-total-{{ target_id }}"
+                         data-cart-id="{{ target_id }}">
                         {{ "{:,}".format(item.price * item.quantity) }}원
                     </div>
-                    {# 개당 단가 표시 #}
+
                     <div class="text-muted small">
-                        개당 <span class="unit-price-{{ item.id }}">{{ "{:,}".format(item.price) }}</span>원
+                        개당 <span id="unit-price-{{ target_id }}">{{ "{:,}".format(item.price) }}</span>원
                     </div>
-                    <a href="{{ url_for('order.delete', cart_id=item.id) }}"
-                       class="item-delete-link" onclick="return confirm('삭제하시겠습니까?')">삭제</a>
                 </div>
             </div>
             {% endfor %}

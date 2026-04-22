@@ -1117,17 +1117,28 @@ with app.app_context():
                 db.session.add(Coupon(user_id=user_obj.id, name='가입 축하 1,000원 할인쿠폰', discount_amount=1000))
 
     # [팀원 1] 기존 하드코딩 주문 5개 유지
-    order1 = Order(user_id=u1.id, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
+    now_str = datetime.now().strftime('%Y%m%d%H%M%S')
+
+    order1 = Order(user_id=u1.id, order_number=f"SEED{now_str}01", recipient='test01', phone='010-1234-5678',
+                   address='경기 성남시 분당구 판교역로 166',
                    total_price=1799000, payment_method='무통장입금', status='배송중', courier_company='한진택배',
                    tracking_number='536691845023')
-    order2 = Order(user_id=u1.id, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
+
+    order2 = Order(user_id=u1.id, order_number=f"SEED{now_str}02", recipient='test01', phone='010-1234-5678',
+                   address='경기 성남시 분당구 판교역로 166',
                    total_price=1600000, payment_method='무통장입금', status='구매확정')
-    order3 = Order(user_id=None, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
+
+    order3 = Order(user_id=None, order_number=f"SEED{now_str}03", recipient='test01', phone='010-1234-5678',
+                   address='경기 성남시 분당구 판교역로 166',
                    total_price=1600000, payment_method='무통장입금', status='배송중', courier_company='CJ대한통운',
                    tracking_number='511704834795')
-    order4 = Order(user_id=u1.id, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
+
+    order4 = Order(user_id=u1.id, order_number=f"SEED{now_str}04", recipient='test01', phone='010-1234-5678',
+                   address='경기 성남시 분당구 판교역로 166',
                    total_price=1600000, payment_method='무통장입금', status='주문취소')
-    order5 = Order(user_id=None, recipient='test01', phone='010-1234-5678', address='경기 성남시 분당구 판교역로 166',
+
+    order5 = Order(user_id=None, order_number=f"SEED{now_str}05", recipient='test01', phone='010-1234-5678',
+                   address='경기 성남시 분당구 판교역로 166',
                    total_price=1600000, payment_method='무통장입금', status='결제완료')
 
     db.session.add_all([order1, order2, order3, order4, order5])
@@ -1151,11 +1162,15 @@ with app.app_context():
 
     for user in all_users_for_orders:
         num_orders = random.randint(1, 3)  # 유저당 1~3개의 주문 생성
-        for _ in range(num_orders):
+        for i in range(num_orders):
             rand_prod = random.choice(all_products_for_orders)
 
             # 🌟 리얼리티를 위해 2~10일 전 구매한 것으로 과거 날짜 셋팅
             past_date = datetime.utcnow() - timedelta(days=random.randint(2, 10))
+
+            # 🌟 핵심: 루프 안에서 주문 번호를 새로 생성합니다!
+            # 예: RND + 날짜시간 + 유저ID + 현재 루프 순번
+            order_no = f"RND{past_date.strftime('%Y%m%d%H%M')}{user.id}{i}"
 
             # 🌟 멤버십 회원이면 3% 적립 예정금액 세팅, 일반 회원은 0원
             reward_pt = int(rand_prod.price * 0.03) if user.is_membership else 0
@@ -1163,6 +1178,7 @@ with app.app_context():
             # 1. 영수증(Order) 생성
             new_order = Order(
                 user_id=user.id,
+                order_number=order_no,
                 recipient=user.username,
                 phone=user.phone,
                 address='서울시 강남구 테헤란로 123 (랜덤아파트)',

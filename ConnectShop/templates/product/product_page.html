@@ -666,14 +666,26 @@ function buyNow(productId) {
         if (data.success) {
             let checkoutUrl = "{{ url_for('order.checkout') }}";
 
-            // 🌟 [핵심 수정] 서버가 기다리는 암구호인 'coupon_id'로 찰떡같이 맞춰서 보냅니다!
-            if (appliedCoupon) {
-                checkoutUrl += "?coupon_id=" + appliedCoupon.id;
+            const separator = checkoutUrl.includes('?') ? '&' : '?';
+
+            // 1. 바로구매 신호(direct_buy)와 상품 정보(product_id, quantity)를 보냅니다.
+            checkoutUrl += `${separator}direct_buy=true&product_id=${productId}&quantity=${quantity}`;
+
+            // 2. 선택한 옵션 문자열도 함께 보냅니다. (서버에서 'selected_options'로 받을 수 있게)
+            if (optionsString) {
+                checkoutUrl += `&selected_options=${encodeURIComponent(optionsString)}`;
             }
+
+            // 3. 이미 적용된 쿠폰이 있다면 추가합니다.
+            if (typeof appliedCoupon !== 'undefined' && appliedCoupon) {
+                checkoutUrl += `&coupon_id=${appliedCoupon.id}`;
+            }
+
+            // 🚀 이제 정보가 가득 담긴 URL로 이동합니다!
             location.href = checkoutUrl;
 
         } else {
-            alert("주문 처리 중 오류가 발생했습니다.");
+            alert(data.message || "주문 처리 중 오류가 발생했습니다.");
         }
     })
     .catch(error => {

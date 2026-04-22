@@ -255,69 +255,68 @@ def modify(cart_id, action):
     new_quantity = 0
     is_deleted = False
 
-    if g.user:
-        cart_item = db.session.get(Cart, cart_id)
-        if cart_item and cart_item.user_id == g.user.id:
-            if action in ['inc', 'increase']:
-                cart_item.quantity += 1
-            elif action in ['dec', 'decrease']:
-                if cart_item.quantity > 1:
-                    cart_item.quantity -= 1
-                else:
-                    db.session.delete(cart_item)
-                    is_deleted = True
-            db.session.commit()
-            new_quantity = 0 if is_deleted else cart_item.quantity
-    else:
-        guest_cart = session.get('guest_cart', [])
-        if 0 <= cart_id < len(guest_cart):
-            item = guest_cart[cart_id]
-            if action in ['inc', 'increase']:
-                item['quantity'] += 1
-            elif action in ['dec', 'decrease']:
-                if item['quantity'] > 1:
-                    item['quantity'] -= 1
-                else:
-                    guest_cart.pop(cart_id)
-                    is_deleted = True
-
-            session['guest_cart'] = guest_cart
-            session.modified = True
-            new_quantity = 0 if is_deleted else item['quantity']
-
-    cart_list = get_cart_items()
-    pure_total = sum(item.price * item.quantity for item in cart_list)
-    total_count = sum(item.quantity for item in cart_list)
-
-    unit_price = 0
-    if not is_deleted:
+    try:
+        # [수량 조절 로직] - 이 부분은 기존과 동일
         if g.user:
-            current_item = next((i for i in cart_list if i.id == cart_id), None)
+            cart_item = db.session.get(Cart, cart_id)
+            if cart_item and cart_item.user_id == g.user.id:
+                if action in ['inc', 'increase']:
+                    cart_item.quantity += 1
+                elif action in ['dec', 'decrease']:
+                    if cart_item.quantity > 1:
+                        cart_item.quantity -= 1
+                    else:
+                        db.session.delete(cart_item)
+                        is_deleted = True
+                db.session.commit()
+                new_quantity = 0 if is_deleted else cart_item.quantity
         else:
-            current_item = next((i for i in cart_list if getattr(i, 'id', None) == cart_id), None)
+            guest_cart = session.get('guest_cart', [])
+            if 0 <= cart_id < len(guest_cart):
+                target = guest_cart[cart_id]
+                if action in ['inc', 'increase']:
+                    target['quantity'] += 1
+                elif action in ['dec', 'decrease']:
+                    if target['quantity'] > 1:
+                        target['quantity'] -= 1
+                    else:
+                        guest_cart.pop(cart_id)
+                        is_deleted = True
+                session['guest_cart'] = guest_cart
+                session.modified = True
+                new_quantity = 0 if is_deleted else target['quantity']
 
-        unit_price = current_item.price if current_item else 0
+        # 🌟 [중요] 여기서부터는 if/else 밖으로 완전히 나와야 합니다!
+        cart_list = get_cart_items()
+        current_unit_price = 0
 
-    shipping_fee = 3000
-    if pure_total == 0 or (g.user and getattr(g.user, 'is_membership', False)):
-        shipping_fee = 0
+        if not is_deleted:
+            # get_cart_items에서 계산된 단가를 가져옴 (이미지의 1,690,000원)
+            current_item = next((item for item in cart_list if item.id == cart_id), None)
+            if current_item:
+                current_unit_price = current_item.price
 
-    final_total = pure_total + shipping_fee
+        pure_total = sum(item.price * item.quantity for item in cart_list)
+        total_count = sum(item.quantity for item in cart_list)
+        shipping_fee = 0 if (g.user and getattr(g.user, 'is_membership', False)) else (3000 if pure_total > 0 else 0)
 
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({
-            'success': True,
-            'new_quantity': new_quantity,
-            'is_deleted': is_deleted,
-            'item_unit_price': format(unit_price, ','),
-            'item_total': format(unit_price * new_quantity, ','),
-            'pure_total': format(pure_total, ','),
-            'total_price': format(final_total, ','),
-            'cart_count': total_count,
-        })
+        # AJAX 요청이면 JSON 응답
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({
+                'success': True,
+                'new_quantity': int(new_quantity),
+                'is_deleted': is_deleted,
+                'item_total': int(current_unit_price * new_quantity),  # 이미지의 '0원' 부분을 채울 값
+                'pure_total': int(pure_total),
+                'total_price': int(pure_total + shipping_fee),
+                'cart_count': int(total_count)
+            })
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({'success': False, 'message': str(e)}), 500
 
     return redirect(request.referrer or url_for('order._list'))
-
 
 @bp.route('/delete/<int:cart_id>')
 def delete(cart_id):
@@ -367,13 +366,21 @@ def checkout():
     if is_direct:
         p_id = request.args.get('product_id', type=int)
         qty = request.args.get('quantity', type=int, default=1)
+        opt_text = request.args.get('selected_options', '')
 
         product = db.session.get(Product, p_id)
         if not product:
             flash("존재하지 않는 상품입니다.")
             return redirect(url_for('main.index'))
 
-        cart_list = [SimpleNamespace(product=product, quantity=qty, product_id=p_id)]
+        cart_list = [SimpleNamespace(
+            product=product,
+            quantity=qty,
+            product_id=p_id,
+            price=product.price,
+            selected_options=opt_text,
+            image=product.image_path
+        )]
 
         if coupon_id:
             session['applied_coupon_id'] = coupon_id
@@ -397,6 +404,32 @@ def checkout():
     product_total = sum(item.price * item.quantity for item in cart_list)
     shipping_fee = 0 if (g.user and g.user.is_membership) else 3000
     final_total = product_total + shipping_fee
+    current_order = None
+
+    if g.user:
+        current_order = Order.query.filter_by(user_id=g.user.id, status='WAITING').first()
+
+    if not current_order:
+        # 주문 번호 생성
+        order_number = f"TS{now_ts}{g.user.id if g.user else 'G'}"
+
+        current_order = Order(
+            user_id=g.user.id if g.user else None,
+            order_number=order_number,
+            total_price=final_total,
+            status='WAITING',
+            recipient='임시',
+            phone='010-0000-0000',
+            address='임시 주소',
+            payment_method='temp'
+        )
+        db.session.add(current_order)
+    else:
+        current_order.total_price = final_total
+        current_order.order_number = f"TS{now_ts}{g.user.id if g.user else 'G'}"  # 번호도 최신화
+
+
+    db.session.commit()
 
     last_order = None
     if g.user:
@@ -405,6 +438,7 @@ def checkout():
             .first()
 
     return render_template('order/checkout.html',
+                           order=current_order,
                            cart_list=cart_list,
                            total_price=final_total,
                            product_total=product_total,
