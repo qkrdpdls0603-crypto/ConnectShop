@@ -1112,3 +1112,39 @@ def inject_cart_totals():
 @login_required
 def wishlist():
     return render_template('order/wishlist.html')
+
+@bp.route('/api/get_delivery_done_items')
+@login_required
+def get_delivery_done_items():
+    # 1. 구매확정 대상 (주문 상태가 '배송완료'인 상품들)
+    confirm_targets = OrderItem.query.join(Order).filter(
+        Order.user_id == g.user.id,
+        Order.status == '배송완료',
+        OrderItem.status == None # 아직 아무 처리가 안 된 상품
+    ).all()
+
+    # 2. 환불/교환 대상 (이미 배송완료되었거나 결제완료된 건 중 신청 가능한 것)
+    # 로직에 따라 범위를 조절하세요.
+    claim_targets = OrderItem.query.join(Order).filter(
+        Order.user_id == g.user.id,
+        Order.status.in_(['배송완료', '배송중']),
+        OrderItem.status == None
+    ).all()
+
+    return jsonify({
+        'confirm_list': [{
+            'id': item.id,
+            'order_id': item.order_id,
+            'name': item.product.name,
+            'option': item.selected_options,
+            'price': item.price * item.quantity,
+            'img': url_for('static', filename='images/menu/' + item.product.image_path)
+        } for item in confirm_targets],
+        'claim_list': [{
+            'id': item.id,
+            'order_id': item.order_id,
+            'name': item.product.name,
+            'price': item.price * item.quantity,
+            'img': url_for('static', filename='images/menu/' + item.product.image_path)
+        } for item in claim_targets]
+    })

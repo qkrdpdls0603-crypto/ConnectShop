@@ -1,127 +1,75 @@
+:root {
+    --content-width: 460px;
+    --input-height: 50px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+}
 
-/* ===========================
-   1. 전체 컨테이너 공통
-   =========================== */
+body {
+    background-color: #f8f9fa;
+}
+
 .auth-container,
 .signup-container,
 .find-container {
-    width: 480px;              /* ✅ 입력창 460px + 여백 */
-    margin: 80px auto;         /* ✅ 화면 가운데 */
+    width: 480px;
+    margin: 80px auto;
     display: flex;
     flex-direction: column;
     align-items: center;
 }
 
-/* ===========================
-   2. 페이지 타이틀
-   =========================== */
+.login-title,
 .auth-title,
 .signup-title,
 .page-title {
     width: 100%;
     font-size: 24px;
     font-weight: bold;
-    text-align: left;
+    text-align: center;
     padding-bottom: 14px;
     border-bottom: 2px solid #000;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
 }
 
-/* ===========================
-   3. 입력 그룹
-   =========================== */
 .input-group {
     width: 100%;
     margin-bottom: 20px;
 }
-
-/* ✅ 입력창: 460 × 50 통일 */
 .auth-input,
 .giant-input,
 .large-input {
-    width: 460px !important;
+    width: 100% !important;
     height: 50px !important;
     font-size: 16px !important;
     padding: 0 14px !important;
-    border: 1px solid #ccc !important;
-    border-radius: 6px !important;
+    background-color: #f0f4f9 !important;
+    border: 1px solid #dee2e6 !important;
+    border-radius: 8px !important;
     box-sizing: border-box;
+    margin-top: 8px;
 }
 
-/* ===========================
-   4. 버튼
-   =========================== */
 .auth-btn,
-.giant-signup-btn,
-.lg-login-btn,
 .action-btn {
-    width: 460px;
+    width:  460px;
     height: 50px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+}
+
+.auth-btn {
     background-color: #000;
     color: #fff;
-    font-size: 16px;
-    font-weight: bold;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
 }
 
-.auth-btn:hover { background-color: #333; }
-
-/* ===========================
-   5. 파인드 페이지 전용 요소
-   =========================== */
-.tab-menu {
-    display: flex;
-    width: 100%;
-    margin-bottom: 30px;
+.auth-btn:hover {
+    background-color: #333;
 }
 
-.tab-btn {
-    flex: 1;
-    height: 44px;
-    border: 1px solid #ddd;
-    background: #f9f9f9;
-    cursor: pointer;
-    font-size: 14px;
-}
-
-.tab-btn.active {
-    border-top: 2px solid #000;
-    background: #fff;
-}
-
-/* ===========================
-   6. 라벨 + 입력 조합
-   =========================== */
-.input-row {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    margin-bottom: 14px;
-}
-
-.label-box {
-    width: 120px;
-    height: 50px;
-    background-color: #e9e9e2;
-    display: flex;
-    align-items: center;
-    padding-left: 10px;
-    margin-right: 10px;
-    font-size: 14px;
-    font-weight: bold;
-}
-/* 비활성화된 탭 컨텐츠는 숨김 처리 */
-.tab-content {
-    display: none;
-    width: 100%;
-}
-
-/* active 클래스가 붙은 컨텐츠만 표시 */
-.tab-content.active {
-    display: block;
-}
 .alert-success {
     width: 460px;
     background-color: #e7f3ff;
@@ -134,7 +82,6 @@
     box-sizing: border-box;
 }
 
-/* 빨간색 에러 창 */
 .alert-danger {
     width: 460px;
     background-color: #fff5f5;
@@ -146,66 +93,90 @@
     text-align: center;
     box-sizing: border-box;
 }
-/* 5. 소셜 로그인 버튼 (초정밀 픽셀 교정) */
+
+.tab-menu {
+    display: flex;
+    width: 100%;
+    margin-bottom: 30px;
+}
+
+.tab-btn {
+    flex: 1;
+    height: 44px;
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.tab-btn.active {
+    background: #fff;
+    border-top: 2px solid #000;
+    font-weight: 700;
+}
+
+.tab-content {
+    display: none;
+    width: 100%;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.info-box {
+    width: 460px;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 25px;
+}
+
+.login-links {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    font-size: 13px;
+    color: #666;
+}
+
+.login-links a {
+    color: #0066cc;
+    text-decoration: none;
+}
 
 .social-login-section {
-    width: 460px; /* 전체 컨테이너 너비 */
-    margin: 20px auto 0; /* 중앙 정렬 */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    width: var(--content-width);
+    margin-top: 20px;
+    text-align: center;
 }
 
 .social-divider {
-    width: 100%;
-    text-align: center;
     margin-bottom: 15px;
     font-size: 14px;
     color: #666;
-    position: relative;
 }
 
-/* 카카오 버튼 본체 */
 .auth-btn.social.kakao {
     display: flex;
-    align-items: center;
     justify-content: center;
-    gap: 8px; /* 아이콘과 텍스트 사이 간격 */
-
-    /* 핵심: 너비를 부모(460px)에 맞춤 */
-    width: 100% !important;
-    height: 50px !important;
-
-    /* border 때문에 삐져나가는 현상 방지 */
-    box-sizing: border-box !important;
-
-    /* 테두리 스타일 (위쪽 입력창이 1px solid #ccc라면 동일하게 설정 가능) */
-    border: 1px solid #FEE500 !important;
-    border-radius: 6px !important;
-
-    background-color: #FEE500;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: var(--input-height);
+    background: #FEE500;
     color: #191919;
-    text-decoration: none;
-    font-size: 16px;
-    font-weight: 500; /* 카카오 권장 폰트 두께 */
-
-    cursor: pointer;
-    transition: opacity 0.2s;
+    border: 1px solid #FEE500;
+    font-weight: 500;
 }
 
 .auth-btn.social.kakao:hover {
     opacity: 0.9;
 }
 
-/* 내부 이미지(아이콘) 수직 정렬 정밀 조정 */
 .auth-btn.social.kakao img {
     height: 18px;
-    width: auto;
-    display: block;
-    /* 이미지 높이가 텍스트와 안 맞을 경우 약간의 margin-top 활용 가능 */
     margin-top: 1px;
-}
-
-.auth-btn.social.kakao span {
-    line-height: 1; /* 텍스트 수직 중앙 정렬 강화 */
 }

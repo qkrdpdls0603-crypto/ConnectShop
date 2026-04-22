@@ -10,9 +10,9 @@
     margin-bottom: 50px;
 }
 .membership-title .highlight {
-    color: #007bff;        /* 파란색으로 강조 (버튼 색상과 통일) */
-    font-weight: 800;      /* 더 두껍게 */
-    position: relative;    /* 밑줄 효과 등을 줄 때 유용 */
+    color: #007bff;
+    font-weight: 800;
+    position: relative;
 }
 
 .benefit-container {
@@ -25,14 +25,13 @@
 
 .benefit-box {
     display: flex;
-    align-items:flex-start;   /* 아이콘과 텍스트 중앙 맞춤 */
+    align-items:flex-start;
     padding: 30px;
     border: 1px solid #eee;
     border-radius: 12px;
     background-color: #f9f9f9;
 }
 
-/* 아이콘 크기 및 간격 */
 .benefit-icon {
     font-size: 2.5rem;
     margin-right: 25px;
@@ -40,27 +39,24 @@
     margin-top: 5px;
 }
 
-/* 텍스트 내용 정렬 */
 .benefit-detail {
     flex: 1;
     text-align: left;
     line-height: 1.6;
 }
 
-/* 질문하신 span 강조 스타일링 */
 .benefit-detail span {
-    display: block;        /* 줄바꿈을 위해 블록 요소로 변경 */
-    font-weight: bold;     /* 굵게 */
-    color: #333;           /* 색상 강조 */
-    margin-bottom: 8px;    /* 본문과의 간격 */
+    display: block;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 8px;
     font-size: 1.1rem;
 }
 
-/* 하단 강조용 span (마지막 span) */
 .benefit-detail span:last-child {
     margin-top: 10px;
     margin-bottom: 0;
-    color: #007bff;        /* 브랜드 컬러로 강조 */
+    color: #007bff;
 }
 
 .subscribe-section {
@@ -82,7 +78,6 @@
     background-color: #0056b3;
 }
 
-/* 배경 어둡게 처리 */
 .modal-overlay {
     position: fixed;
     top: 0; left: 0;
@@ -94,7 +89,6 @@
     z-index: 1000;
 }
 
-/* 모달 박스 스타일 */
 .modal-content-wrap {
     background: #fff;
     width: 90%;
