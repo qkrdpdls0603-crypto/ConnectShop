@@ -135,7 +135,7 @@ def login_required(view):
 def mypage():
     from ConnectShop.views.order_views import get_cart_items
     # 1. 사용자의 모든 주문 조회 (최신순)
-    orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.order_date.desc()).all()
+    orders = Order.query.filter_by(user_id=g.user.id).filter(Order.status != 'WAITING').order_by(Order.order_date.desc()).all()
 
     # 2. 최근주문 개수 (전체 주문 수)
     total_order_count = len(orders)
