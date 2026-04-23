@@ -1261,9 +1261,24 @@ def confirm_order():
     order = Order.query.filter_by(id=order_id, user_id=g.user.id).first()
 
     if order:
-        order.status = '구매확정'  # 상태 변경
+        # 이미 구매확정된 경우 중복 적립 방지
+        if order.status == '구매확정':
+            return jsonify({'success': False, 'message': '이미 구매 확정된 주문입니다.'})
+
+        # 적립할 포인트 (없으면 0)
+        earned_point = order.reward_point or 0
+
+        # 포인트 적립 및 상태 변경
+        g.user.point += earned_point
+        order.status = '구매확정'
+
         db.session.commit()
-        return jsonify({'success': True})
+
+        # 알림창에 포인트 금액이 보이도록 메시지 구성
+        return jsonify({
+            'success': True,
+            'message': f'구매 확정이 완료되었습니다. {earned_point}P가 적립되었습니다.'
+        })
     else:
         return jsonify({'success': False, 'message': '주문을 찾을 수 없습니다.'}), 404
 

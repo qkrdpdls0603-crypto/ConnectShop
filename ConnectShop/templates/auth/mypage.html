@@ -637,6 +637,7 @@
             .then(res => res.json())
             .then(data => {
                 const container = document.getElementById('confirm-list-container');
+                const list = Array.isArray(data?.confirm_list) ? data.confirm_list : [];
 
                 // 1. 구매확정 대기 상품이 있는 경우
                 if (data.confirm_list.length > 0) {
@@ -694,32 +695,79 @@
             });
     }
 
-    function processOrder(orderId, action) {
-        if (action === 'confirm') {
-            if (!confirm("구매 확정을 진행하시겠습니까?")) return;
 
-            // 주소를 서버에 새로 만든 /order/api/confirm 으로 변경!
-            fetch('/order/api/confirm', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({
-                    order_id: orderId
-                })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        alert("구매 확정이 완료되었습니다.");
-                        location.reload();
-                    } else {
-                        alert("실패: " + data.message);
-                    }
-                });
-        }
+function processOrder(orderId, action, btnEl) {
+    if (action !== 'confirm') return;
+
+    if (!confirm("구매 확정을 진행하시겠습니까?")) return;
+
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.dataset.originalText = btnEl.textContent;
+      btnEl.textContent = "처리중...";
     }
 
+    fetch('/order/api/confirm', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({ order_id: orderId })
+    })
+    .then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      // HTTP 실패도 message를 최대한 살리고, 없으면 기본 문구
+      if (!res.ok) {
+        return {
+          success: false,
+          message: data.message || `서버 오류가 발생했습니다. (HTTP ${res.status})`
+        };
+      }
+      return data;
+    })
+    .then((data) => {
+      if (data.success) {
+        // ✅ 성공도 백엔드 메시지 그대로
+        alert(data.message || "구매 확정이 완료되었습니다.");
+        location.reload();
+      } else {
+        alert("실패: " + (data.message || "알 수 없는 오류"));
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("네트워크 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+    })
+    .finally(() => {
+      if (btnEl) {
+        btnEl.disabled = false;
+        btnEl.textContent = btnEl.dataset.originalText || "구매확정";
+      }
+    });
+  }
+
+  // -------- 유틸 --------
+  function formatPrice(price) {
+    // price가 문자열/숫자/undefined 어떤 형태로 와도 안전
+    return Number(price || 0).toLocaleString();
+  }
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  // img src 같은 attribute에 들어갈 값 최소 방어 (원치 않으면 제거해도 됨)
+  function safeAttr(value) {
+    if (value === null || value === undefined) return '';
+    return String(value).replaceAll('"', '&quot;');
+  }
 </script>
+
 {% endblock %}
