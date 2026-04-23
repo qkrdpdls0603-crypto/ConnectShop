@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, abort, g, jsonify
+from flask import Blueprint, render_template, request, abort, g, jsonify, session
 from ConnectShop import db
 # 🌟 충돌 해결: Coupon과 Review 모델을 둘 다 가져옵니다.
 from ConnectShop.models import Product, Coupon, Review
@@ -51,6 +51,7 @@ def product_list():
 @bp.route('/page/<int:product_id>/')
 def page(product_id):
     product = Product.query.get_or_404(product_id)
+    session['recent_viewed_category'] = product.category
     # 아래 한줄 추가코드 product_page추천상품
     recommended_products = Product.query.filter(Product.id != product_id).order_by(func.random()).limit(8).all()
     # 🌟 충돌 해결: 쿠폰 목록과 리뷰 작성 여부를 모두 확인할 수 있게 합쳤습니다.

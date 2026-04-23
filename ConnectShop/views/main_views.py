@@ -1,21 +1,34 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+from flask import Blueprint, render_template, request, flash, redirect, url_for, session
 from ConnectShop.models import FAQ, Product
+from sqlalchemy.sql.expression import func
 
 # 🌟 이메일 발송을 위해 추가된 모듈
 from flask_mail import Message
 from ConnectShop import mail
 
-# 'main'이라는 ㅎ이름의 블루프린트 생성 (기본 접속 주소 '/')
+# 'main'이라는 이름의 블루프린트 생성 (기본 접속 주소 '/')
 bp = Blueprint('main', __name__, url_prefix='/')
 
 
 @bp.route('/')
 def index():
-    #  DB에서 모든 상품 데이터를 가져옵니다.
-    # 이 과정이 있어야 HTML에서 {% for product in products %}를 쓸 수 있습니다.
+    # 1. 기존 로직: DB에서 모든 상품 데이터를 가져옵니다.
     products = Product.query.all()
-    # 🌟 팀원이 만든 상품 메인 페이지로 연결
-    return render_template('product/main_page.html', products=products)
+
+    # 2. 🌟 날개 배너 로직: 세션에서 사용자가 '최근에 본 카테고리'를 확인합니다.
+    recent_category = session.get('recent_viewed_category')
+    recommended_wing_items = []
+
+    if recent_category:
+        # 최근 본 카테고리와 일치하는 상품들을 찾아서, 랜덤으로 3개만 쏙 뽑아옵니다.
+        recommended_wing_items = Product.query.filter_by(category=recent_category) \
+            .order_by(func.random()) \
+            .limit(3).all()
+
+    # 3. 🌟 HTML로 데이터 넘겨주기 (recommended_wing_items 변수를 추가해서 넘깁니다!)
+    return render_template('product/main_page.html',
+                           products=products,
+                           recommended_wing_items=recommended_wing_items)
 
 
 # 회사 소개 페이지 라우트 함수
