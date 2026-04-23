@@ -16,7 +16,7 @@
                 </div>
 
                 <div class="order-items-list" style="border: 1px solid #eaeaea; border-radius: 12px; padding: 20px; background-color: #fff;">
-                    {% for item in cart_list %}
+                    {% for item in order_items %}
                     <div class="d-flex align-items-center {% if not loop.last %}border-bottom mb-3 pb-3{% endif %}">
                         <img src="{{ url_for('static', filename='images/menu/' + item.image) }}"
                              alt="{{ item.product_name }}"

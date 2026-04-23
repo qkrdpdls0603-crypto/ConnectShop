@@ -522,10 +522,12 @@ def checkout():
 
     return render_template('order/checkout.html',
                            order=current_order,
-                           cart_list=cart_list,
+                           order_items=cart_list,
+                           cart_list=get_cart_items(),
                            total_price=final_total,
                            product_total=product_total,
                            shipping_fee=shipping_fee,
+                           header_cart_total=sum(item.price * item.quantity for item in get_cart_items()),
                            available_coupons=available_coupons,
                            now_ts=now_ts,
                            pre_selected_coupon_id=coupon_id,
@@ -587,7 +589,7 @@ def success():
         extra_price = calculate_extra_price(product.id, direct_info['options'])
 
         # 템플릿과 로직에서 공통으로 사용할 리스트 생성
-        cart_items = [SimpleNamespace(
+        order_items = [SimpleNamespace(
             product=product,
             quantity=direct_info['quantity'],
             price=product.price + extra_price,
@@ -597,7 +599,7 @@ def success():
         )]
     else:
         # ✅ 일반 장바구니 결제
-        cart_items = get_cart_items()
+        order_items = get_cart_items()
 
     # 쿠폰 및 포인트 정보 가져오기
     coupon_id = session.get('applied_coupon_id')
@@ -692,7 +694,7 @@ def success():
         db.session.flush()  # order.id 생성을 위해 실행
 
         # 5) 주문 상세 내역(OrderItem) 및 재고 차감
-        for item in cart_items:
+        for item in order_items:
             order_item = OrderItem(
                 order_id=order.id,
                 product_id=item.product.id,
@@ -729,7 +731,7 @@ def success():
         db.session.commit()
 
         # 🌟 'order' 변수가 이 블록 안에서 정의되었으므로 unresolved reference 경고가 사라집니다.
-        return render_template('order/order_complete.html', order=order, order_id=order.id)
+        return render_template('order/order_complete.html', order=order, order_id=order.id, order_items=order_items,cart_list=get_cart_items())
 
     else:
         flash("결제 승인 과정에서 문제가 발생했습니다.")
@@ -1152,7 +1154,7 @@ def inject_cart_totals():
 
     return dict(
         cart_list=cart_list,
-        product_total=product_total
+        header_cart_total=product_total
     )
 
 
