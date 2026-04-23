@@ -536,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const newImg = this.getAttribute('data-image-variant');
                 if (newImg && newImg !== 'None' && newImg.trim() !== '') {
                     const mainImg = document.querySelector('.product-image-sticky img');
-                    if (mainImg) mainImg.src = "/static/images/menu/" + newImg;
+                    if (mainImg) mainImg.src = "/static/images/menu/colors/" + newImg;
                 }
                 refreshTotalDisplay();
             }

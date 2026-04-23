@@ -389,7 +389,7 @@ with app.app_context():
     other_tablets = [
         # --- 삼성 (Samsung) 8개 ---
         Product(name='갤럭시 탭 S9 울트라', price=1590000, category='태블릿', brand='삼성', stock=10,
-                description='14.6인치 압도적 대화면의 끝판왕', image_path='tab_sam1.JPEG'),
+                description='14.6인치 압도적 대화면의 끝판왕', image_path='tab_sam1.JPEG',),
         Product(name='갤럭시 탭 S9+', price=1240000, category='태블릿', brand='삼성', stock=15,
                 description='완벽한 밸런스의 하이엔드 태블릿', image_path='tab_sam2.JPEG'),
         Product(name='갤럭시 탭 S9', price=990000, category='태블릿', brand='삼성', stock=20,
@@ -669,7 +669,7 @@ with app.app_context():
     # -------------------------------------------------------------------
     other_speakers = [
         # --- JBL 8개 ---
-        Product(name='JBL GO 3', price=49000, category='블루투스 스피커', brand='JBL', stock=50,
+        Product(name='JBL GO 3', price=49000, category='블루투스 스피커', brand='JBL', stock=0,
                 description='한 손에 쏙 들어오는 방수방진 캠핑 스피커', image_path='spk_jbl1.jpg'),
         Product(name='JBL Flip 6', price=129000, category='블루투스 스피커', brand='JBL', stock=40,
                 description='세워도 눕혀도 완벽한 아웃도어 사운드', image_path='spk_jbl2.jpg'),
@@ -829,11 +829,15 @@ with app.app_context():
         # --- [기존 메인 제품] 사용자님이 직접 작성한 상세 옵션 유지 ---
         ProductOption(product_id=p1.id, otype='모델', oname='갤럭시 S26 울트라 (174.9mm)', add_price=0),
         ProductOption(product_id=p1.id, otype='용량', oname='256GB ㅣ 12GB', add_price=0),
+        ProductOption(product_id=p1.id, otype='색상', oname='코발트 바이올렛', color_code='#6A5ACD',image_variant='phone_sam1_covalt_violet.webp'),
+        ProductOption(product_id=p1.id, otype='색상', oname='스카이블루', color_code='#87CEEB',image_variant='phone_sam1_skyblue.webp'),
+        ProductOption(product_id=p1.id, otype='색상', oname='핑크 골드', color_code='#F1DDCF', image_variant='phone_sam1_pink_gold.webp'),
+        ProductOption(product_id=p1.id, otype='색상', oname='실버 쉐도우', color_code='#C0C0C0', image_variant='phone_sam1_silver_shadow.webp'),
+        ProductOption(product_id=p1.id, otype='색상', oname='블랙', color_code='#1A1A1A', image_variant='phone_sam1_black.webp'),
+        ProductOption(product_id=p1.id, otype='색상', oname='화이트', color_code='#F8F9FA',image_variant='phone_sam1_white.webp'),
         ProductOption(product_id=p1.id, otype='용량', oname='512GB ㅣ 12GB', add_price=253000),
         ProductOption(product_id=p1.id, otype='용량', oname='1TB ㅣ 16GB', add_price=748000),
-        ProductOption(product_id=p1.id, otype='색상', oname='핑크 골드', color_code='#F1DDCF'),
-        ProductOption(product_id=p1.id, otype='색상', oname='실버 쉐도우', color_code='#C0C0C0'),
-        ProductOption(product_id=p1.id, otype='색상', oname='블랙', color_code='#000000'),
+
 
         ProductOption(product_id=p2.id, otype='모델', oname='유선 충전 모델', add_price=0),
         ProductOption(product_id=p2.id, otype='모델', oname='MagSafe 충전 모델', add_price=50000),
@@ -843,13 +847,15 @@ with app.app_context():
         ProductOption(product_id=p2.id, otype='분실보장', oname='유닛 한쪽 분실 보장 플랜', add_price=15000),
 
         ProductOption(product_id=p3.id, otype='모델', oname='소니 WH 헤드폰', add_price=0),
-        ProductOption(product_id=p3.id, otype='색상', oname='새틴 블랙', color_code='#28282B', add_price=0),
-        ProductOption(product_id=p3.id, otype='색상', oname='클라우드 화이트', color_code='#F5F5F5', add_price=0),
+        ProductOption(product_id=p3.id, otype='색상', oname='블랙', color_code='#1A1A1A', add_price=0,image_variant="headphone1_black.png"),
+        ProductOption(product_id=p3.id, otype='색상', oname='화이트', color_code='#F8F9FA', add_price=0,image_variant="headphone1_white.png"),
+        ProductOption(product_id=p3.id, otype='색상', oname='핑크', color_code='#F1DDCF', add_price=0,image_variant="headphone1_pink.png"),
+        ProductOption(product_id=p3.id, otype='색상', oname='블루', color_code='#191970', add_price=0,image_variant="headphone1_blue.png"),
+
         ProductOption(product_id=p3.id, otype='추가구성', oname='기본 패키지', add_price=0),
         ProductOption(product_id=p3.id, otype='추가구성', oname='고급 가죽 스탠드', add_price=35000),
         ProductOption(product_id=p3.id, otype='보증연장', oname='기본 1년 보증', add_price=0),
         ProductOption(product_id=p3.id, otype='보증연장', oname='Connect Care+ (2년)', add_price=45000),
-
 
         ProductOption(product_id=p4.id, otype='모델', oname='13형 모델', add_price=0),
         ProductOption(product_id=p4.id, otype='모델', oname='15형 모델', add_price=300000),
@@ -860,13 +866,12 @@ with app.app_context():
         ProductOption(product_id=p4.id, otype='OS 선택', oname='Windows 11 Home 설치', add_price=189000),
 
         ProductOption(product_id=p5.id, otype='모델', oname='갤럭시 워치 8', add_price=0),
+        ProductOption(product_id=p5.id, otype='색상', oname='실버', color_code='#D9D9D9',image_variant='watch1_silver.webp'),
+        ProductOption(product_id=p5.id, otype='색상', oname='그라파이트', color_code='#3C3C3C',image_variant='watch1_graphite.webp'),
         ProductOption(product_id=p5.id, otype='크기', oname='40mm / 41mm (표준)', add_price=0),
         ProductOption(product_id=p5.id, otype='크기', oname='44mm / 45mm (대형)', add_price=45000),
         ProductOption(product_id=p5.id, otype='연결성', oname='GPS 전용', add_price=0),
         ProductOption(product_id=p5.id, otype='연결성', oname='GPS + Cellular (LTE)', add_price=121000),
-        ProductOption(product_id=p5.id, otype='스트랩', oname='스포츠 밴드 (실리콘)', color_code='#2F4F4F', add_price=0),
-        ProductOption(product_id=p5.id, otype='스트랩', oname='밀레니즈 루프 (메탈)', color_code='#C0C0C0', add_price=65000),
-        ProductOption(product_id=p5.id, otype='스트랩', oname='가죽 링크 (브라운)', color_code='#8B4513', add_price=89000),
     ]
 
     # 2. [자동화] 나머지 수백 개 제품에도 풍성한 옵션 부여
