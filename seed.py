@@ -669,7 +669,7 @@ with app.app_context():
     # -------------------------------------------------------------------
     other_speakers = [
         # --- JBL 8개 ---
-        Product(name='JBL GO 3', price=49000, category='블루투스 스피커', brand='JBL', stock=0,
+        Product(name='JBL GO 3', price=49000, category='블루투스 스피커', brand='JBL', stock=6,
                 description='한 손에 쏙 들어오는 방수방진 캠핑 스피커', image_path='spk_jbl1.jpg'),
         Product(name='JBL Flip 6', price=129000, category='블루투스 스피커', brand='JBL', stock=40,
                 description='세워도 눕혀도 완벽한 아웃도어 사운드', image_path='spk_jbl2.jpg'),
@@ -1166,7 +1166,7 @@ with app.app_context():
     all_products_for_orders = Product.query.all()
 
     for user in all_users_for_orders:
-        num_orders = random.randint(1, 3)  # 유저당 1~3개의 주문 생성
+        num_orders = random.randint(2, 3)  # 유저당 1~3개의 주문 생성
         for i in range(num_orders):
             rand_prod = random.choice(all_products_for_orders)
 
