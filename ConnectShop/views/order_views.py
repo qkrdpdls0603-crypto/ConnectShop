@@ -1290,3 +1290,31 @@ def get_delivery_done_items():
             'img': url_for('static', filename='images/menu/' + item.product.image_path)
         } for item in claim_targets]
     })
+
+
+@bp.route('/api/confirm', methods=['POST'])
+@login_required
+def confirm_order():
+    data = request.get_json()
+    order_id = data.get('order_id')
+
+    # 주문 찾기 (본인의 주문인지 확인)
+    order = Order.query.filter_by(id=order_id, user_id=g.user.id).first()
+
+    if order:
+        order.status = '구매확정'  # 상태 변경
+        db.session.commit()
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': '주문을 찾을 수 없습니다.'}), 404
+
+@bp.route('/confirmed_list')
+@login_required
+def confirmed_list():
+    # 상태가 '구매확정'인 주문들만 필터링
+    confirmed_orders = Order.query.filter_by(
+        user_id=g.user.id,
+        status='구매확정'
+    ).order_by(Order.order_date.desc()).all()
+
+    return render_template('order/confirmed_list.html', orders=confirmed_orders)

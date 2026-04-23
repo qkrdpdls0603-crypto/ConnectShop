@@ -285,22 +285,28 @@ def coupons_page():
 @bp.route('/get-welcome-coupon', methods=['POST'])
 @login_required
 def get_welcome_coupon():
-    # 1. 중복 발급 확인 (계정당 1회 제한)
-    if g.user.coupons:
-        flash("이미 쿠폰을 발급받으셨거나 보유 중입니다. (계정당 1회 참여 가능)")
+    # 1. 중복 발급 확인 (이름으로 평생 이력 조회)
+    # 멤버십 쿠폰과 일반 쿠폰 중 하나라도 받은 적이 있는지 확인합니다.
+    existing_coupon = Coupon.query.filter(
+        Coupon.user_id == g.user.id,
+        Coupon.name.in_(['멤버십 전용 10% 할인쿠폰', '일반 회원 3% 할인쿠폰'])
+    ).first()
+
+    if existing_coupon:
+        flash("이미 웰컴 쿠폰을 발급받은 이력이 있습니다. (계정당 평생 1회 제한)")
         return redirect(url_for('auth.coupons'))
 
-    # 2. 멤버십 상태에 따른 금액과 이름 결정
+    # 2. 멤버십 상태에 따른 쿠폰 설정
     if g.user.is_membership:
         coupon_name = '멤버십 전용 10% 할인쿠폰'
-        rate = 10  # 10%
+        rate = 10
         msg = "멤버십 전용 10% 할인 쿠폰이 발급되었습니다!"
     else:
         coupon_name = '일반 회원 3% 할인쿠폰'
-        rate = 3  # 3%
+        rate = 3
         msg = "신규 가입 축하 3% 할인 쿠폰이 발급되었습니다!"
 
-    # 3. 🌟 쿠폰 데이터 생성 (name 추가됨!)
+    # 3. 쿠폰 데이터 생성
     new_coupon = Coupon(
         user_id=g.user.id,
         name=coupon_name,
@@ -308,15 +314,21 @@ def get_welcome_coupon():
         is_used=False
     )
 
-    db.session.add(new_coupon)
-    db.session.commit()
+    try:
+        db.session.add(new_coupon)
+        db.session.commit()
 
-    issued_map = session.get('coupon_issued_map', {}) or {}
-    issued_map[str(new_coupon.id)] = datetime.now(timezone.utc).isoformat()
-    session['coupon_issued_map'] = issued_map
-    session.modified = True
+        # 세션 기록 (필요 시 유지)
+        issued_map = session.get('coupon_issued_map', {})
+        issued_map[str(new_coupon.id)] = datetime.now(timezone.utc).isoformat()
+        session['coupon_issued_map'] = issued_map
+        session.modified = True
 
-    flash(msg)
+        flash(msg)
+    except Exception as e:
+        db.session.rollback()
+        flash("쿠폰 발급 중 오류가 발생했습니다.")
+
     return redirect(url_for('auth.coupons'))
 
 @bp.route('/me', methods=['GET', 'POST'])
@@ -376,6 +388,16 @@ def me():
 @login_required
 def membership():
     return render_template('auth/membership.html')
+
+@bp.route('/membership/withdraw')
+@login_required
+def membership_withdraw():
+    user = User.query.get(g.user.id)
+    if user.is_membership:
+        user.is_membership = False  # 모델 수정 없이 기존 값만 변경
+        db.session.commit()
+        flash('멤버십 탈퇴가 완료되었습니다.')
+    return redirect(url_for('auth.mypage')) # 마이페이지로 리다이렉트
 
 @bp.route('/subscribe/success')
 @login_required
