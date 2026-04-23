@@ -221,6 +221,10 @@ def withdraw():
             db.session.add(WithdrawnEmail(email=email, withdrawn_at=now))
 
         # 2) 쿠폰 먼저 삭제 (NOT NULL user_id 이슈 방지)
+
+        for review in getattr(g.user, "reviews", []):
+            db.session.delete(review)
+
         for coupon in getattr(g.user, "coupons", []):
             db.session.delete(coupon)
 
