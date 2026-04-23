@@ -859,7 +859,8 @@ with app.app_context():
 
         ProductOption(product_id=p4.id, otype='모델', oname='13형 모델', add_price=0),
         ProductOption(product_id=p4.id, otype='모델', oname='15형 모델', add_price=300000),
-        ProductOption(product_id=p4.id, otype='색상', oname='스타라이트', color_code='#F0EAD6'),
+        ProductOption(product_id=p4.id, otype='색상', oname='실버', color_code='#D9D9D9',image_variant='notebook2_silver.jpg'),
+        ProductOption(product_id=p4.id, otype='색상', oname='그라파이트', color_code='#3C3C3C', image_variant='notebook2_graphite.png'),
         ProductOption(product_id=p4.id, otype='칩셋', oname='8코어 GPU', add_price=0),
         ProductOption(product_id=p4.id, otype='칩셋', oname='10코어 GPU', add_price=150000),
         ProductOption(product_id=p4.id, otype='OS 선택', oname='Free DOS (윈도우 미설치)', add_price=0),
@@ -888,7 +889,8 @@ with app.app_context():
     for products, cat_name in all_categories:
         for p in products:
             # p1~p5는 이미 위에서 넣었으니 중복 방지
-            if p.id in [p1.id, p2.id, p3.id, p4.id, p5.id]:
+            # 2. 커스텀 옵션을 줄 'JBL GO 3'와 '갤럭시 탭 S9 울트라'도 여기서 제외합니다.
+            if p.id in [p1.id, p2.id, p3.id, p4.id, p5.id] or p.name in ['JBL GO 3', '갤럭시 탭 S9 울트라', '갤럭시 버즈3 프로']:
                 continue
 
             # 모든 제품 기본 모델명 (페이지 구색용)
@@ -991,6 +993,52 @@ with app.app_context():
                 options.append(ProductOption(product_id=p.id, otype='분실보장', oname='가입 안함', add_price=0))
                 options.append(ProductOption(product_id=p.id, otype='분실보장', oname='유닛 한쪽 분실 보장 플랜', add_price=15000))
 
+    # 1. JBL GO 3 전용 커스텀
+    target_jbl = next((p for p in other_speakers if p.name == 'JBL GO 3'), None)
+    if target_jbl:
+        options.append(ProductOption(product_id=target_jbl.id, otype='모델', oname='JBL GO 3', add_price=0))
+        options.append(ProductOption(product_id=target_jbl.id, otype='색상', oname='레드', color_code='#FF0000',
+                                     image_variant='spk_jbl1_red.jpg'))
+        options.append(ProductOption(product_id=target_jbl.id, otype='색상', oname='블랙', color_code='#1A1A1A',
+                                     image_variant='spk_jbl1_black.jpg'))
+        options.append(ProductOption(product_id=target_jbl.id, otype='색상', oname='블루', color_code='#191970',
+                                     image_variant='spk_jbl1_blue.jpg'))
+
+        options.append(ProductOption(product_id=target_jbl.id, otype='연결패키지', oname='블루투스 단독', add_price=0))
+        options.append(
+            ProductOption(product_id=target_jbl.id, otype='연결패키지', oname='AUX 케이블 포함', add_price=5000))
+        options.append(
+            ProductOption(product_id=target_jbl.id, otype='액세서리', oname='전용 방수 파우치', add_price=19000))
+
+    # 2. 갤럭시 탭 S9 울트라 전용 커스텀
+    target_tab = next((p for p in other_tablets if p.name == '갤럭시 탭 S9 울트라'), None)
+    if target_tab:
+        options.append(ProductOption(product_id=target_tab.id, otype='모델', oname='갤럭시 탭 S9 울트라', add_price=0))
+        options.append(ProductOption(product_id=target_tab.id, otype='용량', oname='256GB', add_price=0))
+        options.append(ProductOption(product_id=target_tab.id, otype='용량', oname='512GB', add_price=150000))
+        options.append(ProductOption(product_id=target_tab.id, otype='색상', oname='베이지', color_code='#F5F5DC',
+                                     image_variant='tab_sam1_beige.avif'))
+        options.append(ProductOption(product_id=target_tab.id, otype='색상', oname='그라파이트', color_code='#3C3C3C',
+                                     image_variant='tab_sam1_graphite.avif'))
+
+    # 3. 갤럭시 버즈 3 프로 전용 커스텀
+    target_buds = next((p for p in other_earphones if p.name == '갤럭시 버즈3 프로'), None)
+    if target_buds:
+        # 기존 무선이어폰 옵션 구성을 그대로 가져오되 색상만 변경
+        options.append(ProductOption(product_id=target_buds.id, otype='모델', oname='갤럭시 버즈3 프로', add_price=0))
+
+        # 🌟 색상 옵션 (실버, 화이트) 및 이미지 매칭
+        options.append(ProductOption(product_id=target_buds.id, otype='색상', oname='실버', color_code='#C0C0C0',
+                                     image_variant='ear_sam1_silver.jpeg'))
+        options.append(ProductOption(product_id=target_buds.id, otype='색상', oname='화이트', color_code='#FFFFFF',
+                                     image_variant='ear_sam1_white.jpeg'))
+        options.append(ProductOption(product_id=target_buds.id, otype='추가구성', oname='선택 안함 (본품만)', add_price=0))
+        options.append(
+            ProductOption(product_id=target_buds.id, otype='추가구성', oname='충전 케이스 보호 커버(클리어)', add_price=9900))
+        options.append(ProductOption(product_id=target_buds.id, otype='충전기', oname='C타입 케이블만 포함', add_price=0))
+        options.append(ProductOption(product_id=target_buds.id, otype='충전기', oname='25W 고속 충전 어댑터 추가', add_price=25000))
+        options.append(ProductOption(product_id=target_buds.id, otype='분실보장', oname='가입 안함', add_price=0))
+        options.append(ProductOption(product_id=target_buds.id, otype='분실보장', oname='유닛 한쪽 분실 보장 플랜', add_price=15000))
     # 3. 데이터베이스 저장
     db.session.add_all(options)
     db.session.commit()

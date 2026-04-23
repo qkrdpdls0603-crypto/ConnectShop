@@ -76,12 +76,12 @@
             </div>
 
             <div class="option-sections">
-                {# 🌟 팀원분의 로직(groupby) + 팀장님의 UI/기능(active, price) 완벽 병합 #}
-                {% for group in product.options|groupby('otype') %}
+                {# groupby 대신 views에서 넘겨준 grouped_options를 사용합니다 #}
+                {% for otype, items in grouped_options.items() %}
                 <div class="option-group mb-5">
-                    <label class="fw-bold mb-3">{{ group.grouper }}</label>
+                    <label class="fw-bold mb-3">{{ otype }}</label>
                     <div class="row g-2">
-                        {% for item in group.list %}
+                        {% for item in items %}
                         <div class="col-12 mb-2">
                             <button type="button"
                                     class="btn btn-outline-dark w-100 p-3 text-start d-flex justify-content-between align-items-center option-btn {% if loop.first %}active btn-dark{% endif %}"
@@ -154,9 +154,17 @@
         <li class="mb-2 small"><i class="bi bi-check2 text-success me-2"></i>브랜드별 AS로 이어지는 <strong>전문가 상담 지원</strong></li>
     </ul>
     <div class="d-grid mb-3">
-        <a href="{{ url_for('auth.membership') }}" class="btn btn-outline-dark rounded-pill fw-bold py-2">
-            멤버십 가입하고 혜택 받기 <i class="bi bi-arrow-right ms-1"></i>
-        </a>
+        {% if g.user and g.user.is_membership %}
+            {# 멤버십 가입자인 경우 #}
+            <button class="btn btn-light rounded-pill fw-bold py-2" disabled>
+                <i class="bi bi-check-circle-fill me-1 text-success"></i> 이미 멤버십 가입 상태입니다
+            </button>
+        {% else %}
+            {# 비회원이거나 멤버십 미가입자인 경우 #}
+            <a href="{{ url_for('auth.membership') }}" class="btn btn-outline-dark rounded-pill fw-bold py-2">
+                멤버십 가입하고 혜택 받기 <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        {% endif %}
     </div>
     <div class="membership-notice p-2 border-top">
         <p class="text-muted mb-1" style="font-size: 0.7rem;"><i class="bi bi-exclamation-circle me-1"></i> <strong>주의사항</strong></p>

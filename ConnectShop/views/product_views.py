@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, abort, g, jsonify
 from ConnectShop import db
 # 🌟 충돌 해결: Coupon과 Review 모델을 둘 다 가져옵니다.
 from ConnectShop.models import Product, Coupon, Review
-from collections import defaultdict
+from collections import OrderedDict
 from sqlalchemy import func
 
 # 'product'라는 이름의 블루프린트 생성
@@ -51,9 +51,20 @@ def product_list():
 @bp.route('/page/<int:product_id>/')
 def page(product_id):
     product = Product.query.get_or_404(product_id)
-    # 아래 한줄 추가코드 product_page추천상품
+
+    # 1. 먼저 모든 옵션을 ID 순으로 정렬
+    sorted_options = sorted(product.options, key=lambda x: x.id)
+
+    # 2. 순서가 보장되는 딕셔너리에 otype별로 그룹화
+    # 이렇게 하면 먼저 등장하는 otype(예: 모델)이 무조건 첫 번째 그룹이 됩니다.
+    grouped_options = OrderedDict()
+    for opt in sorted_options:
+        if opt.otype not in grouped_options:
+            grouped_options[opt.otype] = []
+        grouped_options[opt.otype].append(opt)
+
     recommended_products = Product.query.filter(Product.id != product_id).order_by(func.random()).limit(8).all()
-    # 🌟 충돌 해결: 쿠폰 목록과 리뷰 작성 여부를 모두 확인할 수 있게 합쳤습니다.
+
     coupons = []
     has_reviewed = False
 
@@ -68,6 +79,7 @@ def page(product_id):
 
     return render_template('product/product_page.html',
                            product=product,
+                           grouped_options=grouped_options,
                            coupons=coupons,
                            has_reviewed=has_reviewed,
                            recommended_products=recommended_products)
