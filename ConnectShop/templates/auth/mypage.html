@@ -546,6 +546,7 @@
         contentDisplay.appendChild(form);
     }
 
+    // 🌟 1. 리뷰 수정 함수
     function updateReview(id) {
         const contentEl = document.getElementById(`edit-content-${id}`);
         const ratingEl = document.getElementById(`edit-rating-${id}`);
@@ -571,41 +572,44 @@
             formData.append('image', fileEl.files[0]);
         }
 
-        fetch(`/auth/api/review/edit/${id}`, {
+        fetch(`/review/edit/${id}`, {
             method: 'POST',
             headers: {
-            'X-CSRFToken': csrfToken
-        },
+                'X-CSRFToken': csrfToken
+            },
             body: formData
         })
-            .then(safeJson)
-            .then(data => {
-                if (data.success) {
-                    alert('리뷰가 수정되었습니다.');
-                    showMyReviews(currentReviewPage);
-                } else {
-                    alert('수정 실패: ' + (data.message || ''));
-                }
-            })
-            .catch(err => alert('오류 발생: ' + err.message));
+        .then(res => {
+            if (res.ok || res.redirected) {
+                alert('리뷰가 성공적으로 수정되었습니다.');
+                showMyReviews(currentReviewPage);
+            } else {
+                throw new Error("서버에서 오류를 반환했습니다.");
+            }
+        })
+        .catch(err => alert('오류 발생: ' + err.message)); // 👈 safeJson이 깔끔하게 사라진 부분!
     }
 
+
+    // 🌟 2. 리뷰 삭제 함수
     function deleteReview(id) {
-        fetch(`/auth/api/review/delete/${id}`, {
-        method: 'POST',
-        headers: {
-        'X-CSRFToken': csrfToken
-        }
-         })
-            .then(safeJson)
-            .then(data => {
-                if (data.success) {
-                    showMyReviews(currentReviewPage);
-                } else {
-                    alert('삭제 실패: ' + (data.message || ''));
-                }
-            })
-            .catch(err => alert('오류 발생: ' + err.message));
+        if (!confirm('정말로 이 상품평을 삭제하시겠습니까?')) return;
+
+        fetch(`/review/delete/${id}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+        .then(res => {
+            if (res.ok || res.redirected) {
+                alert('리뷰가 성공적으로 삭제되었습니다.');
+                showMyReviews(currentReviewPage);
+            } else {
+                throw new Error("서버에서 오류를 반환했습니다.");
+            }
+        })
+        .catch(err => alert('오류 발생: ' + err.message)); // 👈 여기도 마찬가지!
     }
 
     function renderPagination(totalPages, currentPage) {
@@ -699,6 +703,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     order_id: orderId
