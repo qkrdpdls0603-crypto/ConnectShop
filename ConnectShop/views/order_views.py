@@ -64,7 +64,7 @@ def get_cart_items():
             ))
     else:
         guest_cart = get_guest_cart()
-        # 🌟 i(인덱스) 대신 실제 item 안에 들어있는 'id'를 사용해야 합니다.
+
         for item in guest_cart:
             product = db.session.get(Product, item['product_id'])
             if product:
@@ -74,7 +74,7 @@ def get_cart_items():
                 cart_list.append(SimpleNamespace(
                     # 🌟 여기를 수정: 세션에 저장된 고유 ID를 그대로 사용
                     # 만약 옛날 데이터라 ID가 없다면, 리스트 인덱스라도 사용하도록 방어 코드 작성
-                    id=item.get('id', guest_cart.index(item)),
+                    id=int(item.get('id', 0)),
                     selected_options=opt_str,
                     options=opt_str,
                     price=product.price + extra_price,
@@ -156,9 +156,14 @@ def add(product_id):
     else:
         guest_cart = get_guest_cart()
         session.permanent = True
+
+        # 🌟 상품 객체를 가져와서 가격 정보를 확보합니다.
+        product = db.session.get(Product, product_id)
+        if not product:
+            return jsonify({'success': False, 'message': '상품이 존재하지 않습니다.'}), 404
+
         found = False
         for item in guest_cart:
-            # options 키값이 delete 로직과 일치하도록 통일 (아래 예시는 options 사용)
             if item['product_id'] == product_id and item.get('options', "").strip() == selected_options:
                 item['quantity'] += quantity
                 found = True
@@ -166,11 +171,13 @@ def add(product_id):
 
         if not found:
             guest_cart.append({
-                # 🌟 고유 ID 생성 (타임스탬프 활용)
                 'id': int(datetime.now().timestamp() * 1000),
                 'product_id': product_id,
                 'quantity': quantity,
-                'options': selected_options
+                'options': selected_options,
+                'price': product.price,  # 🌟 [중요] 가격 정보를 세션에 함께 저장!
+                'image_path': product.image_path,  # 나중에 화면 표시용으로 필요할 수 있음
+                'name': product.name  # 나중에 화면 표시용으로 필요할 수 있음
             })
         save_guest_cart(guest_cart)
 
@@ -275,7 +282,7 @@ def modify(cart_id, action):
     is_deleted = False
 
     try:
-        # [수량 조절 로직] - 이 부분은 기존과 동일
+        # 1. 수량 변경 로직 (회원/비회원 분기)
         if g.user:
             cart_item = db.session.get(Cart, cart_id)
             if cart_item and cart_item.user_id == g.user.id:
@@ -290,49 +297,69 @@ def modify(cart_id, action):
                 db.session.commit()
                 new_quantity = 0 if is_deleted else cart_item.quantity
         else:
-            guest_cart = session.get('guest_cart', [])
-            if 0 <= cart_id < len(guest_cart):
-                target = guest_cart[cart_id]
-                if action in ['inc', 'increase']:
-                    target['quantity'] += 1
-                elif action in ['dec', 'decrease']:
-                    if target['quantity'] > 1:
-                        target['quantity'] -= 1
-                    else:
-                        guest_cart.pop(cart_id)
-                        is_deleted = True
-                session['guest_cart'] = guest_cart
-                session.modified = True
-                new_quantity = 0 if is_deleted else target['quantity']
+            guest_cart = get_guest_cart()
+            found_item = None
 
-        # 🌟 [중요] 여기서부터는 if/else 밖으로 완전히 나와야 합니다!
+            # 🌟 수정: ID 비교 시 타입을 강제로 맞춰서 검색 성공률을 높임
+            for item in guest_cart:
+                if str(item.get('id')) == str(cart_id):
+                    found_item = item
+                    break
+
+            if found_item:
+                if action in ['inc', 'increase']:
+                    found_item['quantity'] += 1
+                elif action in ['dec', 'decrease']:
+                    if found_item['quantity'] > 1:
+                        found_item['quantity'] -= 1
+                    else:
+                        # 리스트 컴프리헨션으로 안전하게 삭제
+                        guest_cart = [i for i in guest_cart if str(i.get('id')) != str(cart_id)]
+                        is_deleted = True
+
+                # 삭제되지 않았을 때만 해당 아이템의 수량 업데이트
+                if not is_deleted:
+                    new_quantity = found_item['quantity']
+
+                save_guest_cart(guest_cart)
+            else:
+                # 🌟 여기가 0원 고정의 범인: 아이템을 못 찾으면 로그를 찍음
+                print(f"Warning: Guest item not found for ID {cart_id}")
+
+        # 2. 가격 계산 로직 (get_cart_items를 활용해 최신 상태 반영)
         cart_list = get_cart_items()
         current_unit_price = 0
 
+        # 수정된 상품의 단가를 찾음
         if not is_deleted:
-            # get_cart_items에서 계산된 단가를 가져옴 (이미지의 1,690,000원)
-            current_item = next((item for item in cart_list if item.id == cart_id), None)
+            current_item = next((item for item in cart_list if str(item.id) == str(cart_id)), None)
             if current_item:
                 current_unit_price = current_item.price
 
         pure_total = sum(item.price * item.quantity for item in cart_list)
         total_count = sum(item.quantity for item in cart_list)
-        shipping_fee = 0 if (g.user and getattr(g.user, 'is_membership', False)) else (3000 if pure_total > 0 else 0)
 
-        # AJAX 요청이면 JSON 응답
+        shipping_fee = 0
+        if pure_total > 0:
+            if not (g.user and getattr(g.user, 'is_membership', False)):
+                shipping_fee = 3000
+
+        # 3. 응답 반환
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({
                 'success': True,
                 'new_quantity': int(new_quantity),
                 'is_deleted': is_deleted,
-                'item_total': int(current_unit_price * new_quantity),  # 이미지의 '0원' 부분을 채울 값
+                'item_total': int(current_unit_price * new_quantity),
                 'pure_total': int(pure_total),
                 'total_price': int(pure_total + shipping_fee),
+                'shipping_fee': int(shipping_fee),
                 'cart_count': int(total_count)
             })
 
     except Exception as e:
-        print(f"Error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)}), 500
 
     return redirect(request.referrer or url_for('order._list'))
@@ -354,17 +381,19 @@ def delete(cart_id):
         pure_total = sum(item.price * item.quantity for item in cart_list)
         total_count = sum(item.quantity for item in cart_list)
 
-        shipping_fee = 3000
-        if pure_total == 0 or (g.user and getattr(g.user, 'is_membership', False)):
-            shipping_fee = 0
+        shipping_fee = 0
+        # 장바구니가 비지 않았고, 멤버십이 아닐 때만 배송비 발생
+        if pure_total > 0:
+            if not (g.user and getattr(g.user, 'is_membership', False)):
+                shipping_fee = 3000
 
+        # 🌟 핵심 수정: format()을 제거하고 숫자를 그대로 보냅니다.
         return jsonify({
             "success": True,
-            "pure_total": format(pure_total, ','),
-            "total_price": format(pure_total + shipping_fee, ','),
-            "cart_count": total_count,
-            "raw_pure_total": pure_total,
-            "raw_total_price": pure_total + shipping_fee
+            "pure_total": int(pure_total),  # 👈 문자열이 아닌 숫자!
+            "total_price": int(pure_total + shipping_fee),
+            "shipping_fee": int(shipping_fee),  # 👈 JS에서 사용하므로 추가
+            "cart_count": int(total_count)
         })
 
     return redirect(url_for('order._list'))
@@ -373,6 +402,16 @@ def delete(cart_id):
 @bp.route('/checkout', methods=['GET', 'POST'])
 def checkout():
     if request.method == 'POST':
+        # '선택상품 주문' 버튼(form 제출)을 통해 들어온 경우
+        selected_ids = request.form.getlist('selected_ids')
+        if selected_ids:
+            session['checkout_selected_ids'] = selected_ids
+    else:
+        # 🌟 '전체상품 주문' 버튼(<a> 링크)을 통해 들어온 경우
+        # 혹은 바로 구매(direct_buy)가 아닌 일반적인 접근일 때 세션을 비웁니다.
+        if request.args.get('direct_buy') != 'true':
+            session.pop('checkout_selected_ids', None)
+
         session['temp_order_info'] = {
             'recipient': request.form.get('recipient'),
             'phone': request.form.get('phone'),
@@ -380,10 +419,11 @@ def checkout():
         }
 
     is_direct = request.args.get('direct_buy') == 'true'
+    selected_ids = session.get('checkout_selected_ids')
     coupon_id = request.args.get('coupon_id') or session.get('applied_coupon_id')
 
     if is_direct:
-        # ✅ 세션에서 즉시구매 정보 가져오기 (보안 및 안정성 강화)
+        # ✅ 보안이 강화된 세션 방식 적용 (Updated upstream 반영)
         direct_info = session.get('direct_order_info')
         if not direct_info:
             flash("주문 정보가 없습니다.")
@@ -394,28 +434,48 @@ def checkout():
             flash("존재하지 않는 상품입니다.")
             return redirect(url_for('main.index'))
 
-        # ✅ 즉시구매 상품도 옵션 추가 금액을 계산해서 정확한 가격을 책정합니다.
+        # ✅ 옵션 추가 금액 계산 로직 유지
         extra_price = calculate_extra_price(product.id, direct_info['options'])
 
-        # 템플릿이 사용할 수 있게 SimpleNamespace로 포맷팅
         cart_list = [SimpleNamespace(
             product=product,
             quantity=direct_info['quantity'],
             product_id=product.id,
-            price=product.price + extra_price,  # 기본가 + 옵션 추가금
+            price=product.price + extra_price,
             selected_options=direct_info['options'],
             image=product.image_path,
             product_name=product.name
         )]
 
-        # ✅ 안전장치: 혹시 URL로 쿠폰 ID가 넘어왔다면 세션에 저장
         if coupon_id:
             session['applied_coupon_id'] = coupon_id
     else:
-        # 일반 장바구니 결제
-        cart_list = get_cart_items()
+        # ✅ 오타가 수정된 장바구니 필터링 로직 적용 (Stashed changes 반영)
+        all_cart_items = get_cart_items()
 
+        if selected_ids:
+            if g.user:
+                # [회원] DB ID와 문자열 ID 비교
+                cart_list = [item for item in all_cart_items if str(item.id) in selected_ids]
+            else:
+                # [비회원] 인덱스 번호 매칭
+                cart_list = []
+                for idx_str in selected_ids:
+                    try:
+                        idx = int(idx_str)
+                        if 0 <= idx < len(all_cart_items):
+                            cart_list.append(all_cart_items[idx])
+                    except ValueError:
+                        continue
+
+            if not cart_list:
+                print(f"DEBUG: Filtered cart_list is empty! All items count: {len(all_cart_items)}")
+        else:
+            cart_list = all_cart_items
+
+    # --- 이후 로직 (재고 체크, 주문 번호 생성 등) 은 기존과 동일 ---
     if not cart_list:
+        session.pop('checkout_selected_ids', None)
         flash("결제할 상품이 없습니다.")
         return redirect(url_for('order._list'))
 
@@ -432,15 +492,13 @@ def checkout():
     product_total = sum(item.price * item.quantity for item in cart_list)
     shipping_fee = 0 if (g.user and g.user.is_membership) else 3000
     final_total = product_total + shipping_fee
-    current_order = None
 
+    current_order = None
     if g.user:
         current_order = Order.query.filter_by(user_id=g.user.id, status='WAITING').first()
 
     if not current_order:
-        # 주문 번호 생성
         order_number = f"TS{now_ts}{g.user.id if g.user else 'G'}"
-
         current_order = Order(
             user_id=g.user.id if g.user else None,
             order_number=order_number,
@@ -454,16 +512,13 @@ def checkout():
         db.session.add(current_order)
     else:
         current_order.total_price = final_total
-        current_order.order_number = f"TS{now_ts}{g.user.id if g.user else 'G'}"  # 번호도 최신화
-
+        current_order.order_number = f"TS{now_ts}{g.user.id if g.user else 'G'}"
 
     db.session.commit()
 
     last_order = None
     if g.user:
-        last_order = Order.query.filter_by(user_id=g.user.id) \
-            .order_by(Order.order_date.desc()) \
-            .first()
+        last_order = Order.query.filter_by(user_id=g.user.id).order_by(Order.order_date.desc()).first()
 
     return render_template('order/checkout.html',
                            order=current_order,
@@ -475,7 +530,6 @@ def checkout():
                            now_ts=now_ts,
                            pre_selected_coupon_id=coupon_id,
                            last_order=last_order)
-
 
 # 🌟 [병합 완료] 팀장님의 '사용 포인트' + 팀원분의 '적립금 및 현금영수증' 완벽 통합
 @bp.route('/save_temp_info', methods=['POST'])
@@ -508,6 +562,7 @@ def save_temp_info():
 @bp.route('/success')
 def success():
     # --- [1. 데이터 수집] ---
+
     payment_type = request.args.get('paymentType')
     payment_key = request.args.get('paymentKey')
     order_id = request.args.get('orderId')
@@ -761,20 +816,38 @@ def order_complete(order_id):
 @bp.route('/my_orders')
 @login_required
 def my_orders():
-    orders = Order.query.filter_by(user_id=g.user.id).order_by(Order.order_date.desc()).all()
+    # 1. 사용자가 클릭한 상태 필터값 가져오기 (예: ?status=배송중)
+    current_filter = request.args.get('status')
 
-    pay_done = [o for o in orders if getattr(o, 'status', '결제완료') == '결제완료']
-    ready = [o for o in orders if getattr(o, 'status', None) == '배송준비중']
-    shipping = [o for o in orders if getattr(o, 'status', None) == '배송중']
-    shipped = [o for o in orders if getattr(o, 'status', None) == '배송완료']
+    # 2. 카운트용 전체 주문 (필터링과 관계없이 상단 바 숫자는 유지되어야 함)
+    all_user_orders = Order.query.filter_by(user_id=g.user.id).filter(Order.status != 'WAITING').all()
+
+    # 3. 화면에 보여줄 주문 리스트 쿼리 생성
+    query = Order.query.filter_by(user_id=g.user.id).filter(Order.status != 'WAITING')
+
+    # 만약 필터값이 들어왔다면 쿼리에 조건 추가
+    if current_filter:
+        query = query.filter_by(status=current_filter)
+
+    orders = query.order_by(Order.order_date.desc()).all()
+
+    # 4. 상단 바 카운트 계산 (전체 주문 기준)
+    total_count = len(all_user_orders)
+    pay_count = len([o for o in all_user_orders if o.status == '결제완료'])
+    ready_count = len([o for o in all_user_orders if o.status == '배송준비중'])
+    ship_count = len([o for o in all_user_orders if o.status == '배송중'])
+    done_count = len([o for o in all_user_orders if o.status == '배송완료'])
+    confirmed_count = len([o for o in all_user_orders if o.status == '구매확정'])
 
     return render_template('order/mypage_order_list.html',
                            order_list=orders,
-                           pay_count=len(pay_done),
-                           ready_count=len(ready),
-                           ship_count=len(shipping),
-                           done_count=len(shipped))
-
+                           total_count=total_count,
+                           pay_count=pay_count,
+                           ready_count=ready_count,
+                           ship_count=ship_count,
+                           done_count=done_count,
+                           confirmed_count=confirmed_count,
+                           current_filter=current_filter)
 
 @bp.route('/find_guest_order', methods=['GET', 'POST'])
 def find_guest_order():
@@ -857,9 +930,9 @@ def cancel_order(order_id):
                 coupon.is_used = False
                 coupon.used_date = None
 
-        if g.user and hasattr(order, 'used_point') and order.used_point > 0:
-            g.user.point += order.used_point
-            print(f"--- [포인트 복구] {order.used_point}원이 다시 반환되었습니다.")
+        if hasattr(order, 'reward_point') and order.reward_point > 0:
+            print(f"--- [적립 취소] {order.reward_point}P 지급 예정이 취소되었습니다.")
+            order.reward_point = 0
 
         order.status = '주문취소'
         db.session.commit()
@@ -920,13 +993,13 @@ def confirm_purchase(order_id):
     if order.user_id != g.user.id:
         return jsonify({"success": False, "message": "권한이 없습니다."})
 
-    is_locked = any(item.status in ['환불신청', '교환신청', '환불완료'] for item in order.items)
+    is_locked = any(item.status in ['환불신청', '교환신청'] for item in order.items)
 
     if is_locked:
         flash("교환 또는 환불 신청이 진행 중인 주문은 구매확정이 불가능합니다.")
         return redirect(url_for('order.order_detail', order_id=order_id))
 
-    if order.status == '배송완료':
+    if order.status in ['배송완료', '교환완료', '부분환불완료']:
         order.status = '구매확정'
 
         if not order.is_point_paid and order.reward_point > 0:
@@ -1126,9 +1199,8 @@ def approve_refund(item_id):
     db.session.commit()
     return jsonify({"success": True, "message": "환불 처리가 최종 승인되었습니다."})
 
-
 # =======================================================
-# 🌟 팀장님 로직: 마이페이지 구매확정/환불 대상 리스트 조회
+# 🌟 팀장님 로직: 마이페이지 구매확정/환불 대상 리스트 조회 API
 # =======================================================
 @bp.route('/api/get_delivery_done_items')
 @login_required
@@ -1164,3 +1236,112 @@ def get_delivery_done_items():
             'img': url_for('static', filename='images/menu/' + item.product.image_path)
         } for item in claim_targets]
     })
+
+
+# =======================================================
+# 🌟 사용자(팀장님) 추가 로직: AJAX 구매 확정 및 확정 리스트
+# =======================================================
+@bp.route('/api/confirm', methods=['POST'])
+@login_required
+def confirm_order():
+    data = request.get_json()
+    order_id = data.get('order_id')
+
+    # 주문 찾기 (본인의 주문인지 확인)
+    order = Order.query.filter_by(id=order_id, user_id=g.user.id).first()
+
+    if order:
+        order.status = '구매확정'  # 상태 변경
+        db.session.commit()
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': '주문을 찾을 수 없습니다.'}), 404
+
+@bp.route('/confirmed_list')
+@login_required
+def confirmed_list():
+    # 상태가 '구매확정'인 주문들만 필터링
+    confirmed_orders = Order.query.filter_by(
+        user_id=g.user.id,
+        status='구매확정'
+    ).order_by(Order.order_date.desc()).all()
+
+    return render_template('order/confirmed_list.html', orders=confirmed_orders)
+
+
+# =======================================================
+# 🌟 메인(팀원) 추가 로직: 부분 환불 및 포인트/재고 정밀 계산
+# =======================================================
+@bp.route('/order/refund_item/<int:order_id>/<int:item_id>', methods=['POST'])
+@login_required
+def refund_item(order_id, item_id):
+    order = Order.query.get_or_404(order_id)
+    # 해당 주문의 아이템 중 아직 환불되지 않은 것만 가져옴
+    order_item = next((i for i in order.items if i.id == item_id), None)
+
+    if not order_item or order_item.status == '환불완료':
+        flash("환불 가능한 상품이 아니거나 이미 처리되었습니다.")
+        return redirect(url_for('order.order_detail', order_id=order_id))
+
+    # 1. 금액 계산
+    # 현재 환불하려는 상품 금액 (배송비 제외)
+    refund_item_price = order_item.price * order_item.quantity
+
+    # 전체 상품 총액 (환불 전 기준)
+    total_product_sum = sum(item.price * item.quantity for item in order.items if item.status != '환불완료')
+
+    # 2. 쿠폰 기준선 체크
+    if order.coupon_id:
+        coupon = db.session.get(Coupon, order.coupon_id)
+        if coupon:
+            # 이 상품을 뺐을 때 남은 금액
+            remaining_price = total_product_sum - refund_item_price
+            if remaining_price < coupon.min_order_amount:
+                flash(f"이 상품 환불 시 쿠폰 적용 기준({coupon.min_order_amount}원)에 미달하여 환불이 제한됩니다.")
+                return redirect(url_for('order.order_detail', order_id=order_id))
+
+    # 3. 포인트 안분 계산 (공식: 기존 포인트 * (환불금액 / 전체상품금액))
+    refund_ratio = refund_item_price / total_product_sum
+
+    if g.user:
+        # (A) 사용 포인트 복구 (배송비 제외 상품가 비율만큼)
+        if order.used_point > 0:
+            refund_point = int(order.used_point * refund_ratio)
+            g.user.point += refund_point
+            order.used_point -= refund_point
+            print(f"--- [부분 반환] 사용포인트 {refund_point}P 복구")
+
+        # (B) 적립 예정 포인트 차감 (준 적 없으므로 주문서 수치만 조정)
+        if order.reward_point > 0:
+            cancel_reward = int(order.reward_point * refund_ratio)
+            order.reward_point -= cancel_reward
+            print(f"--- [적립 취소] 예정포인트 {cancel_reward}P 무효화")
+
+    # 4. 재고 복구 및 상태 변경
+    product = db.session.get(Product, order_item.product_id)
+    if product:
+        product.stock += order_item.quantity
+
+    order_item.status = '환불완료'
+
+    # 5. 주문 전체 상태 자동 변경 (모든 아이템이 환불되었는지 확인)
+    active_items = [i for i in order.items if i.status != '환불완료']
+    if not active_items:
+        order.status = '주문취소'
+
+    total_items = len(order.items)
+    refunded_items = len([i for i in order.items if i.status == '환불완료'])
+
+    if refunded_items == 0:
+        # 환불된 게 없음 (정상 진행 중)
+        pass
+    elif refunded_items == total_items:
+        # 전체가 환불됨
+        order.status = '환불완료'
+    else:
+        # 일부만 환불됨
+        order.status = '부분환불완료'
+
+    db.session.commit()
+    flash(f"'{order_item.product.name}' 상품의 환불 처리가 완료되었습니다. (배송비 제외)")
+    return redirect(url_for('order.order_detail', order_id=order_id))

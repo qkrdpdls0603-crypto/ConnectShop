@@ -63,11 +63,27 @@
             <div class="m-grid-item m-data-box">
                 <div class="m-data-label">보증 서비스</div>
                 <div class="m-data-value">
-                    {# g.user가 있고 멤버십이 활성화된 경우만 표시 #}
                     {% if g.user and g.user.is_membership %}
-                    <span style="color: #007bff; font-weight: bold;">커넥션 Care+ 활성</span>
+                        <div class="membership-info-container">
+                            <span class="membership-status-active">커넥션 Care+ 활성</span>
+                            <span id="membership-expire-date" class="membership-expire-text"></span>
+
+                            <a href="{{ url_for('auth.membership') }}" class="membership-withdraw-btn">
+                                멤버십 관리/탈퇴
+                            </a>
+                        </div>
+                        <script>
+                            (function() {
+                                const now = new Date();
+                                now.setDate(now.getDate() + 30);
+                                const dateStr = now.getFullYear() + '-' +
+                                                String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                                                String(now.getDate()).padStart(2, '0');
+                                document.getElementById('membership-expire-date').innerText = "(~" + dateStr + " 종료 예정)";
+                            })();
+                        </script>
                     {% else %}
-                    <span style="color: #868e96; font-size: 0.9rem;">미가입</span>
+                        <span class="membership-status-none">미가입</span>
                     {% endif %}
                 </div>
             </div>
@@ -617,6 +633,8 @@
             .then(res => res.json())
             .then(data => {
                 const container = document.getElementById('confirm-list-container');
+
+                // 1. 구매확정 대기 상품이 있는 경우
                 if (data.confirm_list.length > 0) {
                     container.innerHTML = data.confirm_list.map(item => `
                     <div class="list-group-item d-flex align-items-center py-3">
@@ -628,8 +646,17 @@
                         <button onclick="processOrder(${item.order_id}, 'confirm')" class="btn btn-sm btn-dark">구매확정</button>
                     </div>
                 `).join('');
-                } else {
-                    container.innerHTML = '<p class="text-center py-4">구매확정 가능한 상품이 없습니다.</p>';
+                }
+                // 2. 구매확정 대기 상품이 없는 경우 -> 확정 완료된 목록 안내
+                else {
+                    container.innerHTML = `
+                    <div class="text-center py-4">
+                        <p class="text-muted">구매확정 가능한 최신 상품이 없습니다.</p>
+                        <hr>
+                        <p class="small">이미 확정된 상품들은 '전체 주문 내역'에서 확인 가능합니다.</p>
+                        <a href="/order/my_orders" class="btn btn-outline-primary btn-sm">구매확정 내역 보러가기</a>
+                    </div>
+                `;
                 }
                 new bootstrap.Modal(document.getElementById('confirmOrderModal')).show();
             });
@@ -661,6 +688,32 @@
                 }
                 new bootstrap.Modal(document.getElementById('claimOrderModal')).show();
             });
+    }
+
+    function processOrder(orderId, action) {
+        if (action === 'confirm') {
+            if (!confirm("구매 확정을 진행하시겠습니까?")) return;
+
+            // 주소를 서버에 새로 만든 /order/api/confirm 으로 변경!
+            fetch('/order/api/confirm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    order_id: orderId
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("구매 확정이 완료되었습니다.");
+                        location.reload();
+                    } else {
+                        alert("실패: " + data.message);
+                    }
+                });
+        }
     }
 
 </script>

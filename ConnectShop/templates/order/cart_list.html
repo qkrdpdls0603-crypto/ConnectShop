@@ -42,9 +42,9 @@
             {# 상품 리스트 (중복 제거 및 통합) #}
             {% for item in cart_list %}
             <div class="cart-item">
+                {% set target_id = item.id if g.user else loop.index0 %}
                 <div class="item-checkbox">
-                    {# value를 item.product_id로 유지하거나 item.id로 통일 (서버 로직에 맞게) #}
-                    <input type="checkbox" name="selected_ids" value="{{ item.id }}" class="form-check-input item-check">
+                    <input type="checkbox" name="selected_ids" value="{{ target_id }}" class="form-check-input item-check">
                 </div>
 
                 <div class="item-image-box">
@@ -77,20 +77,16 @@
                     </p>
                 </div>
 
-                {% set target_id = item.id if g.user else loop.index0 %}
+               {% set target_id = item.id %}
 
                 <div class="item-quantity">
-                    {# 🌟 인자 전달 시 '{{ target_id }}' 처럼 따옴표로 감싸서 문자열로 만듭니다 #}
                     <button type="button" class="qty-btn" onclick="updateQuantity('{{ target_id }}', 'dec', this)">−</button>
                     <span class="qty-num" id="qty-{{ target_id }}">{{ item.quantity }}</span>
                     <button type="button" class="qty-btn" onclick="updateQuantity('{{ target_id }}', 'inc', this)">+</button>
                 </div>
 
                 <div class="item-price-group">
-                    {# 🌟 0원 버그가 나는 바로 그 위치 #}
-                    <div class="item-price js-item-total"
-                         id="item-total-{{ target_id }}"
-                         data-cart-id="{{ target_id }}">
+                    <div class="item-price js-total-price" data-item-total-id="{{ target_id }}">
                         {{ "{:,}".format(item.price * item.quantity) }}원
                     </div>
 
@@ -142,9 +138,20 @@
                     {{ "{:,}".format(total_price|int) }}원
                 </span>
             </div>
-            <a href="{{ url_for('order.checkout') }}" style="text-decoration: none;">
-                <button class="btn-checkout">결제 확인</button>
-            </a>
+            <div class="d-flex gap-2 mt-4">
+                <button type="submit" form="cart-form" formaction="{{ url_for('order.checkout') }}"
+                        class="btn-checkout-selected flex-fill"
+                        style="padding: 12px; background-color: #007bff; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.95rem;">
+                    선택상품 주문
+                </button>
+
+                <a href="{{ url_for('order.checkout') }}" class="flex-fill" style="text-decoration: none;">
+                    <button type="button" class="btn-checkout-all"
+                            style="width: 100%; padding: 12px; background-color: white; color: #495057; border: 1px solid #ced4da; border-radius: 8px; font-weight: bold; font-size: 0.95rem;">
+                        전체상품 주문
+                    </button>
+                </a>
+            </div>
         </div>
     {% else %}
         <div class="empty-cart">
@@ -193,15 +200,20 @@
         const cartForm = document.getElementById('cart-form');
         if (cartForm) {
             cartForm.addEventListener('submit', function(e) {
-                const isDeleteSelected = e.submitter && e.submitter.classList.contains('btn-delete-selected');
+              // 클릭된 버튼이 무엇인지 감지
+                const isDelete = e.submitter && e.submitter.classList.contains('btn-delete-selected');
                 const isDeleteSoldout = e.submitter && e.submitter.classList.contains('btn-delete-soldout');
+                const isOrder = e.submitter && (e.submitter.classList.contains('btn-checkout-selected') || (e.submitter.formAction && e.submitter.formAction.includes('checkout')));
 
-                if (isDeleteSelected) {
+                if (isDelete || isOrder) {
                     const checkedCount = document.querySelectorAll('.item-check:checked').length;
                     if (checkedCount === 0) {
                         e.preventDefault();
-                        alert("삭제할 상품을 선택해 주세요.");
-                    } else if (!confirm(checkedCount + "개의 상품을 삭제하시겠습니까?")) {
+                        alert("주문(또는 삭제)할 상품을 선택해 주세요.");
+                        return;
+                    }
+
+                    if (isDelete && !confirm(checkedCount + "개의 상품을 삭제하시겠습니까?")) {
                         e.preventDefault();
                     }
                 } else if (isDeleteSoldout) {
