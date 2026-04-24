@@ -564,72 +564,53 @@ def save_temp_info():
 @bp.route('/success')
 def success():
     # --- [1. 데이터 수집] ---
-
     payment_type = request.args.get('paymentType')
     payment_key = request.args.get('paymentKey')
     order_id = request.args.get('orderId')
     amount = request.args.get('amount')
-
-    # 즉시 구매 여부 확인 (JS에서 보낸 direct_buy=true 파라미터)
     is_direct = request.args.get('direct_buy') == 'true'
 
-    # --- [2. 주문 상품 데이터 구성 (분기)] ---
+    # --- [2. 주문 상품 데이터 구성] ---
     if is_direct:
-        # ✅ 즉시 구매 세션에서 정보 추출
         direct_info = session.get('direct_order_info')
         if not direct_info:
-            flash("주문 정보가 만료되었습니다. 다시 시도해주세요.")
+            flash("주문 정보가 만료되었습니다.")
             return redirect(url_for('main.index'))
-
         product = db.session.get(Product, direct_info['product_id'])
         if not product:
             flash("존재하지 않는 상품입니다.")
             return redirect(url_for('main.index'))
-
         extra_price = calculate_extra_price(product.id, direct_info['options'])
-
-        # 템플릿과 로직에서 공통으로 사용할 리스트 생성
         order_items = [SimpleNamespace(
-            product=product,
-            quantity=direct_info['quantity'],
-            price=product.price + extra_price,
-            selected_options=direct_info['options'],
-            image=product.image_path,  # 🌟 이미지 에러 방지용
-            product_name=product.name
+            product=product, quantity=direct_info['quantity'],
+            price=product.price + extra_price, selected_options=direct_info['options'],
+            image=product.image_path, product_name=product.name
         )]
     else:
-        # ✅ 일반 장바구니 결제
         order_items = get_cart_items()
 
-    # 쿠폰 및 포인트 정보 가져오기
     coupon_id = session.get('applied_coupon_id')
     used_point = int(session.get('temp_used_point', 0))
     reward_point = int(session.get('calculated_reward_point', 0))
 
     is_success = False
-    res_data = {}
-    payment_method_used = '무통장입금'
+    payment_method_used = '카드/간편결제'
+    secret_key = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6" + ":"
+    encoded_key = base64.b64encode(secret_key.encode()).decode()
 
-    # --- [3. 결제 승인 로직 (토스 페이먼츠 / 무통장)] ---
+    # --- [3. 결제 승인 로직] ---
     if payment_type == 'VBANK':
         is_success = True
         payment_method_used = '무통장입금'
-
     elif payment_type == 'POINT_ONLY':
         is_success = True
         payment_method_used = '전액포인트결제'
-        print(f"--- [0원 결제] 전액 포인트 주문을 승인 없이 처리합니다. OrderID: {order_id}")
-
     else:
-        secret_key = "test_gsk_docs_OaPz8L5KdmQXkzRz3y47BMw6" + ":"
-        encoded_key = base64.b64encode(secret_key.encode()).decode()
         url = "https://api.tosspayments.com/v1/payments/confirm"
         headers = {"Authorization": f"Basic {encoded_key}", "Content-Type": "application/json"}
-
         try:
-            response = requests.post(url, json={
-                "paymentKey": payment_key, "orderId": order_id, "amount": amount
-            }, headers=headers)
+            response = requests.post(url, json={"paymentKey": payment_key, "orderId": order_id, "amount": amount},
+                                     headers=headers)
             res_data = response.json()
             if response.status_code == 200:
                 is_success = True
@@ -643,106 +624,75 @@ def success():
 
     # --- [4. 결제 성공 후 DB 작업] ---
     if is_success:
-        # 1) 쿠폰 처리
-        applied_coupon = None
-        if coupon_id and g.user:
-            applied_coupon = Coupon.query.filter_by(id=coupon_id, user_id=g.user.id, is_used=False).first()
+        try:
+            # 쿠폰/포인트 선처리
+            applied_coupon = None
+            if coupon_id and g.user:
+                applied_coupon = Coupon.query.filter_by(id=coupon_id, user_id=g.user.id, is_used=False).first()
+            if not (g.user and g.user.is_membership):
+                reward_point = 0
+            if payment_method_used in ['계좌이체', '가상계좌', '무통장입금']:
+                reward_point += int(int(amount) * 0.03)
+            if g.user and used_point > 0:
+                g.user.point -= min(g.user.point, used_point)
 
-        # 2) [보안 체크] 일반 회원임이 확인되면 기본 적립금을 강제로 0으로 초기화 (팀원 로직)
-        if not (g.user and g.user.is_membership):
-            reward_point = 0
-            print("--- [보안 체크] 일반 회원임이 확인되어 기본 적립금을 0원으로 변경합니다.")
-
-        # 3) 현금성 결제 3% 보너스 적립 추가 (팀장 로직)
-        if payment_method_used in ['계좌이체', '가상계좌', '무통장입금']:
-            bonus_point = int(int(amount) * 0.03)
-            reward_point += bonus_point
-            print(f"--- [보너스 적립] 현금성 결제 3% 추가 적용: +{bonus_point}원")
-
-        # 4) 사용 포인트 차감
-        if g.user and used_point > 0:
-            actual_used_point = min(g.user.point, used_point)
-            g.user.point -= actual_used_point
-            used_point = actual_used_point
-
-        # 5) 주문(Order) 객체 생성
-        order_status = '입금대기' if payment_type == 'VBANK' else '결제완료'
-        order = Order(
-            order_number=order_id,
-            user_id=g.user.id if g.user else None,
-            recipient=session.get('temp_recipient'),
-            phone=session.get('temp_phone'),
-            address=session.get('temp_address'),
-            memo=session.get('temp_memo'),
-            total_price=int(amount),
-            reward_point=reward_point, # 검증과 보너스가 모두 적용된 최종 적립금
-            is_point_paid=False,
-            payment_method=payment_method_used,
-            status=order_status,
-            coupon_id=coupon_id,
-            used_point=used_point,
-            cash_receipt_apply=session.get('cash_receipt_apply', False),
-            cash_receipt_type=session.get('cash_receipt_type'),
-            cash_receipt_number=session.get('cash_receipt_number')
-        )
-
-        if applied_coupon:
-            applied_coupon.is_used = True
-            applied_coupon.used_date = datetime.now()
-
-        db.session.add(order)
-        db.session.flush()  # order.id 생성을 위해 실행
-
-        # 5) 주문 상세 내역(OrderItem) 및 재고 차감
-        for item in order_items:
-
-            result = Product.query.filter(
-                Product.id == item.product.id,
-                Product.stock >= item.quantity  # 👈 핵심: 업데이트 직전 재고 조건 확인
-            ).update({"stock": Product.stock - item.quantity})
-
-            if result == 0:
-                db.session.rollback()
-                flash(f"상품의 재고가 품절되었습니다.")
-                return redirect(url_for('order.checkout'))
-
-            order_item = OrderItem(
-                order_id=order.id,
-                product_id=item.product.id,
-                quantity=item.quantity,
-                price=item.price,
-                selected_options=getattr(item, 'selected_options', '')
+            # 주문 생성
+            order_status = '입금대기' if payment_type == 'VBANK' else '결제완료'
+            order = Order(
+                order_number=order_id, user_id=g.user.id if g.user else None,
+                recipient=session.get('temp_recipient'), phone=session.get('temp_phone'),
+                address=session.get('temp_address'), memo=session.get('temp_memo'),
+                total_price=int(amount), reward_point=reward_point,
+                payment_method=payment_method_used, status=order_status,
+                coupon_id=coupon_id, used_point=used_point
             )
-            db.session.add(order_item)
+            if applied_coupon:
+                applied_coupon.is_used = True
+                applied_coupon.used_date = datetime.now()
 
-        # 6) [중요] 장바구니 비우기 분기 처리
-        if is_direct:
-            # 즉시 구매면 임시 세션만 제거
-            session.pop('direct_order_info', None)
-        else:
-            # 장바구니 결제면 DB/세션 장바구니 비우기
-            if g.user:
+            db.session.add(order)
+            db.session.flush()
+
+            # 재고 차감
+            for item in order_items:
+                result = Product.query.filter(Product.id == item.product.id, Product.stock >= item.quantity).update(
+                    {"stock": Product.stock - item.quantity})
+                if result == 0:
+                    raise Exception(f"품절 ({item.product_name})")
+
+                db.session.add(
+                    OrderItem(order_id=order.id, product_id=item.product.id, quantity=item.quantity, price=item.price,
+                              selected_options=getattr(item, 'selected_options', '')))
+
+            # 장바구니/세션 정리
+            if is_direct:
+                session.pop('direct_order_info', None)
+            elif g.user:
                 Cart.query.filter_by(user_id=g.user.id).delete()
             else:
                 session.pop('guest_cart', None)
 
-        # 공통 세션 정리
-        keys_to_pop = [
-            'applied_coupon_id', 'calculated_reward_point', 'temp_recipient',
-            'temp_phone', 'temp_address', 'temp_memo', 'cash_receipt_apply',
-            'cash_receipt_type', 'cash_receipt_number', 'temp_used_point'
-        ]
-        for key in keys_to_pop:
-            session.pop(key, None)
+            for key in ['applied_coupon_id', 'calculated_reward_point', 'temp_recipient', 'temp_phone', 'temp_address',
+                        'temp_memo', 'temp_used_point']:
+                session.pop(key, None)
 
-        db.session.commit()
+            db.session.commit()
+            return render_template('order/order_complete.html', order=order, order_id=order.id, order_items=order_items,
+                                   cart_list=get_cart_items())
 
-        # 🌟 'order' 변수가 이 블록 안에서 정의되었으므로 unresolved reference 경고가 사라집니다.
-        return render_template('order/order_complete.html', order=order, order_id=order.id, order_items=order_items,cart_list=get_cart_items())
+        except Exception as e:
+            db.session.rollback()
+            if payment_type not in ['VBANK', 'POINT_ONLY'] and payment_key:
+                cancel_url = f"https://api.tosspayments.com/v1/payments/{payment_key}/cancel"
+                requests.post(cancel_url, json={"cancelReason": str(e)},
+                              headers={"Authorization": f"Basic {encoded_key}", "Content-Type": "application/json"})
 
-    else:
-        flash("결제 승인 과정에서 문제가 발생했습니다.")
-        return redirect(url_for('order.checkout'))
+            flash(f"결제 처리 중 오류 발생: {str(e)}")
+            return redirect(url_for('order._list'))
+
+    # 만약 여기까지 왔다면 (is_success가 False인 예외 상황)
+    flash("정상적인 결제 접근이 아닙니다.")
+    return redirect(url_for('order.checkout'))
 
 # =======================================================
 # 🌟 [추가] 결제 실패 시 처리하는 라우트
@@ -1379,3 +1329,6 @@ def refund_item(order_id, item_id):
     db.session.commit()
     flash(f"'{order_item.product.name}' 상품의 환불 처리가 완료되었습니다. (배송비 제외)")
     return redirect(url_for('order.order_detail', order_id=order_id))
+
+
+from datetime import timedelta
