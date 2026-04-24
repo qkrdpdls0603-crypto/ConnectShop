@@ -695,6 +695,17 @@ def success():
 
         # 5) 주문 상세 내역(OrderItem) 및 재고 차감
         for item in order_items:
+
+            result = Product.query.filter(
+                Product.id == item.product.id,
+                Product.stock >= item.quantity  # 👈 핵심: 업데이트 직전 재고 조건 확인
+            ).update({"stock": Product.stock - item.quantity})
+
+            if result == 0:
+                db.session.rollback()
+                flash(f"상품의 재고가 품절되었습니다.")
+                return redirect(url_for('order.checkout'))
+
             order_item = OrderItem(
                 order_id=order.id,
                 product_id=item.product.id,
@@ -703,10 +714,6 @@ def success():
                 selected_options=getattr(item, 'selected_options', '')
             )
             db.session.add(order_item)
-
-            product = db.session.get(Product, item.product.id)
-            if product:
-                product.stock -= item.quantity
 
         # 6) [중요] 장바구니 비우기 분기 처리
         if is_direct:
