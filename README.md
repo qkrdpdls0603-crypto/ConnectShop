@@ -45,6 +45,7 @@
  <img width="1018" height="751" alt="image" src="https://github.com/user-attachments/assets/9cdf0220-2960-4e2a-91fb-6696670a923f" />
 </details>
 
+## 와이어프레임
 
 ## 화면구현
 
