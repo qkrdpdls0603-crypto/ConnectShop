@@ -134,11 +134,11 @@
 </details>
 <details>
 <summary>고객지원 페이지</summary>
-여기에 이미지를 넣어주세요
+<img width="1794" height="1392" alt="고객지원페이지" src="https://github.com/user-attachments/assets/0bef93bd-6f56-4a5f-8cbf-a51566dcc530" />
 </details>
 <details>
 <summary>FAQ 페이지</summary>
-여기에 이미지를 넣어주세요
+<img width="1014" height="1175" alt="127 0 0 1_5000_faq_board (1)" src="https://github.com/user-attachments/assets/de5d8f37-dd04-4bef-807c-b1a6c01336f0" />
 </details>
 <details>
 <summary>회사 소개 페이지</summary>
@@ -146,7 +146,7 @@
 </details>
 <details>
 <summary>1:1 문의 페이지</summary>
-여기에 이미지를 넣어주세요
+<img width="1014" height="1579" alt="127 0 0 1_5000_inquiry" src="https://github.com/user-attachments/assets/a7896e73-b1b2-42c6-8a90-7e406ea54c24" />
 </details>
 
 ## 주요 기능 (Key Features)
