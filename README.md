@@ -65,8 +65,76 @@
 </details>
 
 ## 와이어프레임
-
+<details>
+<summary>메인 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<details>
+<summary>서브 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<details>
+<summary>마이 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<details>
+<summary>로그인 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
 ## 화면구현
+<details>
+<summary>메인 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<details>
+<summary>제품 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<details>
+<summary>품 상세 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<details>
+<summary>헤더 장바구니 패널</summary>
+여기에 이미지를 넣어주세요
+</details>
+<details>
+<summary>메인 장바구니 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>결제창</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>주문완료 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>비회원 주문조회</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>주문/배송 조회 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>주문 상세 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>마이 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>로그인/회원가 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>고객지원 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>FAQ 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>회사 소개 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
+<summary>1:1 문의 페이지</summary>
+여기에 이미지를 넣어주세요
+</details>
 
 ## 주요 기능 (Key Features)
 
